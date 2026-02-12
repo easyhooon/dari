@@ -1,4 +1,4 @@
-package com.easyhooon.dari
+package com.easyhooon.dari.sample
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.easyhooon.dari", appContext.packageName)
+        assertEquals("com.easyhooon.dari.sample", appContext.packageName)
     }
 }

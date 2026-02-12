@@ -1,4 +1,4 @@
-package com.easyhooon.dari.ui.theme
+package com.easyhooon.dari.sample.ui.theme
 
 import android.app.Activity
 import android.os.Build

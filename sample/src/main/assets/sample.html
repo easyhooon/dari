@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dari Sample</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 24px 16px;
+            padding-top: max(24px, env(safe-area-inset-top));
+            padding-bottom: max(24px, env(safe-area-inset-bottom));
+            background: #f5f5f5;
+        }
+        h1 { font-size: 20px; margin-bottom: 4px; color: #2D6AB1; }
+        .subtitle { font-size: 13px; color: #999; margin-bottom: 20px; }
+        .section { font-size: 13px; font-weight: 700; color: #888; margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px 16px;
+            margin-bottom: 8px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            color: white;
+            text-align: left;
+        }
+        .btn span { display: block; font-size: 11px; font-weight: 400; opacity: 0.8; margin-top: 2px; }
+        .btn-blue { background: #2196F3; }
+        .btn-green { background: #4CAF50; }
+        .btn-teal { background: #009688; }
+        .btn-orange { background: #FF9800; }
+        .btn-red { background: #F44336; }
+        .btn-purple { background: #9C27B0; }
+        .btn-indigo { background: #3F51B5; }
+        #log {
+            margin-top: 16px;
+            padding: 12px;
+            background: #fff;
+            border-radius: 10px;
+            font-size: 11px;
+            font-family: monospace;
+            max-height: 180px;
+            overflow-y: auto;
+            color: #333;
+            line-height: 1.6;
+        }
+        #log .res { color: #4CAF50; }
+        #log .err { color: #F44336; }
+        #log .req { color: #2196F3; }
+    </style>
+</head>
+<body>
+    <h1>Dari Bridge Sample</h1>
+    <p class="subtitle">Realistic WebView bridge scenarios</p>
+
+    <div class="section">Device &amp; App Info</div>
+    <button class="btn btn-blue" onclick="getAppInfo()">
+        Get App Info
+        <span>App version, OS version, device model</span>
+    </button>
+    <button class="btn btn-teal" onclick="hapticFeedback()">
+        Haptic Feedback
+        <span>Trigger device vibration pattern</span>
+    </button>
+
+    <div class="section">Native Actions</div>
+    <button class="btn btn-green" onclick="showToast()">
+        Show Toast
+        <span>Display a native Toast message</span>
+    </button>
+    <button class="btn btn-indigo" onclick="shareText()">
+        Open Share Sheet
+        <span>Share content via native share dialog</span>
+    </button>
+    <button class="btn btn-purple" onclick="copyToClipboard()">
+        Copy to Clipboard
+        <span>Copy text using native clipboard API</span>
+    </button>
+
+    <div class="section">Navigation &amp; Settings</div>
+    <button class="btn btn-orange" onclick="openAppSettings()">
+        Open App Settings
+        <span>Navigate to system app settings screen</span>
+    </button>
+    <button class="btn btn-red" onclick="requestPermission()">
+        Request Camera Permission
+        <span>Trigger native permission dialog</span>
+    </button>
+
+    <div id="log"></div>
+
+    <script>
+        var requestCounter = 0;
+
+        function log(msg, type) {
+            var el = document.getElementById('log');
+            var cls = type || 'req';
+            el.innerHTML = '<div class="' + cls + '">' + msg + '</div>' + el.innerHTML;
+        }
+
+        function rid() {
+            requestCounter++;
+            return 'req_' + Date.now() + '_' + requestCounter;
+        }
+
+        function getAppInfo() {
+            var id = rid();
+            log('→ getAppInfo', 'req');
+            Android.onBridgeRequest('getAppInfo', id, null);
+        }
+
+        function hapticFeedback() {
+            var id = rid();
+            var data = JSON.stringify({ type: "success", duration: 50 });
+            log('→ hapticFeedback', 'req');
+            Android.onBridgeRequest('hapticFeedback', id, data);
+        }
+
+        function showToast() {
+            var id = rid();
+            var data = JSON.stringify({ message: "Hello from WebView!", duration: "short" });
+            log('→ showToast', 'req');
+            Android.onBridgeRequest('showToast', id, data);
+        }
+
+        function shareText() {
+            var id = rid();
+            var data = JSON.stringify({
+                title: "Check this out",
+                text: "Dari - WebView Bridge Debugger for Android\nhttps://github.com/easyhooon/dari"
+            });
+            log('→ shareText', 'req');
+            Android.onBridgeRequest('shareText', id, data);
+        }
+
+        function copyToClipboard() {
+            var id = rid();
+            var data = JSON.stringify({ text: "Copied from Dari WebView Bridge!" });
+            log('→ copyToClipboard', 'req');
+            Android.onBridgeRequest('copyToClipboard', id, data);
+        }
+
+        function openAppSettings() {
+            var id = rid();
+            log('→ openAppSettings', 'req');
+            Android.onBridgeRequest('openAppSettings', id, null);
+        }
+
+        function requestPermission() {
+            var id = rid();
+            var data = JSON.stringify({ permission: "camera" });
+            log('→ requestCameraPermission', 'req');
+            Android.onBridgeRequest('requestCameraPermission', id, data);
+        }
+
+        // Called from native side with the response
+        function onBridgeResponse(requestId, success, data) {
+            if (success) {
+                log('← ' + data, 'res');
+            } else {
+                log('✗ ' + data, 'err');
+            }
+        }
+    </script>
+</body>
+</html>

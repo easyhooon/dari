@@ -1,4 +1,4 @@
-package com.easyhooon.dari.ui.theme
+package com.easyhooon.dari.sample.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

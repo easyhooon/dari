@@ -1,4 +1,4 @@
-package com.easyhooon.dari
+package com.easyhooon.dari.sample
 
 import org.junit.Test
 

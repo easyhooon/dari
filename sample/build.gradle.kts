@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "com.easyhooon.dari"
+    namespace = "com.easyhooon.dari.sample"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.easyhooon.dari"
+        applicationId = "com.easyhooon.dari.sample"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -38,6 +38,9 @@ android {
 }
 
 dependencies {
+    debugImplementation(project(":dari"))
+    releaseImplementation(project(":dari-noop"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
