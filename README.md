@@ -62,45 +62,26 @@ val interceptor: DariInterceptor? = Dari.createInterceptor()
 
 #### 2. Intercept Web-to-App messages
 
-When your `@JavascriptInterface` method receives a call from JavaScript:
+Call the interceptor in your `@JavascriptInterface` method when a request arrives and after the response is ready:
 
 ```kotlin
-class BridgeInterface(private val interceptor: DariInterceptor?) {
+// When a request is received from JavaScript
+interceptor?.onWebToAppRequest(handlerName, requestId, data)
 
-    @JavascriptInterface
-    fun callNative(handlerName: String, requestId: String, data: String?) {
-        // 1. Log the incoming request
-        interceptor?.onWebToAppRequest(handlerName, requestId, data)
-
-        // 2. Process the request
-        val (responseData, isSuccess) = processRequest(handlerName, data)
-
-        // 3. Log the outgoing response
-        interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
-
-        // 4. Send response back to WebView
-        sendResponseToWeb(requestId, responseData)
-    }
-}
+// After processing, log the response
+interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
 ```
 
 #### 3. Intercept App-to-Web messages
 
-When your native code sends a message to JavaScript:
+Call the interceptor when your native code sends a message to JavaScript and when the response comes back:
 
 ```kotlin
-fun sendMessageToWeb(webView: WebView, handlerName: String, data: String?) {
-    val requestId = UUID.randomUUID().toString()
+// When sending a message to JavaScript
+interceptor?.onAppToWebMessage(handlerName, requestId, data)
 
-    // 1. Log the outgoing message
-    interceptor?.onAppToWebMessage(handlerName, requestId, data)
-
-    // 2. Evaluate JavaScript
-    webView.evaluateJavascript("javascript:onNativeMessage('$handlerName', '$data')") { result ->
-        // 3. Log the response from web
-        interceptor?.onAppToWebResponse(requestId, true, result)
-    }
-}
+// When the web response is received
+interceptor?.onAppToWebResponse(requestId, isSuccess, responseData)
 ```
 
 ### Custom Configuration
