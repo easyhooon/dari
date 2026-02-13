@@ -19,6 +19,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.easyhooon.dari.Dari
 import com.easyhooon.dari.interceptor.DariInterceptor
 import org.json.JSONObject
@@ -138,7 +141,9 @@ class MainActivity : ComponentActivity() {
             Toast.LENGTH_SHORT
         }
 
-        runOnUiThread { Toast.makeText(this, message, duration).show() }
+        lifecycleScope.launch(Dispatchers.Main) {
+            Toast.makeText(this@MainActivity, message, duration).show()
+        }
 
         val response = JSONObject().apply { put("shown", true) }
         interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(2), true)
@@ -168,7 +173,9 @@ class MainActivity : ComponentActivity() {
         val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("dari", text))
 
-        runOnUiThread { Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show() }
+        lifecycleScope.launch(Dispatchers.Main) {
+            Toast.makeText(this@MainActivity, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+        }
 
         val response = JSONObject().apply {
             put("copied", true)
