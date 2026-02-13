@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.easyhooon.dari.MessageDirection
+import com.easyhooon.dari.R
 import com.easyhooon.dari.ui.DariActivity
 
 /**
@@ -45,7 +46,9 @@ internal class DariNotification(private val context: Context) {
     }
 
     fun show() {
-        postNotification()
+        if (totalCount > 0) {
+            postNotification()
+        }
     }
 
     /**
@@ -89,14 +92,11 @@ internal class DariNotification(private val context: Context) {
             inboxStyle.addLine(line)
         }
 
-        val contentText = if (totalCount > 0) {
-            "${recentLines.last()}"
-        } else {
-            "No messages yet"
-        }
+        val contentText = recentLines.last()
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_dari)
+            .setColor(0xFF2D6AB1.toInt())
             .setContentTitle("Recording bridge activity")
             .setContentText(contentText)
             .setSubText("$totalCount")

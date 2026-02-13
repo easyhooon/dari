@@ -37,7 +37,6 @@ object Dari {
 
         if (config.showNotification) {
             notification = DariNotification(this.context)
-            notification?.show()
         }
 
         addDynamicShortcut()
@@ -83,7 +82,7 @@ object Dari {
         val shortcut = ShortcutInfoCompat.Builder(context, "open_dari")
             .setShortLabel("Open Dari")
             .setLongLabel("Open Dari")
-            .setIcon(IconCompat.createWithResource(context, android.R.drawable.ic_dialog_info))
+            .setIcon(IconCompat.createWithResource(context, R.drawable.ic_dari))
             .setIntent(intent)
             .build()
 
