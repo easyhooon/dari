@@ -8,7 +8,16 @@ Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualiz
 
 ## Screenshots
 
-<!-- TODO: Add screenshots -->
+<p align="center">
+  <img src="screenshots/shortcut.jpeg" width="270" />
+  <img src="screenshots/notification.jpeg" width="270" />
+  <img src="screenshots/list.jpeg" width="270" />
+</p>
+<p align="center">
+  <img src="screenshots/overview.jpeg" width="270" />
+  <img src="screenshots/request.jpeg" width="270" />
+  <img src="screenshots/response.jpeg" width="270" />
+</p>
 
 ## Features
 
