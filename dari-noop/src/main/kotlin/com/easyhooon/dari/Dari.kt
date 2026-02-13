@@ -8,7 +8,6 @@ import com.easyhooon.dari.interceptor.DariInterceptor
  */
 object Dari {
 
-    @Suppress("UnusedParameter")
     fun init(context: Context, config: DariConfig = DariConfig()) = Unit
 
     fun createInterceptor(): DariInterceptor? = null

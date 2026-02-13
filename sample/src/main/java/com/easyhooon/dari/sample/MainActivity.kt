@@ -113,7 +113,7 @@ class MainActivity : ComponentActivity() {
 
         val vibrator = getSystemService(VIBRATOR_SERVICE) as android.os.Vibrator
         vibrator.vibrate(
-            VibrationEffect.createOneShot(durationMs, android.os.VibrationEffect.DEFAULT_AMPLITUDE),
+            VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE),
         )
 
         val response = JSONObject().apply {

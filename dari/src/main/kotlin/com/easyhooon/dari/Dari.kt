@@ -1,5 +1,6 @@
 package com.easyhooon.dari
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.pm.ShortcutInfoCompat
@@ -15,6 +16,7 @@ import com.easyhooon.dari.ui.DariActivity
  * Singleton entry point for Dari.
  * Automatically initialized via androidx.startup.
  */
+@SuppressLint("StaticFieldLeak")
 object Dari {
 
     internal lateinit var context: Context
@@ -47,6 +49,7 @@ object Dari {
      * Returns [DefaultDariInterceptor] in debug/staging builds,
      * or null in release builds (noop module).
      */
+    @Suppress("RedundantNullableReturnType") // Returns null in noop module
     fun createInterceptor(): DariInterceptor? = DefaultDariInterceptor()
 
     /**
