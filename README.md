@@ -20,12 +20,12 @@ Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualiz
 
 ### Gradle
 
-Add the `dari` (debug) and `dari-noop` (release) modules to your app's `build.gradle.kts`:
+Add the `dari` (debug) and `dari-noop` (release) dependencies to your app's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    debugImplementation(project(":dari"))
-    releaseImplementation(project(":dari-noop"))
+    debugImplementation("io.github.easyhooon:dari:1.0.0")
+    releaseImplementation("io.github.easyhooon:dari-noop:1.0.0")
 }
 ```
 
