@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
+import android.os.VibratorManager
 import android.provider.Settings
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -106,12 +107,16 @@ class MainActivity : ComponentActivity() {
         callJs(requestId, true, response.toString())
     }
 
-    @Suppress("DEPRECATION")
     private fun handleHapticFeedback(handlerName: String, requestId: String, data: String?) {
         val json = data?.let { JSONObject(it) }
         val durationMs = json?.optLong("duration", 50) ?: 50
 
-        val vibrator = getSystemService(VIBRATOR_SERVICE) as android.os.Vibrator
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            getSystemService(VibratorManager::class.java).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(VIBRATOR_SERVICE) as android.os.Vibrator
+        }
         vibrator.vibrate(
             VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE),
         )
