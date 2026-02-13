@@ -4,6 +4,10 @@
 
 Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualizes **WebView JavaScript bridge messages** between your web content and native Android code.
 
+## Screenshots
+
+<!-- TODO: Add screenshots -->
+
 ## Features
 
 - Intercepts Web-to-App and App-to-Web bridge messages
