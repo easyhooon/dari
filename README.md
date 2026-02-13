@@ -9,7 +9,7 @@ Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualiz
 ## Screenshots
 
 <p align="center">
-  <img src="screenshots/shortcut.jpeg" width="270" />
+  <img src="screenshots/shortcut_v2.jpeg" width="270" />
   <img src="screenshots/notification.jpeg" width="270" />
   <img src="screenshots/list.jpeg" width="270" />
 </p>
