@@ -22,6 +22,8 @@ android {
 dependencies {
     implementation(libs.androidx.startup)
     implementation(libs.kotlinx.coroutines.core)
+
+    testImplementation(libs.junit)
 }
 
 mavenPublishing {

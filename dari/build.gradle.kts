@@ -44,6 +44,9 @@ dependencies {
 
     // Serialization (JSON parsing)
     implementation(libs.kotlinx.serialization.json)
+
+    // Test
+    testImplementation(libs.junit)
 }
 
 mavenPublishing {
