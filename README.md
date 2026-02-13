@@ -143,7 +143,7 @@ The `sample/` module contains a working WebView demo with realistic bridge scena
 ## License
 
 ```
-Copyright 2025 easyhooon
+Copyright 2026 easyhooon
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
