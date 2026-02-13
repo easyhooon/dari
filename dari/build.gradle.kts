@@ -50,7 +50,7 @@ mavenPublishing {
     coordinates(
         groupId = "io.github.easyhooon",
         artifactId = "dari",
-        version = "1.0.0"
+        version = "1.0.1"
     )
 
     pom {
