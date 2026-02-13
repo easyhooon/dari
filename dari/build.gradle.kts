@@ -1,6 +1,9 @@
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.vanniktech.maven.publish)
 }
 
 android {
@@ -41,4 +44,43 @@ dependencies {
 
     // Serialization (JSON parsing)
     implementation(libs.kotlinx.serialization.json)
+}
+
+mavenPublishing {
+    coordinates(
+        groupId = "io.github.easyhooon",
+        artifactId = "dari",
+        version = "1.0.0"
+    )
+
+    pom {
+        name.set("Dari")
+        description.set("WebView bridge message inspector for Android, inspired by Chucker")
+        inceptionYear.set("2025")
+        url.set("https://github.com/easyhooon/dari")
+
+        licenses {
+            license {
+                name.set("The Apache Software License, Version 2.0")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+            }
+        }
+
+        developers {
+            developer {
+                id.set("easyhooon")
+                name.set("Lee jihun")
+                email.set("mraz3068@gmail.com")
+            }
+        }
+
+        scm {
+            url.set("https://github.com/easyhooon/dari")
+            connection.set("scm:git:git://github.com/easyhooon/dari.git")
+            developerConnection.set("scm:git:ssh://git@github.com/easyhooon/dari.git")
+        }
+    }
+
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    signAllPublications()
 }
