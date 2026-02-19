@@ -21,5 +21,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "dari"
 include(":sample")
+include(":dari-core")
 include(":dari")
 include(":dari-noop")

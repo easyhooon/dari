@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 /**
  * Noop implementation - does nothing.
  */
+@Suppress("UNUSED_PARAMETER")
 class MessageRepository(private val maxEntries: Int = 500) {
 
     val entries: StateFlow<List<MessageEntry>> = MutableStateFlow(emptyList())
