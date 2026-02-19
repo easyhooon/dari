@@ -107,6 +107,7 @@ class MyApp : Application() {
 
 ```
 dari/
+├── dari-core/     ← Shared types (DariConfig, MessageEntry, DariInterceptor, etc.)
 ├── dari/          ← Debug library (interceptor, UI, notifications)
 ├── dari-noop/     ← Release no-op (same API surface, zero overhead)
 └── sample/        ← Sample app with WebView bridge demo
