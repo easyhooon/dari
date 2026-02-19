@@ -20,6 +20,8 @@ android {
 }
 
 dependencies {
+    api(project(":dari-core"))
+
     implementation(libs.androidx.startup)
     implementation(libs.kotlinx.coroutines.core)
 
@@ -30,7 +32,7 @@ mavenPublishing {
     coordinates(
         groupId = "io.github.easyhooon",
         artifactId = "dari-noop",
-        version = "1.0.1"
+        version = "1.1.0"
     )
 
     pom {
