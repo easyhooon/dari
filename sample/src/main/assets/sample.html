@@ -103,33 +103,33 @@
             el.innerHTML = '<div class="' + cls + '">' + msg + '</div>' + el.innerHTML;
         }
 
-        function rid() {
+        function createRequestId() {
             requestCounter++;
             return 'req_' + Date.now() + '_' + requestCounter;
         }
 
         function getAppInfo() {
-            var id = rid();
+            var id = createRequestId();
             log('→ getAppInfo', 'req');
             Android.onBridgeRequest('getAppInfo', id, null);
         }
 
         function hapticFeedback() {
-            var id = rid();
+            var id = createRequestId();
             var data = JSON.stringify({ type: "success", duration: 50 });
             log('→ hapticFeedback', 'req');
             Android.onBridgeRequest('hapticFeedback', id, data);
         }
 
         function showToast() {
-            var id = rid();
+            var id = createRequestId();
             var data = JSON.stringify({ message: "Hello from WebView!", duration: "short" });
             log('→ showToast', 'req');
             Android.onBridgeRequest('showToast', id, data);
         }
 
         function shareText() {
-            var id = rid();
+            var id = createRequestId();
             var data = JSON.stringify({
                 title: "Check this out",
                 text: "Dari - WebView Bridge Debugger for Android\nhttps://github.com/easyhooon/dari"
@@ -139,20 +139,20 @@
         }
 
         function copyToClipboard() {
-            var id = rid();
+            var id = createRequestId();
             var data = JSON.stringify({ text: "Copied from Dari WebView Bridge!" });
             log('→ copyToClipboard', 'req');
             Android.onBridgeRequest('copyToClipboard', id, data);
         }
 
         function openAppSettings() {
-            var id = rid();
+            var id = createRequestId();
             log('→ openAppSettings', 'req');
             Android.onBridgeRequest('openAppSettings', id, null);
         }
 
         function requestPermission() {
-            var id = rid();
+            var id = createRequestId();
             var data = JSON.stringify({ permission: "camera" });
             log('→ requestCameraPermission', 'req');
             Android.onBridgeRequest('requestCameraPermission', id, data);
