@@ -23,7 +23,7 @@ mavenPublishing {
     coordinates(
         groupId = "io.github.easyhooon",
         artifactId = "dari-core",
-        version = "1.1.0"
+        version = "1.1.1"
     )
 
     pom {

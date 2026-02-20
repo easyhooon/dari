@@ -19,10 +19,12 @@
         <activity
             android:name=".ui.DariActivity"
             android:exported="false"
+            android:taskAffinity="com.easyhooon.dari"
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
         <activity
             android:name=".ui.DariDetailActivity"
             android:exported="false"
+            android:taskAffinity="com.easyhooon.dari"
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
         <receiver
             android:name=".notification.ClearDariReceiver"
