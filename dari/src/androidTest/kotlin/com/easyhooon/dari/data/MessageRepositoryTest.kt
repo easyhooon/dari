@@ -23,6 +23,8 @@ class MessageRepositoryTest {
 
     @Before
     fun setup() {
+        // Uses in-memory database (not persisted to disk) for test isolation.
+        // Automatically garbage-collected when the test instance is discarded.
         database = Room.inMemoryDatabaseBuilder(
             ApplicationProvider.getApplicationContext(),
             DariDatabase::class.java,
@@ -32,6 +34,9 @@ class MessageRepositoryTest {
 
     @After
     fun tearDown() {
+        // Only cancel the coroutine scope; do NOT call database.close() here.
+        // The repository's background scope may still be executing DAO operations,
+        // and closing the database would cause SQLiteDatabase already-closed crashes.
         repository.close()
     }
 
