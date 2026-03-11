@@ -4,6 +4,7 @@ import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.data.local.DariDatabase
 import com.easyhooon.dari.data.local.toEntity
 import com.easyhooon.dari.data.local.toMessageEntry
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -32,11 +33,14 @@ class MessageRepository internal constructor(
     private val _messageCount = MutableStateFlow(0)
     val messageCount: StateFlow<Int> = _messageCount.asStateFlow()
 
+    internal val initialized = CompletableDeferred<Unit>()
+
     init {
         scope.launch {
             val persisted = dao.getAll().map { it.toMessageEntry() }
             _entries.value = persisted
             _messageCount.value = persisted.size
+            initialized.complete(Unit)
         }
     }
 
@@ -69,7 +73,7 @@ class MessageRepository internal constructor(
                     requestId = requestId,
                     responseData = entry.responseData,
                     status = entry.status,
-                    responseTimestamp = entry.responseTimestamp ?: 0L,
+                    responseTimestamp = entry.responseTimestamp,
                 )
             }
         }

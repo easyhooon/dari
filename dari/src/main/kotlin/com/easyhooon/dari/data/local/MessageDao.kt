@@ -21,7 +21,7 @@ internal interface MessageDao {
         requestId: String,
         responseData: String?,
         status: MessageStatus,
-        responseTimestamp: Long,
+        responseTimestamp: Long?,
     )
 
     @Query(

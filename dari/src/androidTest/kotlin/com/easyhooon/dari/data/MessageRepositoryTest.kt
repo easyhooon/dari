@@ -96,11 +96,8 @@ class MessageRepositoryTest {
         repository.addEntry(createEntry("1"))
         repository.addEntry(createEntry("2"))
 
-        // Create a new repository with the same database
         val newRepository = MessageRepository(database, maxEntries = 3)
-
-        // Wait briefly for the init coroutine to load from DB
-        kotlinx.coroutines.delay(500)
+        newRepository.initialized.await()
 
         assertEquals(2, newRepository.entries.value.size)
     }

@@ -43,8 +43,8 @@ object Dari {
 
         if (database == null) {
             database = DariDatabase.create(this.context)
+            repository = MessageRepository(database!!, config.maxEntries)
         }
-        repository = MessageRepository(database!!, config.maxEntries)
 
         if (config.showNotification) {
             notification = DariNotification(this.context)
