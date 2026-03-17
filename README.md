@@ -84,6 +84,18 @@ interceptor?.onAppToWebMessage(handlerName, requestId, data)
 interceptor?.onAppToWebResponse(requestId, isSuccess, responseData)
 ```
 
+#### 4. Fire-and-Forget messages (optional requestId)
+
+For messages that don't require a response (e.g., analytics events, screen tracking), you can pass `null` as the `requestId`:
+
+```kotlin
+// Fire-and-forget: no response expected
+interceptor?.onWebToAppRequest(handlerName, null, data)
+// No need to call onWebToAppResponse
+```
+
+When `requestId` is `null`, the message is treated as standalone and won't be matched with a response.
+
 ### Custom Configuration
 
 You can customize Dari by calling `init` with a config before auto-initialization occurs, or in your `Application.onCreate()`:
@@ -136,10 +148,10 @@ The `sample/` module contains a working WebView demo with realistic bridge scena
 
 | Method | Description |
 |--------|-------------|
-| `onWebToAppRequest(handlerName, requestId, requestData)` | Log a Web-to-App request |
-| `onWebToAppResponse(handlerName, requestId, responseData, isSuccess)` | Log the response to a Web-to-App request |
-| `onAppToWebMessage(handlerName, requestId, data)` | Log an App-to-Web message |
-| `onAppToWebResponse(requestId, isSuccess, responseData)` | Log the response to an App-to-Web message |
+| `onWebToAppRequest()` | Log a Web-to-App request. `requestId` is optional for fire-and-forget messages. |
+| `onWebToAppResponse()` | Log the response to a Web-to-App request. Skipped if `requestId` is null. |
+| `onAppToWebMessage()` | Log an App-to-Web message. `requestId` is optional for fire-and-forget messages. |
+| `onAppToWebResponse()` | Log the response to an App-to-Web message. Skipped if `requestId` is null. |
 
 ```kotlin
 /**
@@ -148,16 +160,33 @@ The `sample/` module contains a working WebView demo with realistic bridge scena
  */
 interface DariInterceptor {
     /** Called when a Web -> App request is received */
-    fun onWebToAppRequest(handlerName: String, requestId: String, requestData: String?)
+    fun onWebToAppRequest(
+        handlerName: String,
+        requestId: String?,
+        requestData: String?,
+    )
 
     /** Called when a response is sent for a Web -> App request */
-    fun onWebToAppResponse(handlerName: String, requestId: String, responseData: String?, isSuccess: Boolean)
+    fun onWebToAppResponse(
+        handlerName: String,
+        requestId: String?,
+        responseData: String?,
+        isSuccess: Boolean,
+    )
 
     /** Called when an App -> Web message is sent */
-    fun onAppToWebMessage(handlerName: String, requestId: String, data: String?)
+    fun onAppToWebMessage(
+        handlerName: String,
+        requestId: String?,
+        data: String?,
+    )
 
     /** Called when a web response is received for an App -> Web request */
-    fun onAppToWebResponse(requestId: String, isSuccess: Boolean, responseData: String?)
+    fun onAppToWebResponse(
+        requestId: String?,
+        isSuccess: Boolean,
+        responseData: String?,
+    )
 }
 ```
 
