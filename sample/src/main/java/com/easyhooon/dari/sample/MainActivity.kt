@@ -28,7 +28,7 @@ import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
 
-    private val interceptor: DariInterceptor? = Dari.createInterceptor()
+    private val interceptor: DariInterceptor? = Dari.createInterceptor(tag = "SampleWebView")
     private var webView: WebView? = null
 
     // Pending camera permission request info
