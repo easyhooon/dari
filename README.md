@@ -22,8 +22,9 @@ Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualiz
 ## Features
 
 - Intercepts Web-to-App and App-to-Web bridge messages
+- **Tag support** for identifying message sources in multi-WebView/Activity environments
 - Chucker-style persistent notification showing recent bridge activity
-- Message list UI with search and filter by handler name
+- Message list UI with search, filter by handler name, and **tag-based filtering**
 - Detail view with Overview / Request / Response tabs
 - JSON pretty-printing for request and response payloads
 - Share message details as text
@@ -56,9 +57,15 @@ Dari requires **manual injection** of the interceptor into your WebView bridge l
 import com.easyhooon.dari.Dari
 import com.easyhooon.dari.interceptor.DariInterceptor
 
-// Returns DefaultDariInterceptor in debug builds, null in release builds
+// Basic usage (no tag)
 val interceptor: DariInterceptor? = Dari.createInterceptor()
+
+// With tag — identifies the source in multi-WebView/Activity environments
+val paymentInterceptor: DariInterceptor? = Dari.createInterceptor(tag = "PaymentWebView")
+val mainInterceptor: DariInterceptor? = Dari.createInterceptor(tag = "MainWebView")
 ```
+
+When a `tag` is provided, all messages captured by that interceptor are automatically tagged. Tags appear as chips in the message list and can be used to filter messages by source.
 
 #### 2. Intercept Web-to-App messages
 
@@ -140,7 +147,7 @@ The `sample/` module contains a working WebView demo with realistic bridge scena
 | Method | Description |
 |--------|-------------|
 | `init(context, config)` | Initialize with custom configuration |
-| `createInterceptor()` | Create a `DariInterceptor` (returns `null` in noop) |
+| `createInterceptor(tag?)` | Create a `DariInterceptor` with an optional tag (returns `null` in noop) |
 | `showNotification()` | Show the notification (e.g., after permission grant) |
 | `clear()` | Clear all stored messages and dismiss notification |
 
