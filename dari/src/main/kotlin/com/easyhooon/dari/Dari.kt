@@ -59,13 +59,13 @@ object Dari {
      * or null in release builds (noop module).
      */
     @Suppress("RedundantNullableReturnType") // Returns null in noop module
-    fun createInterceptor(): DariInterceptor? = DefaultDariInterceptor()
+    fun createInterceptor(tag: String? = null): DariInterceptor? = DefaultDariInterceptor(tag)
 
     /**
      * Adds a new message to the notification.
      */
-    internal fun postMessageNotification(handlerName: String, direction: MessageDirection) {
-        notification?.postMessage(handlerName, direction)
+    internal fun postMessageNotification(handlerName: String, direction: MessageDirection, tag: String? = null) {
+        notification?.postMessage(handlerName, direction, tag)
     }
 
     /**

@@ -6,12 +6,19 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -36,9 +43,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.Dari
 import com.easyhooon.dari.ui.components.MessageListItem
@@ -69,15 +78,17 @@ class DariActivity : ComponentActivity() {
                 val entries by Dari.repository.entries.collectAsState()
                 var isSearchMode by rememberSaveable { mutableStateOf(false) }
                 var searchQuery by rememberSaveable { mutableStateOf("") }
+                var selectedTag by rememberSaveable { mutableStateOf<String?>(null) }
                 var showClearDialog by rememberSaveable { mutableStateOf(false) }
                 val keyboardController = LocalSoftwareKeyboardController.current
 
-                val filteredEntries = if (searchQuery.isBlank()) {
-                    entries.reversed()
-                } else {
-                    entries.reversed().filter {
-                        it.handlerName.contains(searchQuery, ignoreCase = true)
-                    }
+                val availableTags = entries.mapNotNull { it.tag }.distinct()
+
+                val filteredEntries = entries.reversed().filter { entry ->
+                    val matchesSearch = searchQuery.isBlank() ||
+                        entry.handlerName.contains(searchQuery, ignoreCase = true)
+                    val matchesTag = selectedTag == null || entry.tag == selectedTag
+                    matchesSearch && matchesTag
                 }
 
                 Scaffold(
@@ -150,6 +161,49 @@ class DariActivity : ComponentActivity() {
                             .fillMaxSize()
                             .padding(padding),
                     ) {
+                        Column {
+                        if (availableTags.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                val allSelected = selectedTag == null
+                                Text(
+                                    text = "All",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (allSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(
+                                            if (allSelected) Color(0xFF2D6AB1) else MaterialTheme.colorScheme.surfaceVariant,
+                                        )
+                                        .clickable { selectedTag = null }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                )
+                                availableTags.forEach { tag ->
+                                    val isSelected = selectedTag == tag
+                                    Text(
+                                        text = tag,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(
+                                                if (isSelected) Color(0xFF2D6AB1) else MaterialTheme.colorScheme.surfaceVariant,
+                                            )
+                                            .clickable { selectedTag = if (isSelected) null else tag }
+                                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    )
+                                }
+                            }
+                        }
                         if (filteredEntries.isEmpty()) {
                             Column(
                                 modifier = Modifier
@@ -186,6 +240,7 @@ class DariActivity : ComponentActivity() {
                                     )
                                 }
                             }
+                        }
                         }
                     }
 

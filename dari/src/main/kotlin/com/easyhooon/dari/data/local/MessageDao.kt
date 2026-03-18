@@ -15,10 +15,11 @@ internal interface MessageDao {
     suspend fun insert(entity: MessageEntity): Long
 
     @Query(
-        "UPDATE messages SET responseData = :responseData, status = :status, responseTimestamp = :responseTimestamp WHERE requestId = :requestId"
+        "UPDATE messages SET responseData = :responseData, status = :status, responseTimestamp = :responseTimestamp WHERE requestId = :requestId AND (tag = :tag OR (:tag IS NULL AND tag IS NULL))"
     )
     suspend fun updateByRequestId(
         requestId: String,
+        tag: String?,
         responseData: String?,
         status: MessageStatus,
         responseTimestamp: Long?,

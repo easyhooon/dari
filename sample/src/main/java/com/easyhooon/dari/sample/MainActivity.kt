@@ -28,7 +28,7 @@ import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
 
-    private val interceptor: DariInterceptor? = Dari.createInterceptor()
+    private val interceptor: DariInterceptor? = Dari.createInterceptor(tag = "SampleWebView")
     private var webView: WebView? = null
 
     // Pending camera permission request info
@@ -150,7 +150,9 @@ class MainActivity : ComponentActivity() {
 
     private fun handleShowToast(handlerName: String, requestId: String, data: String?) {
         val json = data?.let { JSONObject(it) }
-        val message = json?.optString("message", "Hello!") ?: "Hello!"
+        val rawMessage = json?.optString("message", "Hello!") ?: "Hello!"
+        val prefix = interceptor?.tag?.let { "[$it] " } ?: ""
+        val message = "$prefix$rawMessage"
         val duration = if (json?.optString("duration") == "long") {
             Toast.LENGTH_LONG
         } else {

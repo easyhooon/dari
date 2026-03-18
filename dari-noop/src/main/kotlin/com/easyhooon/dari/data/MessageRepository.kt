@@ -14,6 +14,6 @@ class MessageRepository(private val maxEntries: Int = 500) {
     val messageCount: StateFlow<Int> = MutableStateFlow(0)
 
     fun addEntry(entry: MessageEntry) = Unit
-    fun updateEntry(requestId: String, transform: (MessageEntry) -> MessageEntry) = Unit
+    fun updateEntry(requestId: String, tag: String? = null, transform: (MessageEntry) -> MessageEntry) = Unit
     fun clear() = Unit
 }

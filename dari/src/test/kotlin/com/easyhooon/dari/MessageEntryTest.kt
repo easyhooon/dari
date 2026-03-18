@@ -73,4 +73,35 @@ class MessageEntryTest {
         )
         assertEquals(MessageStatus.IN_PROGRESS, entry.status)
     }
+
+    @Test
+    fun `tag defaults to null`() {
+        val entry = MessageEntry(
+            handlerName = "test",
+            direction = MessageDirection.WEB_TO_APP,
+        )
+        assertNull(entry.tag)
+    }
+
+    @Test
+    fun `tag is preserved when set`() {
+        val entry = MessageEntry(
+            handlerName = "test",
+            direction = MessageDirection.WEB_TO_APP,
+            tag = "PaymentWebView",
+        )
+        assertEquals("PaymentWebView", entry.tag)
+    }
+
+    @Test
+    fun `tag is preserved through copy`() {
+        val entry = MessageEntry(
+            handlerName = "test",
+            direction = MessageDirection.WEB_TO_APP,
+            tag = "MainWebView",
+        )
+        val updated = entry.copy(status = MessageStatus.SUCCESS)
+        assertEquals("MainWebView", updated.tag)
+        assertEquals(MessageStatus.SUCCESS, updated.status)
+    }
 }

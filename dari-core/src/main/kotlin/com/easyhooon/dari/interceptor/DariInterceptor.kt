@@ -5,6 +5,10 @@ package com.easyhooon.dari.interceptor
  * Injected into WebViewBridge to capture all bridge messages.
  */
 interface DariInterceptor {
+    /** Tag identifying the source of messages captured by this interceptor */
+    val tag: String?
+        get() = null
+
     /** Called when a Web -> App request is received */
     fun onWebToAppRequest(handlerName: String, requestId: String?, requestData: String?)
 

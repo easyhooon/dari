@@ -70,11 +70,11 @@ class MessageRepository internal constructor(
         }
     }
 
-    fun updateEntry(requestId: String, transform: (MessageEntry) -> MessageEntry) {
+    fun updateEntry(requestId: String, tag: String? = null, transform: (MessageEntry) -> MessageEntry) {
         var updatedEntry: MessageEntry? = null
         _entries.update { current ->
             current.map { entry ->
-                if (entry.requestId == requestId) {
+                if (entry.requestId == requestId && entry.tag == tag) {
                     transform(entry).also { updatedEntry = it }
                 } else {
                     entry
@@ -85,6 +85,7 @@ class MessageRepository internal constructor(
             scope.launch {
                 dao.updateByRequestId(
                     requestId = requestId,
+                    tag = tag,
                     responseData = entry.responseData,
                     status = entry.status,
                     responseTimestamp = entry.responseTimestamp,

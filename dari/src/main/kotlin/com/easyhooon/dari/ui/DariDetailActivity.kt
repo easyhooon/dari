@@ -129,6 +129,7 @@ class DariDetailActivity : ComponentActivity() {
             appendLine("Handler: ${entry.handlerName}")
             appendLine("Direction: $direction")
             appendLine("Status: ${entry.status}")
+            appendLine("Tag: ${entry.tag ?: "-"}")
             appendLine("Request ID: ${entry.requestId ?: "-"}")
             appendLine()
             appendLine("Request time: ${dateFormat.format(Date(entry.requestTimestamp))}")
@@ -246,6 +247,7 @@ private fun OverviewTab(entry: MessageEntry) {
         OverviewRow("Handler", entry.handlerName)
         OverviewRow("Direction", direction)
         OverviewRow("Status", entry.status.name)
+        OverviewRow("Tag", entry.tag ?: "-")
         OverviewRow("Request ID", entry.requestId ?: "-")
 
         Spacer(modifier = Modifier.height(8.dp))

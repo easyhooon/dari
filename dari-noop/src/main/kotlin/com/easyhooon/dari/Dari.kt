@@ -11,7 +11,8 @@ object Dari {
     @Suppress("UNUSED_PARAMETER")
     fun init(context: Context, config: DariConfig = DariConfig()) = Unit
 
-    fun createInterceptor(): DariInterceptor? = null
+    @Suppress("UNUSED_PARAMETER")
+    fun createInterceptor(tag: String? = null): DariInterceptor? = null
 
     fun clear() = Unit
 }
