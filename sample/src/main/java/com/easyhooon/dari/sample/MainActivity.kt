@@ -222,7 +222,7 @@ class MainActivity : ComponentActivity() {
 
     private fun handleSendWithNullFields(handlerName: String, requestId: String, data: String?) {
         val json = data?.let { JSONObject(it) }
-        val name = json?.optString("name") ?: "unknown"
+        val name = json?.optString("name")?.takeIf { it.isNotEmpty() } ?: "unknown"
 
         val response = JSONObject().apply {
             put("name", name)
