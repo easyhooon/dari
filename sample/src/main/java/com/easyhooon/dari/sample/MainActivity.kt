@@ -88,6 +88,7 @@ class MainActivity : ComponentActivity() {
                 "copyToClipboard" -> handleCopyToClipboard(handlerName, requestId, data)
                 "openAppSettings" -> handleOpenAppSettings(handlerName, requestId)
                 "requestCameraPermission" -> handleRequestCameraPermission(requestId)
+                "sendWithNullFields" -> handleSendWithNullFields(handlerName, requestId, data)
                 "fetchLargeData" -> handleFetchLargeData(handlerName, requestId)
                 else -> {
                     val error = """{"error":"Unknown handler","handler":"$handlerName"}"""
@@ -218,6 +219,21 @@ class MainActivity : ComponentActivity() {
     private fun handleRequestCameraPermission(requestId: String) {
         pendingPermissionRequestId = requestId
         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+    }
+
+    private fun handleSendWithNullFields(handlerName: String, requestId: String, data: String?) {
+        val json = data?.let { JSONObject(it) }
+        val name = json?.optString("name")?.takeIf { it.isNotEmpty() } ?: "unknown"
+
+        val response = JSONObject().apply {
+            put("name", name)
+            put("processedAt", System.currentTimeMillis())
+            put("profileImage", JSONObject.NULL)
+            put("nickname", JSONObject.NULL)
+            put("metadata", JSONObject.NULL)
+        }
+        interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(2), true)
+        callJs(requestId, true, response.toString())
     }
 
     private fun handleFetchLargeData(handlerName: String, requestId: String) {

@@ -92,6 +92,12 @@
         <span>Trigger native permission dialog</span>
     </button>
 
+    <div class="section">Null Field Handling</div>
+    <button class="btn btn-indigo" onclick="sendWithNullFields()">
+        Send with Null Fields
+        <span>Request containing explicit null values</span>
+    </button>
+
     <div class="section">Large Payload (Truncation Test)</div>
     <button class="btn btn-red" onclick="fetchLargeData()">
         Fetch Large Data (~2MB)
@@ -172,6 +178,19 @@
             var data = JSON.stringify({ permission: "camera" });
             log('→ requestCameraPermission', 'req');
             Android.onBridgeRequest('requestCameraPermission', id, data);
+        }
+
+        function sendWithNullFields() {
+            var id = createRequestId();
+            var data = JSON.stringify({
+                name: "test_user",
+                email: null,
+                age: null,
+                address: null,
+                isVerified: true
+            });
+            log('→ sendWithNullFields', 'req');
+            Android.onBridgeRequest('sendWithNullFields', id, data);
         }
 
         function fetchLargeData() {
