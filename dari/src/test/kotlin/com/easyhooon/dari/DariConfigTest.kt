@@ -25,4 +25,14 @@ class DariConfigTest {
         assertEquals(false, config.showNotification)
         assertEquals(1_000_000, config.maxContentLength)
     }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `maxContentLength rejects zero`() {
+        DariConfig(maxContentLength = 0)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `maxContentLength rejects negative value`() {
+        DariConfig(maxContentLength = -1)
+    }
 }
