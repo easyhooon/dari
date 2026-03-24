@@ -147,4 +147,112 @@ class MessageEntryTest {
         assertFalse(entry.requestDataTruncated)
         assertFalse(entry.responseDataTruncated)
     }
+
+    @Test
+    fun `truncation flags default to false in secondary constructor`() {
+        val entry = MessageEntry(
+            id = 1L,
+            requestId = "1",
+            handlerName = "test",
+            direction = MessageDirection.WEB_TO_APP,
+            requestData = "req",
+            responseData = "res",
+            status = MessageStatus.SUCCESS,
+            requestTimestamp = 1000L,
+            responseTimestamp = 2000L,
+        )
+        assertFalse(entry.requestDataTruncated)
+        assertFalse(entry.responseDataTruncated)
+    }
+
+    @Test
+    fun `truncation flags are preserved through copy`() {
+        val entry = MessageEntry(
+            handlerName = "test",
+            direction = MessageDirection.WEB_TO_APP,
+            requestDataTruncated = true,
+            responseDataTruncated = true,
+        )
+        val updated = entry.copy(status = MessageStatus.SUCCESS)
+        assertTrue(updated.requestDataTruncated)
+        assertTrue(updated.responseDataTruncated)
+        assertEquals(MessageStatus.SUCCESS, updated.status)
+    }
+
+    @Test
+    fun `truncateIfNeeded returns empty string as-is`() {
+        val (result, wasTruncated) = MessageEntry.truncateIfNeeded("", 100)
+        assertEquals("", result)
+        assertFalse(wasTruncated)
+    }
+
+    @Test
+    fun `truncateIfNeeded handles multibyte characters by char count`() {
+        val data = "가나다라마"
+        val (result, wasTruncated) = MessageEntry.truncateIfNeeded(data, 3)
+        assertTrue(wasTruncated)
+        assertTrue(result!!.startsWith("가나다"))
+    }
+
+    // --- Existing code coverage ---
+
+    @Test
+    fun `totalSizeBytes when only requestData is present`() {
+        val entry = MessageEntry(
+            handlerName = "test",
+            direction = MessageDirection.WEB_TO_APP,
+            requestData = "hello",
+            responseData = null,
+        )
+        assertEquals(5, entry.totalSizeBytes)
+    }
+
+    @Test
+    fun `totalSizeBytes when only responseData is present`() {
+        val entry = MessageEntry(
+            handlerName = "test",
+            direction = MessageDirection.WEB_TO_APP,
+            requestData = null,
+            responseData = "world!",
+        )
+        assertEquals(6, entry.totalSizeBytes)
+    }
+
+    @Test
+    fun `secondary constructor maps all fields correctly with tag as null`() {
+        val entry = MessageEntry(
+            id = 42L,
+            requestId = "req-1",
+            handlerName = "getAppInfo",
+            direction = MessageDirection.APP_TO_WEB,
+            requestData = "req",
+            responseData = "res",
+            status = MessageStatus.SUCCESS,
+            requestTimestamp = 1000L,
+            responseTimestamp = 2000L,
+        )
+        assertEquals(42L, entry.id)
+        assertEquals("req-1", entry.requestId)
+        assertEquals("getAppInfo", entry.handlerName)
+        assertEquals(MessageDirection.APP_TO_WEB, entry.direction)
+        assertNull(entry.tag)
+        assertEquals("req", entry.requestData)
+        assertEquals("res", entry.responseData)
+        assertEquals(MessageStatus.SUCCESS, entry.status)
+        assertEquals(1000L, entry.requestTimestamp)
+        assertEquals(2000L, entry.responseTimestamp)
+    }
+
+    @Test
+    fun `fire-and-forget entry has null requestId`() {
+        val entry = MessageEntry(
+            requestId = null,
+            handlerName = "logEvent",
+            direction = MessageDirection.WEB_TO_APP,
+            requestData = """{"event":"click"}""",
+        )
+        assertNull(entry.requestId)
+        assertNull(entry.durationMs)
+        assertEquals(MessageStatus.IN_PROGRESS, entry.status)
+    }
 }
