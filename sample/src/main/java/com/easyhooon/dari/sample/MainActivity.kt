@@ -88,6 +88,7 @@ class MainActivity : ComponentActivity() {
                 "copyToClipboard" -> handleCopyToClipboard(handlerName, requestId, data)
                 "openAppSettings" -> handleOpenAppSettings(handlerName, requestId)
                 "requestCameraPermission" -> handleRequestCameraPermission(requestId)
+                "fetchLargeData" -> handleFetchLargeData(handlerName, requestId)
                 else -> {
                     val error = """{"error":"Unknown handler","handler":"$handlerName"}"""
                     interceptor?.onWebToAppResponse(handlerName, requestId, error, false)
@@ -217,6 +218,21 @@ class MainActivity : ComponentActivity() {
     private fun handleRequestCameraPermission(requestId: String) {
         pendingPermissionRequestId = requestId
         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+    }
+
+    private fun handleFetchLargeData(handlerName: String, requestId: String) {
+        // Simulate a large response payload (~2MB) that exceeds Android's Binder transaction limit.
+        // Dari will automatically truncate this data based on maxContentLength config.
+        val largePayload = buildString {
+            append("""{"items":[""")
+            for (i in 0 until 10_000) {
+                if (i > 0) append(",")
+                append("""{"id":$i,"title":"Item #$i","description":"This is a sample item with some additional data to simulate a realistic large API response payload.","category":"category_${i % 20}","price":${i * 1.5},"inStock":${i % 3 != 0},"tags":["tag_${i % 5}","tag_${i % 7}","tag_${i % 11}"]}""")
+            }
+            append("]}")
+        }
+        interceptor?.onWebToAppResponse(handlerName, requestId, largePayload, true)
+        callJs(requestId, true, """{"size":${largePayload.length},"itemCount":10000}""")
     }
 
     private fun handleLogEvent(data: String?) {

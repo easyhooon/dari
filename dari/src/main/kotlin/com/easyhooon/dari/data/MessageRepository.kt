@@ -87,6 +87,7 @@ class MessageRepository internal constructor(
                     requestId = requestId,
                     tag = tag,
                     responseData = entry.responseData,
+                    responseDataTruncated = entry.responseDataTruncated,
                     status = entry.status,
                     responseTimestamp = entry.responseTimestamp,
                 )

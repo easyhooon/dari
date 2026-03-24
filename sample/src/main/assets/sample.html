@@ -92,6 +92,12 @@
         <span>Trigger native permission dialog</span>
     </button>
 
+    <div class="section">Large Payload (Truncation Test)</div>
+    <button class="btn btn-red" onclick="fetchLargeData()">
+        Fetch Large Data (~2MB)
+        <span>Simulates a large API response that triggers body truncation</span>
+    </button>
+
     <div class="section">Fire-and-Forget (No Response)</div>
     <button class="btn btn-purple" onclick="logEvent()">
         Log Event
@@ -166,6 +172,12 @@
             var data = JSON.stringify({ permission: "camera" });
             log('→ requestCameraPermission', 'req');
             Android.onBridgeRequest('requestCameraPermission', id, data);
+        }
+
+        function fetchLargeData() {
+            var id = createRequestId();
+            log('→ fetchLargeData (~2MB response)', 'req');
+            Android.onBridgeRequest('fetchLargeData', id, null);
         }
 
         function logEvent() {

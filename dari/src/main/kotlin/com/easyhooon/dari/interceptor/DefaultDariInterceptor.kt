@@ -16,13 +16,18 @@ class DefaultDariInterceptor(
     override val tag: String? = null,
 ) : DariInterceptor {
 
+    private val maxContentLength: Int
+        get() = Dari.config.maxContentLength
+
     override fun onWebToAppRequest(handlerName: String, requestId: String?, requestData: String?) {
+        val (truncatedData, wasTruncated) = MessageEntry.truncateIfNeeded(requestData, maxContentLength)
         val entry = MessageEntry(
             requestId = requestId,
             handlerName = handlerName,
             direction = MessageDirection.WEB_TO_APP,
             tag = tag,
-            requestData = requestData,
+            requestData = truncatedData,
+            requestDataTruncated = wasTruncated,
         )
         Dari.repository.addEntry(entry)
         Dari.postMessageNotification(handlerName, MessageDirection.WEB_TO_APP, tag)
@@ -37,9 +42,11 @@ class DefaultDariInterceptor(
         // Skip request-response matching when requestId is null (fire-and-forget message)
         if (requestId == null) return
 
+        val (truncatedData, wasTruncated) = MessageEntry.truncateIfNeeded(responseData, maxContentLength)
         Dari.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
             entry.copy(
-                responseData = responseData,
+                responseData = truncatedData,
+                responseDataTruncated = wasTruncated,
                 status = if (isSuccess) MessageStatus.SUCCESS else MessageStatus.ERROR,
                 responseTimestamp = System.currentTimeMillis(),
             )
@@ -47,12 +54,14 @@ class DefaultDariInterceptor(
     }
 
     override fun onAppToWebMessage(handlerName: String, requestId: String?, data: String?) {
+        val (truncatedData, wasTruncated) = MessageEntry.truncateIfNeeded(data, maxContentLength)
         val entry = MessageEntry(
             requestId = requestId,
             handlerName = handlerName,
             direction = MessageDirection.APP_TO_WEB,
             tag = tag,
-            requestData = data,
+            requestData = truncatedData,
+            requestDataTruncated = wasTruncated,
         )
         Dari.repository.addEntry(entry)
         Dari.postMessageNotification(handlerName, MessageDirection.APP_TO_WEB, tag)
@@ -62,9 +71,11 @@ class DefaultDariInterceptor(
         // Skip request-response matching when requestId is null (fire-and-forget message)
         if (requestId == null) return
 
+        val (truncatedData, wasTruncated) = MessageEntry.truncateIfNeeded(responseData, maxContentLength)
         Dari.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
             entry.copy(
-                responseData = responseData,
+                responseData = truncatedData,
+                responseDataTruncated = wasTruncated,
                 status = if (isSuccess) MessageStatus.SUCCESS else MessageStatus.ERROR,
                 responseTimestamp = System.currentTimeMillis(),
             )

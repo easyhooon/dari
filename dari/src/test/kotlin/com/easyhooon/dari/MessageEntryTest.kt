@@ -1,7 +1,9 @@
 package com.easyhooon.dari
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MessageEntryTest {
@@ -103,5 +105,46 @@ class MessageEntryTest {
         val updated = entry.copy(status = MessageStatus.SUCCESS)
         assertEquals("MainWebView", updated.tag)
         assertEquals(MessageStatus.SUCCESS, updated.status)
+    }
+
+    @Test
+    fun `truncateIfNeeded returns original data when within limit`() {
+        val (result, wasTruncated) = MessageEntry.truncateIfNeeded("short data", 100)
+        assertEquals("short data", result)
+        assertFalse(wasTruncated)
+    }
+
+    @Test
+    fun `truncateIfNeeded returns null for null input`() {
+        val (result, wasTruncated) = MessageEntry.truncateIfNeeded(null, 100)
+        assertNull(result)
+        assertFalse(wasTruncated)
+    }
+
+    @Test
+    fun `truncateIfNeeded truncates data exceeding limit`() {
+        val longData = "a".repeat(200)
+        val (result, wasTruncated) = MessageEntry.truncateIfNeeded(longData, 100)
+        assertTrue(wasTruncated)
+        assertTrue(result!!.startsWith("a".repeat(100)))
+        assertTrue(result.contains("...[truncated, original length: 200 chars]"))
+    }
+
+    @Test
+    fun `truncateIfNeeded does not truncate data at exact limit`() {
+        val data = "a".repeat(100)
+        val (result, wasTruncated) = MessageEntry.truncateIfNeeded(data, 100)
+        assertEquals(data, result)
+        assertFalse(wasTruncated)
+    }
+
+    @Test
+    fun `truncation flags default to false`() {
+        val entry = MessageEntry(
+            handlerName = "test",
+            direction = MessageDirection.WEB_TO_APP,
+        )
+        assertFalse(entry.requestDataTruncated)
+        assertFalse(entry.responseDataTruncated)
     }
 }

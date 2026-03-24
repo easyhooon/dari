@@ -140,8 +140,8 @@ class DariDetailActivity : ComponentActivity() {
                 appendLine("Duration: $it ms")
             }
             appendLine()
-            appendLine("Request size: ${formatSize(requestSize)}")
-            appendLine("Response size: ${formatSize(responseSize)}")
+            appendLine("Request size: ${formatSize(requestSize)}${if (entry.requestDataTruncated) " (truncated)" else ""}")
+            appendLine("Response size: ${formatSize(responseSize)}${if (entry.responseDataTruncated) " (truncated)" else ""}")
             appendLine("Total size: ${formatSize(requestSize + responseSize)}")
             appendLine()
             appendLine("---------- Request ----------")
@@ -153,11 +153,23 @@ class DariDetailActivity : ComponentActivity() {
             appendLine(formatJson(entry.responseData) ?: "(empty)")
         }
 
+        // Truncate the final share text to stay within Android's Binder transaction limit (~1MB)
+        val safeText = if (text.length > SHARE_MAX_LENGTH) {
+            text.take(SHARE_MAX_LENGTH) + "\n\n...[truncated for sharing]"
+        } else {
+            text
+        }
+
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, text)
+            putExtra(Intent.EXTRA_TEXT, safeText)
         }
         startActivity(Intent.createChooser(intent, "Share Bridge Message"))
+    }
+
+    companion object {
+        /** Maximum character length for share Intent text to avoid TransactionTooLargeException */
+        private const val SHARE_MAX_LENGTH = 500_000
     }
 
     private fun formatJson(jsonString: String?): String? {
@@ -262,8 +274,8 @@ private fun OverviewTab(entry: MessageEntry) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        OverviewRow("Request size", formatSize(requestSize))
-        OverviewRow("Response size", formatSize(responseSize))
+        OverviewRow("Request size", formatSize(requestSize) + if (entry.requestDataTruncated) " (truncated)" else "")
+        OverviewRow("Response size", formatSize(responseSize) + if (entry.responseDataTruncated) " (truncated)" else "")
         OverviewRow("Total size", formatSize(requestSize + responseSize))
     }
 }

@@ -16,6 +16,8 @@ data class MessageEntry(
     val tag: String? = null,
     val requestData: String? = null,
     val responseData: String? = null,
+    val requestDataTruncated: Boolean = false,
+    val responseDataTruncated: Boolean = false,
     val status: MessageStatus = MessageStatus.IN_PROGRESS,
     val requestTimestamp: Long = System.currentTimeMillis(),
     val responseTimestamp: Long? = null,
@@ -58,4 +60,16 @@ data class MessageEntry(
             val responseSize = responseData?.toByteArray(Charsets.UTF_8)?.size ?: 0
             return requestSize + responseSize
         }
+
+    companion object {
+        /**
+         * Truncates [data] to [maxLength] characters if it exceeds the limit.
+         * Returns a Pair of (truncated data, wasTruncated).
+         */
+        fun truncateIfNeeded(data: String?, maxLength: Int): Pair<String?, Boolean> {
+            if (data == null || data.length <= maxLength) return data to false
+            val truncated = data.take(maxLength) + "\n\n...[truncated, original length: ${data.length} chars]"
+            return truncated to true
+        }
+    }
 }
