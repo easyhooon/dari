@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -37,11 +38,16 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -81,6 +87,20 @@ class DariActivity : ComponentActivity() {
                 var selectedTag by rememberSaveable { mutableStateOf<String?>(null) }
                 var showClearDialog by rememberSaveable { mutableStateOf(false) }
                 val keyboardController = LocalSoftwareKeyboardController.current
+
+                val lazyListState = rememberLazyListState()
+                var resumeCount by remember { mutableIntStateOf(0) }
+
+                LifecycleResumeEffect(Unit) {
+                    resumeCount++
+                    onPauseOrDispose {}
+                }
+
+                LaunchedEffect(resumeCount) {
+                    if (resumeCount > 0) {
+                        lazyListState.scrollToItem(0)
+                    }
+                }
 
                 val availableTags = entries.mapNotNull { it.tag }.distinct()
 
@@ -221,7 +241,7 @@ class DariActivity : ComponentActivity() {
                                 )
                             }
                         } else {
-                            LazyColumn {
+                            LazyColumn(state = lazyListState) {
                                 items(
                                     items = filteredEntries,
                                     key = { it.id },
