@@ -39,7 +39,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +47,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -81,7 +81,7 @@ class DariActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme {
-                val entries by Dari.repository.entries.collectAsState()
+                val entries by Dari.repository.entries.collectAsStateWithLifecycle()
                 var isSearchMode by rememberSaveable { mutableStateOf(false) }
                 var searchQuery by rememberSaveable { mutableStateOf("") }
                 var selectedTag by rememberSaveable { mutableStateOf<String?>(null) }
