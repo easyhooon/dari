@@ -26,6 +26,15 @@
             android:exported="false"
             android:taskAffinity="com.easyhooon.dari"
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <provider
+            android:name=".export.DariFileProvider"
+            android:authorities="${applicationId}.dari.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/dari_file_paths" />
+        </provider>
         <receiver
             android:name=".notification.ClearDariReceiver"
             android:exported="false" />
