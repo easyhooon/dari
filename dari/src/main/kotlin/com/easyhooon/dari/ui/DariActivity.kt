@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -56,6 +57,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.Dari
+import com.easyhooon.dari.export.DariExporter
+import com.easyhooon.dari.export.ExportFormat
 import com.easyhooon.dari.ui.components.MessageListItem
 import com.easyhooon.dari.ui.theme.DariTopBarColors
 
@@ -86,6 +89,7 @@ class DariActivity : ComponentActivity() {
                 var searchQuery by rememberSaveable { mutableStateOf("") }
                 var selectedTag by rememberSaveable { mutableStateOf<String?>(null) }
                 var showClearDialog by rememberSaveable { mutableStateOf(false) }
+                var showExportDialog by rememberSaveable { mutableStateOf(false) }
                 val keyboardController = LocalSoftwareKeyboardController.current
 
                 val lazyListState = rememberLazyListState()
@@ -167,6 +171,12 @@ class DariActivity : ComponentActivity() {
                                     IconButton(onClick = { isSearchMode = true }) {
                                         Icon(Icons.Default.Search, contentDescription = "Search")
                                     }
+                                }
+                                IconButton(
+                                    onClick = { showExportDialog = true },
+                                    enabled = filteredEntries.isNotEmpty(),
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = "Export")
                                 }
                                 IconButton(onClick = { showClearDialog = true }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Clear")
@@ -280,6 +290,38 @@ class DariActivity : ComponentActivity() {
                             dismissButton = {
                                 TextButton(onClick = { showClearDialog = false }) {
                                     Text("CANCEL")
+                                }
+                            },
+                        )
+                    }
+
+                    if (showExportDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showExportDialog = false },
+                            title = { Text("Export") },
+                            text = { Text("Choose export format for ${filteredEntries.size} messages") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    showExportDialog = false
+                                    DariExporter.exportAndShare(
+                                        this@DariActivity,
+                                        filteredEntries,
+                                        ExportFormat.JSON,
+                                    )
+                                }) {
+                                    Text("JSON")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = {
+                                    showExportDialog = false
+                                    DariExporter.exportAndShare(
+                                        this@DariActivity,
+                                        filteredEntries,
+                                        ExportFormat.TEXT,
+                                    )
+                                }) {
+                                    Text("TEXT")
                                 }
                             },
                         )
