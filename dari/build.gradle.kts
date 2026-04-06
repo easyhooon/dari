@@ -14,6 +14,7 @@ android {
     defaultConfig {
         minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "DARI_VERSION", "\"${libs.versions.dari.get()}\"")
     }
 
     compileOptions {
@@ -23,6 +24,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -42,6 +44,7 @@ dependencies {
     implementation(libs.androidx.startup)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.process)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
@@ -67,7 +70,7 @@ mavenPublishing {
     coordinates(
         groupId = "io.github.easyhooon",
         artifactId = "dari",
-        version = "1.3.3"
+        version = libs.versions.dari.get(),
     )
 
     pom {
