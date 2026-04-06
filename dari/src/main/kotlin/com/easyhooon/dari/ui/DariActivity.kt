@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.Dari
 import com.easyhooon.dari.ui.components.MessageListItem
+import com.easyhooon.dari.ui.components.SettingsBottomSheet
 import com.easyhooon.dari.ui.theme.DariTopBarColors
 
 /**
@@ -82,10 +84,14 @@ class DariActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 val entries by Dari.repository.entries.collectAsStateWithLifecycle()
+                val shakeToOpen by Dari.preferences.shakeToOpenFlow().collectAsStateWithLifecycle(
+                    initialValue = Dari.preferences.shakeToOpen,
+                )
                 var isSearchMode by rememberSaveable { mutableStateOf(false) }
                 var searchQuery by rememberSaveable { mutableStateOf("") }
                 var selectedTag by rememberSaveable { mutableStateOf<String?>(null) }
                 var showClearDialog by rememberSaveable { mutableStateOf(false) }
+                var showSettingsSheet by rememberSaveable { mutableStateOf(false) }
                 val keyboardController = LocalSoftwareKeyboardController.current
 
                 val lazyListState = rememberLazyListState()
@@ -170,6 +176,9 @@ class DariActivity : ComponentActivity() {
                                 }
                                 IconButton(onClick = { showClearDialog = true }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Clear")
+                                }
+                                IconButton(onClick = { showSettingsSheet = true }) {
+                                    Icon(Icons.Default.Settings, contentDescription = "Settings")
                                 }
                             },
                             colors = DariTopBarColors.colors(),
@@ -262,6 +271,14 @@ class DariActivity : ComponentActivity() {
                             }
                         }
                         }
+                    }
+
+                    if (showSettingsSheet) {
+                        SettingsBottomSheet(
+                            shakeToOpen = shakeToOpen,
+                            onShakeToOpenChange = { Dari.setShakeToOpenEnabled(it) },
+                            onDismiss = { showSettingsSheet = false },
+                        )
                     }
 
                     if (showClearDialog) {
