@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -39,7 +40,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +48,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.Dari
 import com.easyhooon.dari.ui.components.MessageListItem
+import com.easyhooon.dari.ui.components.SettingsBottomSheet
 import com.easyhooon.dari.ui.theme.DariTopBarColors
 
 /**
@@ -81,11 +83,15 @@ class DariActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme {
-                val entries by Dari.repository.entries.collectAsState()
+                val entries by Dari.repository.entries.collectAsStateWithLifecycle()
+                val shakeToOpen by Dari.preferences.shakeToOpenFlow().collectAsStateWithLifecycle(
+                    initialValue = Dari.preferences.shakeToOpen,
+                )
                 var isSearchMode by rememberSaveable { mutableStateOf(false) }
                 var searchQuery by rememberSaveable { mutableStateOf("") }
                 var selectedTag by rememberSaveable { mutableStateOf<String?>(null) }
                 var showClearDialog by rememberSaveable { mutableStateOf(false) }
+                var showSettingsSheet by rememberSaveable { mutableStateOf(false) }
                 val keyboardController = LocalSoftwareKeyboardController.current
 
                 val lazyListState = rememberLazyListState()
@@ -170,6 +176,9 @@ class DariActivity : ComponentActivity() {
                                 }
                                 IconButton(onClick = { showClearDialog = true }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Clear")
+                                }
+                                IconButton(onClick = { showSettingsSheet = true }) {
+                                    Icon(Icons.Default.Settings, contentDescription = "Settings")
                                 }
                             },
                             colors = DariTopBarColors.colors(),
@@ -262,6 +271,14 @@ class DariActivity : ComponentActivity() {
                             }
                         }
                         }
+                    }
+
+                    if (showSettingsSheet) {
+                        SettingsBottomSheet(
+                            shakeToOpen = shakeToOpen,
+                            onShakeToOpenChange = { Dari.setShakeToOpenEnabled(it) },
+                            onDismiss = { showSettingsSheet = false },
+                        )
                     }
 
                     if (showClearDialog) {
