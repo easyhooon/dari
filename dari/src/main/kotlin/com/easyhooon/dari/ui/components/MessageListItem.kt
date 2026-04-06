@@ -24,8 +24,9 @@ import androidx.compose.ui.unit.sp
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessageStatus
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
@@ -97,8 +98,9 @@ internal fun MessageListItem(
             )
 
             Row {
-                val time = SimpleDateFormat("a h:mm:ss", Locale.getDefault())
-                    .format(Date(entry.requestTimestamp))
+                val time = LIST_TIME_FORMATTER.format(
+                    Instant.ofEpochMilli(entry.requestTimestamp).atZone(ZoneId.systemDefault()),
+                )
                 Text(
                     text = time,
                     style = MaterialTheme.typography.bodySmall,
@@ -126,6 +128,9 @@ internal fun MessageListItem(
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
+
+private val LIST_TIME_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("a h:mm:ss", Locale.getDefault())
 
 private fun formatSize(bytes: Int): String = when {
     bytes < 1024 -> "$bytes B"
