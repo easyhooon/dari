@@ -11,6 +11,7 @@ import com.easyhooon.dari.data.local.DariDatabase
 import com.easyhooon.dari.interceptor.DariInterceptor
 import com.easyhooon.dari.interceptor.DefaultDariInterceptor
 import com.easyhooon.dari.notification.DariNotification
+import com.easyhooon.dari.shake.DariShakeManager
 import com.easyhooon.dari.ui.DariActivity
 
 /**
@@ -32,6 +33,7 @@ object Dari {
         private set
 
     private var notification: DariNotification? = null
+    private var shakeManager: DariShakeManager? = null
 
     /**
      * Initializes Dari.
@@ -48,6 +50,11 @@ object Dari {
 
         if (config.showNotification) {
             notification = DariNotification(this.context)
+        }
+
+        if (config.shakeToOpen) {
+            shakeManager?.unregister()
+            shakeManager = DariShakeManager(this.context).also { it.register() }
         }
 
         addDynamicShortcut()
