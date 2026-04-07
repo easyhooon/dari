@@ -1,5 +1,6 @@
 package com.easyhooon.dari.ui.components
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -93,7 +94,8 @@ internal fun SettingsBottomSheet(
                 value = "easyhooon/dari",
                 onClick = {
                     val intent = Intent(Intent.ACTION_VIEW, GITHUB_URL.toUri())
-                    context.startActivity(intent)
+                    runCatching { context.startActivity(intent) }
+                        .onFailure { if (it !is ActivityNotFoundException) throw it }
                 },
             )
         }
