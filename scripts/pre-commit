@@ -1,0 +1,11 @@
+#!/bin/sh
+
+echo "Running detekt and ktlintCheck..."
+./gradlew detekt ktlintCheck --daemon
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "detekt/ktlint check failed. Fix violations before committing."
+  echo "Run './gradlew ktlintFormat' to auto-fix formatting issues."
+  exit 1
+fi

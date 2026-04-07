@@ -49,8 +49,9 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
@@ -117,7 +118,6 @@ class DariDetailActivity : ComponentActivity() {
     }
 
     private fun shareAsText(entry: MessageEntry) {
-        val dateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy", Locale.getDefault())
         val direction = when (entry.direction) {
             MessageDirection.WEB_TO_APP -> "Web \u2192 App"
             MessageDirection.APP_TO_WEB -> "App \u2192 Web"
@@ -132,9 +132,9 @@ class DariDetailActivity : ComponentActivity() {
             appendLine("Tag: ${entry.tag ?: "-"}")
             appendLine("Request ID: ${entry.requestId ?: "-"}")
             appendLine()
-            appendLine("Request time: ${dateFormat.format(Date(entry.requestTimestamp))}")
+            appendLine("Request time: ${formatTimestamp(entry.requestTimestamp)}")
             entry.responseTimestamp?.let {
-                appendLine("Response time: ${dateFormat.format(Date(it))}")
+                appendLine("Response time: ${formatTimestamp(it)}")
             }
             entry.durationMs?.let {
                 appendLine("Duration: $it ms")
@@ -241,7 +241,6 @@ private fun DetailTabs(entry: MessageEntry) {
 
 @Composable
 private fun OverviewTab(entry: MessageEntry) {
-    val dateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy", Locale.getDefault())
     val requestSize = entry.requestData?.toByteArray(Charsets.UTF_8)?.size ?: 0
     val responseSize = entry.responseData?.toByteArray(Charsets.UTF_8)?.size ?: 0
 
@@ -264,9 +263,9 @@ private fun OverviewTab(entry: MessageEntry) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        OverviewRow("Request time", dateFormat.format(Date(entry.requestTimestamp)))
+        OverviewRow("Request time", formatTimestamp(entry.requestTimestamp))
         entry.responseTimestamp?.let {
-            OverviewRow("Response time", dateFormat.format(Date(it)))
+            OverviewRow("Response time", formatTimestamp(it))
         }
         entry.durationMs?.let {
             OverviewRow("Duration", "$it ms")
@@ -320,6 +319,14 @@ private fun DataTab(data: String?) {
         }
     }
 }
+
+private val DETAIL_TIME_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss z yyyy", Locale.getDefault())
+
+private fun formatTimestamp(epochMillis: Long): String =
+    DETAIL_TIME_FORMATTER.format(
+        Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()),
+    )
 
 private fun formatSize(bytes: Int): String = when {
     bytes < 1024 -> "$bytes B"
