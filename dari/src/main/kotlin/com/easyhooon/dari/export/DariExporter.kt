@@ -29,6 +29,10 @@ internal object DariExporter {
         shareFile(context, file, format)
     }
 
+    fun exportAndShareSingle(context: Context, entry: MessageEntry, format: ExportFormat) {
+        exportAndShare(context, listOf(entry), format)
+    }
+
     private fun writeExportFile(
         context: Context,
         entries: List<MessageEntry>,
