@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -150,7 +150,7 @@ private fun DarkModeRow(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = Icons.Default.DarkMode,
+                imageVector = Icons.Default.Brightness6,
                 contentDescription = null,
                 tint = DariBlue,
                 modifier = Modifier.size(20.dp),
