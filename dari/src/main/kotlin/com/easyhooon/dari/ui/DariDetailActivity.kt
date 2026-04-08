@@ -68,16 +68,24 @@ import java.util.Locale
  */
 class DariDetailActivity : ComponentActivity() {
 
+    // Entry captured at launch time, consumed in the SAF callback.
+    // Two launchers are registered (one per format) so document providers
+    // receive the correct MIME type hint — CreateDocument fixes the type at
+    // registration, not per-launch.
     private var pendingSaveEntry: MessageEntry? = null
-    private var pendingSaveFormat: ExportFormat = ExportFormat.JSON
 
-    private val saveDocumentLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("*/*"),
-    ) { uri: Uri? ->
+    private val saveTextDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument(DariExporter.mimeTypeFor(ExportFormat.TEXT)),
+    ) { uri: Uri? -> handleSaveResult(uri, ExportFormat.TEXT) }
+
+    private val saveJsonDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument(DariExporter.mimeTypeFor(ExportFormat.JSON)),
+    ) { uri: Uri? -> handleSaveResult(uri, ExportFormat.JSON) }
+
+    private fun handleSaveResult(uri: Uri?, format: ExportFormat) {
         val entry = pendingSaveEntry
-        val format = pendingSaveFormat
         pendingSaveEntry = null
-        if (uri == null || entry == null) return@registerForActivityResult
+        if (uri == null || entry == null) return
         lifecycleScope.launch {
             DariExporter.saveToUri(this@DariDetailActivity, uri, listOf(entry), format)
         }
@@ -85,8 +93,11 @@ class DariDetailActivity : ComponentActivity() {
 
     private fun launchSave(entry: MessageEntry, format: ExportFormat) {
         pendingSaveEntry = entry
-        pendingSaveFormat = format
-        saveDocumentLauncher.launch(DariExporter.suggestedFilename(format))
+        val launcher = when (format) {
+            ExportFormat.TEXT -> saveTextDocumentLauncher
+            ExportFormat.JSON -> saveJsonDocumentLauncher
+        }
+        launcher.launch(DariExporter.suggestedFilename(format))
     }
 
     @OptIn(ExperimentalMaterial3Api::class)

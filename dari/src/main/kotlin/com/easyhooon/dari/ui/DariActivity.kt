@@ -95,17 +95,24 @@ class DariActivity : ComponentActivity() {
         }
     }
 
-    // Entries + format captured at launch time, consumed in the SAF callback.
+    // Entries captured at launch time, consumed in the SAF callback.
+    // Two launchers are registered (one per format) so document providers
+    // receive the correct MIME type hint — CreateDocument fixes the type at
+    // registration, not per-launch.
     private var pendingSaveEntries: List<MessageEntry> = emptyList()
-    private var pendingSaveFormat: ExportFormat = ExportFormat.JSON
 
-    private val saveDocumentLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("*/*"),
-    ) { uri: Uri? ->
+    private val saveTextDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument(DariExporter.mimeTypeFor(ExportFormat.TEXT)),
+    ) { uri: Uri? -> handleSaveResult(uri, ExportFormat.TEXT) }
+
+    private val saveJsonDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument(DariExporter.mimeTypeFor(ExportFormat.JSON)),
+    ) { uri: Uri? -> handleSaveResult(uri, ExportFormat.JSON) }
+
+    private fun handleSaveResult(uri: Uri?, format: ExportFormat) {
         val entries = pendingSaveEntries
-        val format = pendingSaveFormat
         pendingSaveEntries = emptyList()
-        if (uri == null || entries.isEmpty()) return@registerForActivityResult
+        if (uri == null || entries.isEmpty()) return
         lifecycleScope.launch {
             DariExporter.saveToUri(this@DariActivity, uri, entries, format)
         }
@@ -114,8 +121,11 @@ class DariActivity : ComponentActivity() {
     internal fun launchSave(entries: List<MessageEntry>, format: ExportFormat) {
         if (entries.isEmpty()) return
         pendingSaveEntries = entries
-        pendingSaveFormat = format
-        saveDocumentLauncher.launch(DariExporter.suggestedFilename(format))
+        val launcher = when (format) {
+            ExportFormat.TEXT -> saveTextDocumentLauncher
+            ExportFormat.JSON -> saveJsonDocumentLauncher
+        }
+        launcher.launch(DariExporter.suggestedFilename(format))
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
