@@ -31,6 +31,10 @@ private val DariDarkOnSurfaceVariant = Color(0xFFB5B5BA)
 private val DariDarkOutline = Color(0xFF505056)
 private val DariDarkOutlineVariant = Color(0xFF42424A)
 
+// Off-white foreground for dark mode over the blue top bar / tabs — pure
+// white feels harsh next to the dimmed primary color in dark mode.
+private val DariDarkOnPrimary = Color(0xFFE8E8EC)
+
 private val DariLightColorScheme = lightColorScheme(
     primary = DariBlue,
     onPrimary = Color.White,
@@ -40,9 +44,9 @@ private val DariLightColorScheme = lightColorScheme(
 
 private val DariDarkColorScheme = darkColorScheme(
     primary = DariBlueDark,
-    onPrimary = Color.White,
+    onPrimary = DariDarkOnPrimary,
     primaryContainer = DariBlueDark,
-    onPrimaryContainer = Color.White,
+    onPrimaryContainer = DariDarkOnPrimary,
     background = DariDarkBackground,
     onBackground = DariDarkOnSurface,
     surface = DariDarkSurface,
@@ -114,12 +118,13 @@ object DariTopBarColors {
     @Composable
     fun colors(): TopAppBarColors {
         val container = MaterialTheme.colorScheme.primary
+        val onContainer = MaterialTheme.colorScheme.onPrimary
         return TopAppBarColors(
             containerColor = container,
             scrolledContainerColor = container,
-            navigationIconContentColor = Color.White,
-            titleContentColor = Color.White,
-            actionIconContentColor = Color.White,
+            navigationIconContentColor = onContainer,
+            titleContentColor = onContainer,
+            actionIconContentColor = onContainer,
         )
     }
 }

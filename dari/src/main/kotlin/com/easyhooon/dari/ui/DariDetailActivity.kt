@@ -45,7 +45,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.Dari
@@ -56,7 +55,6 @@ import com.easyhooon.dari.export.ExportFormat
 import com.easyhooon.dari.ui.components.JsonViewer
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.easyhooon.dari.ui.theme.ApplyDariSystemBars
-import com.easyhooon.dari.ui.theme.DariBlue
 import com.easyhooon.dari.ui.theme.DariTheme
 import com.easyhooon.dari.ui.theme.DariTopBarColors
 import kotlinx.coroutines.launch
@@ -227,12 +225,12 @@ private fun DetailTabs(entry: MessageEntry) {
     Column(modifier = Modifier.fillMaxSize()) {
         TabRow(
             selectedTabIndex = pagerState.currentPage,
-            containerColor = DariBlue,
-            contentColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             indicator = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                 )
             },
         ) {
@@ -244,9 +242,9 @@ private fun DetailTabs(entry: MessageEntry) {
                         Text(
                             text = title,
                             color = if (pagerState.currentPage == index) {
-                                Color.White
+                                MaterialTheme.colorScheme.onPrimary
                             } else {
-                                Color.White.copy(alpha = 0.6f)
+                                MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f)
                             },
                         )
                     },
