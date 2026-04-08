@@ -5,6 +5,8 @@ import android.content.Intent
 import androidx.core.content.FileProvider
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -24,12 +26,14 @@ internal object DariExporter {
     private const val EXPORT_DIR = "dari_export"
     private const val AUTHORITY_SUFFIX = ".dari.fileprovider"
 
-    fun exportAndShare(context: Context, entries: List<MessageEntry>, format: ExportFormat) {
-        val file = writeExportFile(context, entries, format)
+    suspend fun exportAndShare(context: Context, entries: List<MessageEntry>, format: ExportFormat) {
+        val file = withContext(Dispatchers.IO) {
+            writeExportFile(context, entries, format)
+        }
         shareFile(context, file, format)
     }
 
-    fun exportAndShareSingle(context: Context, entry: MessageEntry, format: ExportFormat) {
+    suspend fun exportAndShareSingle(context: Context, entry: MessageEntry, format: ExportFormat) {
         exportAndShare(context, listOf(entry), format)
     }
 

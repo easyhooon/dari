@@ -47,9 +47,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -330,11 +331,13 @@ class DariActivity : ComponentActivity() {
                             confirmButton = {
                                 TextButton(onClick = {
                                     showExportDialog = false
-                                    DariExporter.exportAndShare(
-                                        this@DariActivity,
-                                        filteredEntries,
-                                        ExportFormat.JSON,
-                                    )
+                                    lifecycleScope.launch {
+                                        DariExporter.exportAndShare(
+                                            this@DariActivity,
+                                            filteredEntries,
+                                            ExportFormat.JSON,
+                                        )
+                                    }
                                 }) {
                                     Text("JSON")
                                 }
@@ -342,11 +345,13 @@ class DariActivity : ComponentActivity() {
                             dismissButton = {
                                 TextButton(onClick = {
                                     showExportDialog = false
-                                    DariExporter.exportAndShare(
-                                        this@DariActivity,
-                                        filteredEntries,
-                                        ExportFormat.TEXT,
-                                    )
+                                    lifecycleScope.launch {
+                                        DariExporter.exportAndShare(
+                                            this@DariActivity,
+                                            filteredEntries,
+                                            ExportFormat.TEXT,
+                                        )
+                                    }
                                 }) {
                                     Text("TEXT")
                                 }

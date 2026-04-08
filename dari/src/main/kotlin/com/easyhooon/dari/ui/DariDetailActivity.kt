@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -130,11 +131,13 @@ class DariDetailActivity : ComponentActivity() {
                             confirmButton = {
                                 TextButton(onClick = {
                                     showShareDialog = false
-                                    DariExporter.exportAndShareSingle(
-                                        this@DariDetailActivity,
-                                        entry,
-                                        ExportFormat.JSON,
-                                    )
+                                    lifecycleScope.launch {
+                                        DariExporter.exportAndShareSingle(
+                                            this@DariDetailActivity,
+                                            entry,
+                                            ExportFormat.JSON,
+                                        )
+                                    }
                                 }) {
                                     Text("JSON")
                                 }
