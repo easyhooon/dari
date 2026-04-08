@@ -1,11 +1,9 @@
 package com.easyhooon.dari.data
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,23 +15,25 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
-private val Context.dariDataStore: DataStore<Preferences> by preferencesDataStore(name = "dari_preferences")
-
 /**
  * Persists user-toggled Dari settings (shake-to-open, dark mode) so changes
  * survive process restarts and override the initial [com.easyhooon.dari.DariConfig]
  * defaults.
  *
- * Backed by Jetpack DataStore Preferences. Values are exposed as hot
- * [StateFlow]s so both Compose collectors and synchronous Kotlin callers
- * see a consistent latest-known value.
+ * Backed by Jetpack DataStore Preferences. [dataStore] is injected rather
+ * than built from a `Context` delegate so this class stays Android-free and
+ * can be unit-tested on the JVM — and later lifted into `commonMain` for
+ * KMP support (see #13). [com.easyhooon.dari.Dari] owns the production
+ * instance.
+ *
+ * Values are exposed as hot [StateFlow]s so both Compose collectors and
+ * synchronous Kotlin callers see a consistent latest-known value.
  */
 internal class DariPreferences(
-    context: Context,
+    private val dataStore: DataStore<Preferences>,
     private val defaultShakeToOpen: Boolean,
 ) {
 
-    private val dataStore = context.applicationContext.dariDataStore
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _shakeToOpen = MutableStateFlow(defaultShakeToOpen)

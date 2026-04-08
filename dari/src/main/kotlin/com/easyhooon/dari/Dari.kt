@@ -6,9 +6,13 @@ import android.content.Intent
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.easyhooon.dari.data.DariPreferences
 import com.easyhooon.dari.data.MessageRepository
 import com.easyhooon.dari.data.local.DariDatabase
+import java.io.File
 import com.easyhooon.dari.interceptor.DariInterceptor
 import com.easyhooon.dari.interceptor.DefaultDariInterceptor
 import com.easyhooon.dari.notification.DariNotification
@@ -52,7 +56,10 @@ object Dari {
             repository = MessageRepository(database!!, config.maxEntries)
         }
 
-        preferences = DariPreferences(this.context, defaultShakeToOpen = config.shakeToOpen)
+        preferences = DariPreferences(
+            dataStore = createPreferenceDataStore(this.context),
+            defaultShakeToOpen = config.shakeToOpen,
+        )
 
         if (config.showNotification) {
             notification = DariNotification(this.context)
@@ -87,6 +94,13 @@ object Dari {
             null
         }
     }
+
+    private fun createPreferenceDataStore(context: Context): DataStore<Preferences> =
+        PreferenceDataStoreFactory.create(
+            produceFile = {
+                File(context.applicationContext.filesDir, "datastore/$PREFS_FILE_NAME")
+            },
+        )
 
     /**
      * Creates a [DariInterceptor] instance.
@@ -139,4 +153,6 @@ object Dari {
             // Shortcut registration may fail in test or non-launcher contexts
         }
     }
+
+    private const val PREFS_FILE_NAME = "dari_preferences.preferences_pb"
 }
