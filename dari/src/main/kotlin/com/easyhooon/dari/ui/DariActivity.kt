@@ -374,6 +374,17 @@ class DariActivity : ComponentActivity() {
     }
 
     internal companion object {
+        /**
+         * Tracks whether [DariActivity] is currently in the foreground.
+         *
+         * Used by `DariShakeManager` to suppress shake-to-open while the activity
+         * is already visible (avoids re-launching it on top of itself).
+         *
+         * - Updated from the main thread in [onStart] / [onStop].
+         * - Read from the sensor callback thread in `DariShakeManager`,
+         *   so it must be `@Volatile` for cross-thread visibility.
+         * - `private set` keeps writes confined to the activity lifecycle.
+         */
         @Volatile
         internal var isVisible: Boolean = false
             private set
