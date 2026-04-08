@@ -131,7 +131,9 @@ internal object DariExporter {
             ExportFormat.TEXT -> "txt"
             ExportFormat.JSON -> "json"
         }
-        val file = File(exportDir, "dari_export_$timestamp.$extension")
+        // Use createTempFile so concurrent shares within the same second
+        // don't overwrite a file that a previous share target is still reading.
+        val file = File.createTempFile("dari_export_${timestamp}_", ".$extension", exportDir)
 
         val content = when (format) {
             ExportFormat.TEXT -> formatAsText(entries)
