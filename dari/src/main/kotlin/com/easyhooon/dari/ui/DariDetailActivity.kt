@@ -54,6 +54,8 @@ import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.export.DariExporter
 import com.easyhooon.dari.export.ExportFormat
 import com.easyhooon.dari.ui.components.JsonViewer
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.easyhooon.dari.ui.theme.ApplyDariSystemBars
 import com.easyhooon.dari.ui.theme.DariBlue
 import com.easyhooon.dari.ui.theme.DariTheme
 import com.easyhooon.dari.ui.theme.DariTopBarColors
@@ -115,6 +117,8 @@ class DariDetailActivity : ComponentActivity() {
             val darkMode by Dari.preferences.darkModeFlow().collectAsStateWithLifecycle(
                 initialValue = Dari.preferences.darkMode,
             )
+            val isDark = darkMode ?: isSystemInDarkTheme()
+            ApplyDariSystemBars(isDark)
             DariTheme(darkTheme = darkMode) {
                 val entries by Dari.repository.entries.collectAsStateWithLifecycle()
                 val entry = entries.find { it.id == id }
