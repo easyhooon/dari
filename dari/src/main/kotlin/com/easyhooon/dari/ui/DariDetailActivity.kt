@@ -129,13 +129,10 @@ class DariDetailActivity : ComponentActivity() {
                                                 text = { Text("Share as TEXT") },
                                                 onClick = {
                                                     shareMenuExpanded = false
-                                                    lifecycleScope.launch {
-                                                        DariExporter.exportAndShareSingle(
-                                                            this@DariDetailActivity,
-                                                            current,
-                                                            ExportFormat.TEXT,
-                                                        )
-                                                    }
+                                                    DariExporter.shareSingleAsPlainText(
+                                                        this@DariDetailActivity,
+                                                        current,
+                                                    )
                                                 },
                                             )
                                             DropdownMenuItem(

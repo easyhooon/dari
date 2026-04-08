@@ -27,6 +27,9 @@ internal object DariExporter {
     private const val EXPORT_DIR = "dari_export"
     private const val AUTHORITY_SUFFIX = ".dari.fileprovider"
 
+    /** Safety cap for inline text share to stay below Android's Binder limit (~1MB). */
+    private const val SHARE_TEXT_MAX_LENGTH = 100_000
+
     suspend fun exportAndShare(context: Context, entries: List<MessageEntry>, format: ExportFormat) {
         val file = withContext(Dispatchers.IO) {
             writeExportFile(context, entries, format)
@@ -36,6 +39,29 @@ internal object DariExporter {
 
     suspend fun exportAndShareSingle(context: Context, entry: MessageEntry, format: ExportFormat) {
         exportAndShare(context, listOf(entry), format)
+    }
+
+    /**
+     * Shares a single entry as an inline text string via [Intent.EXTRA_TEXT],
+     * so receiving apps (chat, email, etc.) get directly pasteable text
+     * instead of a `.txt` attachment.
+     *
+     * Very large payloads are truncated to stay under the Android Binder
+     * transaction limit (~1MB) — for bulk exports, use [exportAndShare] with
+     * [ExportFormat.TEXT] which goes through a `FileProvider` URI instead.
+     */
+    fun shareSingleAsPlainText(context: Context, entry: MessageEntry) {
+        val text = formatSingleEntry(entry)
+        val safeText = if (text.length > SHARE_TEXT_MAX_LENGTH) {
+            text.take(SHARE_TEXT_MAX_LENGTH) + "\n\n...[truncated for sharing]"
+        } else {
+            text
+        }
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, safeText)
+        }
+        context.startActivity(Intent.createChooser(intent, "Share Bridge Message"))
     }
 
     /**
