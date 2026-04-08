@@ -98,7 +98,7 @@ internal fun MessageListItem(
             )
 
             Row {
-                val time = LIST_TIME_FORMATTER.format(
+                val time = listTimeFormatter.format(
                     Instant.ofEpochMilli(entry.requestTimestamp).atZone(ZoneId.systemDefault()),
                 )
                 Text(
@@ -109,7 +109,7 @@ internal fun MessageListItem(
                 entry.durationMs?.let { duration ->
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = "${duration} ms",
+                        text = "$duration ms",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -129,8 +129,11 @@ internal fun MessageListItem(
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
 
-private val LIST_TIME_FORMATTER: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("a h:mm:ss", Locale.getDefault())
+// `get()` instead of a cached val so a locale change at runtime is picked up
+// on the next format call instead of staying pinned to the locale at class
+// load time.
+private val listTimeFormatter: DateTimeFormatter
+    get() = DateTimeFormatter.ofPattern("a h:mm:ss", Locale.getDefault())
 
 private fun formatSize(bytes: Int): String = when {
     bytes < 1024 -> "$bytes B"

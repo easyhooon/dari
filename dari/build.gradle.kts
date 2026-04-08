@@ -29,6 +29,14 @@ android {
     }
 }
 
+// Treat dari-core's pure-data models as stable for Compose recomposition
+// skipping. See stability_config.conf at the repo root for the class list
+// and rationale.
+composeCompiler {
+    stabilityConfigurationFile =
+        rootProject.layout.projectDirectory.file("stability_config.conf")
+}
+
 dependencies {
     api(project(":dari-core"))
 

@@ -30,10 +30,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -223,13 +222,16 @@ private fun DetailTabs(entry: MessageEntry) {
     val coroutineScope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(
+        SecondaryTabRow(
             selectedTabIndex = pagerState.currentPage,
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
-            indicator = { tabPositions ->
+            indicator = {
                 TabRowDefaults.SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                    modifier = Modifier.tabIndicatorOffset(
+                        selectedTabIndex = pagerState.currentPage,
+                        matchContentSize = false,
+                    ),
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
             },
@@ -346,11 +348,14 @@ private fun DataTab(data: String?) {
     }
 }
 
-private val DETAIL_TIME_FORMATTER: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss z yyyy", Locale.getDefault())
+// `get()` instead of a cached val so a locale change at runtime is picked up
+// on the next format call instead of staying pinned to the locale at class
+// load time.
+private val detailTimeFormatter: DateTimeFormatter
+    get() = DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss z yyyy", Locale.getDefault())
 
 private fun formatTimestamp(epochMillis: Long): String =
-    DETAIL_TIME_FORMATTER.format(
+    detailTimeFormatter.format(
         Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()),
     )
 
