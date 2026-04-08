@@ -6,11 +6,13 @@ import android.content.Intent
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import com.easyhooon.dari.data.DariPreferences
 import com.easyhooon.dari.data.MessageRepository
 import com.easyhooon.dari.data.local.DariDatabase
 import com.easyhooon.dari.interceptor.DariInterceptor
 import com.easyhooon.dari.interceptor.DefaultDariInterceptor
 import com.easyhooon.dari.notification.DariNotification
+import com.easyhooon.dari.shake.DariShakeManager
 import com.easyhooon.dari.ui.DariActivity
 
 /**
@@ -32,6 +34,10 @@ object Dari {
         private set
 
     private var notification: DariNotification? = null
+    private var shakeManager: DariShakeManager? = null
+
+    internal lateinit var preferences: DariPreferences
+        private set
 
     /**
      * Initializes Dari.
@@ -46,11 +52,32 @@ object Dari {
             repository = MessageRepository(database!!, config.maxEntries)
         }
 
+        preferences = DariPreferences(this.context, defaultShakeToOpen = config.shakeToOpen)
+
         if (config.showNotification) {
             notification = DariNotification(this.context)
         }
 
+        applyShakeToOpen(preferences.shakeToOpen)
+
         addDynamicShortcut()
+    }
+
+    /**
+     * Enable or disable shake-to-open at runtime. Persists across process restarts.
+     */
+    fun setShakeToOpenEnabled(enabled: Boolean) {
+        preferences.shakeToOpen = enabled
+        applyShakeToOpen(enabled)
+    }
+
+    private fun applyShakeToOpen(enabled: Boolean) {
+        shakeManager?.unregister()
+        shakeManager = if (enabled) {
+            DariShakeManager(context).also { it.register() }
+        } else {
+            null
+        }
     }
 
     /**
