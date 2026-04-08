@@ -125,6 +125,7 @@ object DariTopBarColors {
             navigationIconContentColor = onContainer,
             titleContentColor = onContainer,
             actionIconContentColor = onContainer,
+            subtitleContentColor = onContainer,
         )
     }
 }
