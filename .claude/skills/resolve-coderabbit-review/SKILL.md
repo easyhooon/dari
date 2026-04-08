@@ -79,8 +79,10 @@ gh api graphql -f query='
 - 스레드의 첫 번째 코멘트 작성자가 `coderabbitai[bot]` 또는 `coderabbitai`
 - CodeRabbit의 PR 요약 코멘트(리뷰 본문이 아닌 일반 요약)는 제외
 - **이미 처리된 코멘트는 스킵**: 스레드 내 대댓글에 아래 문구가 포함되어 있으면 이전 실행에서 이미 처리된 것이므로 수집 대상에서 제외한다:
-  - `✅` + `반영완료` — 이미 반영됨
-  - `해당 제안은 검토 결과 현재 반영하지 않았습니다` — 이미 거절됨
+  - `✅ Addressed in` — 이미 반영됨 (현행 영어 템플릿)
+  - `✅` + `반영완료` — 이미 반영됨 (구 한글 템플릿, 하위 호환)
+  - `Thanks for the suggestion. After review, we've decided not to apply this change.` — 이미 거절됨 (현행 영어 템플릿)
+  - `해당 제안은 검토 결과 현재 반영하지 않았습니다` — 이미 거절됨 (구 한글 템플릿, 하위 호환)
 
 수집된 코멘트가 없으면 "미해결 CodeRabbit 코멘트가 없습니다." 출력 후 종료한다.
 
@@ -279,7 +281,7 @@ gh pr comment {PR_NUMBER} --body "$(cat <<'EOF'
 ### ❌ Declined
 | Severity | File | Comment | Reason |
 |:--------:|------|---------|--------|
-| {emoji} | `{path}` | {CodeRabbit 지적 요약} ([링크](https://github.com/{OWNER}/{REPO}/pull/{PR_NUMBER}#discussion_r{COMMENT_DATABASE_ID})) | {거절 사유 요약} |
+| {emoji} | `{path}` | {CodeRabbit comment summary} ([link](https://github.com/{OWNER}/{REPO}/pull/{PR_NUMBER}#discussion_r{COMMENT_DATABASE_ID})) | {decline reason summary} |
 EOF
 )"
 ```
