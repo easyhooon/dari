@@ -45,6 +45,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -65,6 +66,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.Dari
 import com.easyhooon.dari.MessageEntry
+import com.easyhooon.dari.MessageStatus
 import com.easyhooon.dari.export.DariExporter
 import com.easyhooon.dari.export.ExportFormat
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -73,6 +75,7 @@ import com.easyhooon.dari.ui.components.SettingsBottomSheet
 import com.easyhooon.dari.ui.theme.ApplyDariSystemBars
 import com.easyhooon.dari.ui.theme.DariTheme
 import com.easyhooon.dari.ui.theme.DariTopBarColors
+import com.easyhooon.dari.ui.theme.color
 
 /**
  * Activity displaying the list of bridge messages.
@@ -151,6 +154,7 @@ class DariActivity : ComponentActivity() {
                 var isSearchMode by rememberSaveable { mutableStateOf(false) }
                 var searchQuery by rememberSaveable { mutableStateOf("") }
                 var selectedTag by rememberSaveable { mutableStateOf<String?>(null) }
+                var selectedStatus by rememberSaveable { mutableStateOf<MessageStatus?>(null) }
                 var showClearDialog by rememberSaveable { mutableStateOf(false) }
                 var shareMenuExpanded by remember { mutableStateOf(false) }
                 var downloadMenuExpanded by remember { mutableStateOf(false) }
@@ -177,7 +181,8 @@ class DariActivity : ComponentActivity() {
                     val matchesSearch = searchQuery.isBlank() ||
                         entry.handlerName.contains(searchQuery, ignoreCase = true)
                     val matchesTag = selectedTag == null || entry.tag == selectedTag
-                    matchesSearch && matchesTag
+                    val matchesStatus = selectedStatus == null || entry.status == selectedStatus
+                    matchesSearch && matchesTag && matchesStatus
                 }
 
                 Scaffold(
@@ -321,45 +326,41 @@ class DariActivity : ComponentActivity() {
                     ) {
                         Column {
                         if (availableTags.isNotEmpty()) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState())
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                val allSelected = selectedTag == null
-                                Text(
-                                    text = "All",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (allSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(
-                                            if (allSelected) Color(0xFF2D6AB1) else MaterialTheme.colorScheme.surfaceVariant,
-                                        )
-                                        .clickable { selectedTag = null }
-                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                            FilterChipRow {
+                                FilterChip(
+                                    label = "All tags",
+                                    selected = selectedTag == null,
+                                    onClick = { selectedTag = null },
                                 )
                                 availableTags.forEach { tag ->
-                                    val isSelected = selectedTag == tag
-                                    Text(
-                                        text = tag,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(
-                                                if (isSelected) Color(0xFF2D6AB1) else MaterialTheme.colorScheme.surfaceVariant,
-                                            )
-                                            .clickable { selectedTag = if (isSelected) null else tag }
-                                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    FilterChip(
+                                        label = tag,
+                                        selected = selectedTag == tag,
+                                        onClick = {
+                                            selectedTag = if (selectedTag == tag) null else tag
+                                        },
                                     )
                                 }
+                            }
+                        }
+                        FilterChipRow {
+                            FilterChip(
+                                label = "All statuses",
+                                selected = selectedStatus == null,
+                                onClick = { selectedStatus = null },
+                            )
+                            // Order: Error first (most actionable in a debug tool),
+                            // then In Progress (stuck calls), Success last (baseline noise).
+                            STATUS_FILTER_ORDER.forEach { status ->
+                                FilterChip(
+                                    label = status.displayLabel(),
+                                    selected = selectedStatus == status,
+                                    onClick = {
+                                        selectedStatus = if (selectedStatus == status) null else status
+                                    },
+                                    selectedBackground = status.color(),
+                                    selectedContent = Color.White,
+                                )
                             }
                         }
                         if (filteredEntries.isEmpty()) {
@@ -464,4 +465,63 @@ class DariActivity : ComponentActivity() {
         internal var isVisible: Boolean = false
             private set
     }
+}
+
+// Display order for the status filter chip row. Errors come first because
+// debugging the failure is the most common reason to open Dari.
+private val STATUS_FILTER_ORDER = listOf(
+    MessageStatus.ERROR,
+    MessageStatus.IN_PROGRESS,
+    MessageStatus.SUCCESS,
+)
+
+private fun MessageStatus.displayLabel(): String = when (this) {
+    MessageStatus.IN_PROGRESS -> "In Progress"
+    MessageStatus.SUCCESS -> "Success"
+    MessageStatus.ERROR -> "Error"
+}
+
+@Composable
+private fun FilterChipRow(content: @Composable () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun FilterChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    selectedBackground: Color = MaterialTheme.colorScheme.primary,
+    selectedContent: Color = MaterialTheme.colorScheme.onPrimary,
+) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium,
+        color = if (selected) {
+            selectedContent
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                if (selected) {
+                    selectedBackground
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    )
 }
