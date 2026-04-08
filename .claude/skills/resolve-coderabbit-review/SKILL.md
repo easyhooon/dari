@@ -270,12 +270,12 @@ gh pr comment {PR_NUMBER} --body "$(cat <<'EOF'
 ### ✅ 반영 내역
 | 중요도 | 파일 | 코멘트 내용 | 수정 사항 | 커밋 |
 |:------:|------|------------|----------|------|
-| {emoji} | `{path}` | {Gemini 지적 요약} ([링크](https://github.com/{OWNER}/{REPO}/pull/{PR_NUMBER}#discussion_r{COMMENT_DATABASE_ID})) | {수정 내용 요약} | [{short_hash}](https://github.com/{OWNER}/{REPO}/commit/{full_hash}) |
+| {emoji} | `{path}` | {CodeRabbit 지적 요약} ([링크](https://github.com/{OWNER}/{REPO}/pull/{PR_NUMBER}#discussion_r{COMMENT_DATABASE_ID})) | {수정 내용 요약} | [{short_hash}](https://github.com/{OWNER}/{REPO}/commit/{full_hash}) |
 
 ### ❌ 거절 내역
 | 중요도 | 파일 | 코멘트 내용 | 거절 사유 |
 |:------:|------|------------|----------|
-| {emoji} | `{path}` | {Gemini 지적 요약} ([링크](https://github.com/{OWNER}/{REPO}/pull/{PR_NUMBER}#discussion_r{COMMENT_DATABASE_ID})) | {거절 사유 요약} |
+| {emoji} | `{path}` | {CodeRabbit 지적 요약} ([링크](https://github.com/{OWNER}/{REPO}/pull/{PR_NUMBER}#discussion_r{COMMENT_DATABASE_ID})) | {거절 사유 요약} |
 EOF
 )"
 ```
@@ -302,7 +302,7 @@ EOF
 #### 코드 변경 상세
 
 **{path}** ([{short_hash}](https://github.com/{OWNER}/{REPO}/commit/{full_hash}))
-- Gemini 지적: {원래 지적 내용 요약}
+- CodeRabbit 지적: {원래 지적 내용 요약}
 - 변경 전: `{변경 전 코드 또는 설명}`
 - 변경 후: `{변경 후 코드 또는 설명}`
 - 변경 이유: {왜 이렇게 수정했는지 설명}
