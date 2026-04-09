@@ -1,5 +1,5 @@
 [versions]
-dari = "1.3.3"
+dari = "1.4.0"
 agp = "9.0.0"
 coreKtx = "1.17.0"
 junit = "4.13.2"
