@@ -26,14 +26,13 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -156,8 +155,7 @@ class DariActivity : ComponentActivity() {
                 var selectedTag by rememberSaveable { mutableStateOf<String?>(null) }
                 var selectedStatus by rememberSaveable { mutableStateOf<MessageStatus?>(null) }
                 var showClearDialog by rememberSaveable { mutableStateOf(false) }
-                var shareMenuExpanded by remember { mutableStateOf(false) }
-                var downloadMenuExpanded by remember { mutableStateOf(false) }
+                var exportMenuExpanded by remember { mutableStateOf(false) }
                 var showSettingsSheet by rememberSaveable { mutableStateOf(false) }
                 val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -246,19 +244,19 @@ class DariActivity : ComponentActivity() {
                                 }
                                 Box {
                                     IconButton(
-                                        onClick = { shareMenuExpanded = true },
+                                        onClick = { exportMenuExpanded = true },
                                         enabled = filteredEntries.isNotEmpty(),
                                     ) {
-                                        Icon(Icons.Default.Share, contentDescription = "Share")
+                                        Icon(Icons.Default.IosShare, contentDescription = "Export")
                                     }
                                     DropdownMenu(
-                                        expanded = shareMenuExpanded,
-                                        onDismissRequest = { shareMenuExpanded = false },
+                                        expanded = exportMenuExpanded,
+                                        onDismissRequest = { exportMenuExpanded = false },
                                     ) {
                                         DropdownMenuItem(
                                             text = { Text("Share as TEXT") },
                                             onClick = {
-                                                shareMenuExpanded = false
+                                                exportMenuExpanded = false
                                                 lifecycleScope.launch {
                                                     DariExporter.exportAndShare(
                                                         this@DariActivity,
@@ -271,7 +269,7 @@ class DariActivity : ComponentActivity() {
                                         DropdownMenuItem(
                                             text = { Text("Share as JSON") },
                                             onClick = {
-                                                shareMenuExpanded = false
+                                                exportMenuExpanded = false
                                                 lifecycleScope.launch {
                                                     DariExporter.exportAndShare(
                                                         this@DariActivity,
@@ -281,37 +279,22 @@ class DariActivity : ComponentActivity() {
                                                 }
                                             },
                                         )
-                                    }
-                                }
-                                Box {
-                                    IconButton(
-                                        onClick = { downloadMenuExpanded = true },
-                                        enabled = filteredEntries.isNotEmpty(),
-                                    ) {
-                                        Icon(Icons.Default.Download, contentDescription = "Save")
-                                    }
-                                    DropdownMenu(
-                                        expanded = downloadMenuExpanded,
-                                        onDismissRequest = { downloadMenuExpanded = false },
-                                    ) {
+                                        HorizontalDivider()
                                         DropdownMenuItem(
                                             text = { Text("Save as TEXT") },
                                             onClick = {
-                                                downloadMenuExpanded = false
+                                                exportMenuExpanded = false
                                                 launchSave(filteredEntries, ExportFormat.TEXT)
                                             },
                                         )
                                         DropdownMenuItem(
                                             text = { Text("Save as JSON") },
                                             onClick = {
-                                                downloadMenuExpanded = false
+                                                exportMenuExpanded = false
                                                 launchSave(filteredEntries, ExportFormat.JSON)
                                             },
                                         )
                                     }
-                                }
-                                IconButton(onClick = { showClearDialog = true }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Clear")
                                 }
                                 IconButton(onClick = { showSettingsSheet = true }) {
                                     Icon(Icons.Default.Settings, contentDescription = "Settings")
@@ -412,6 +395,10 @@ class DariActivity : ComponentActivity() {
                             onShakeToOpenChange = { Dari.setShakeToOpenEnabled(it) },
                             darkMode = darkMode,
                             onDarkModeChange = { Dari.setDarkMode(it) },
+                            onClearMessages = {
+                                showSettingsSheet = false
+                                showClearDialog = true
+                            },
                             onDismiss = { showSettingsSheet = false },
                         )
                     }

@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -52,6 +53,7 @@ internal fun SettingsBottomSheet(
     onShakeToOpenChange: (Boolean) -> Unit,
     darkMode: Boolean?,
     onDarkModeChange: (Boolean?) -> Unit,
+    onClearMessages: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -87,6 +89,19 @@ internal fun SettingsBottomSheet(
             DarkModeRow(
                 darkMode = darkMode,
                 onDarkModeChange = onDarkModeChange,
+            )
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = MaterialTheme.colorScheme.outlineVariant,
+            )
+
+            SectionHeader("Data")
+            DestructiveActionRow(
+                icon = Icons.Default.DeleteOutline,
+                title = "Clear all messages",
+                description = "Permanently remove every captured bridge message",
+                onClick = onClearMessages,
             )
 
             HorizontalDivider(
@@ -237,6 +252,55 @@ private fun SettingToggleRow(
                 checkedTrackColor = DariBlue,
             ),
         )
+    }
+}
+
+@Composable
+private fun DestructiveActionRow(
+    icon: ImageVector,
+    title: String,
+    description: String,
+    onClick: () -> Unit,
+) {
+    val accent = MaterialTheme.colorScheme.error
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(accent.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Spacer(Modifier.size(16.dp))
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = accent,
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
