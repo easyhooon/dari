@@ -7,22 +7,67 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import com.easyhooon.dari.MessageStatus
 
+// Amber
+internal val Amber100 = Color(0xFFFFECB3)
+internal val Amber200 = Color(0xFFFFE082)
+internal val Amber300 = Color(0xFFFFD54F)
+internal val Amber400 = Color(0xFFFFCA28)
+internal val Amber500 = Color(0xFFFFC107)
+internal val Amber600 = Color(0xFFFFB300)
+internal val Amber700 = Color(0xFFFFA000)
+internal val Amber800 = Color(0xFFFF8F00)
+internal val Amber900 = Color(0xFFFF6F00)
+
+// Green
+internal val Green100 = Color(0xFFC8E6C9)
+internal val Green200 = Color(0xFFA5D6A7)
+internal val Green300 = Color(0xFF81C784)
+internal val Green400 = Color(0xFF66BB6A)
+internal val Green500 = Color(0xFF4CAF50)
+internal val Green600 = Color(0xFF43A047)
+internal val Green700 = Color(0xFF388E3C)
+internal val Green800 = Color(0xFF2E7D32)
+internal val Green900 = Color(0xFF1B5E20)
+
+// Red
+internal val Red100 = Color(0xFFFFCDD2)
+internal val Red200 = Color(0xFFEF9A9A)
+internal val Red300 = Color(0xFFE57373)
+internal val Red400 = Color(0xFFEF5350)
+internal val Red500 = Color(0xFFF44336)
+internal val Red600 = Color(0xFFE53935)
+internal val Red700 = Color(0xFFD32F2F)
+internal val Red800 = Color(0xFFC62828)
+internal val Red900 = Color(0xFFB71C1C)
+
+// Blue
+internal val Blue100 = Color(0xFFBBDEFB)
+internal val Blue200 = Color(0xFF90CAF9)
+internal val Blue300 = Color(0xFF64B5F6)
+internal val Blue400 = Color(0xFF42A5F5)
+internal val Blue500 = Color(0xFF2196F3)
+internal val Blue600 = Color(0xFF1E88E5)
+internal val Blue700 = Color(0xFF1976D2)
+internal val Blue800 = Color(0xFF1565C0)
+internal val Blue900 = Color(0xFF0D47A1)
+
+// Blue Grey
+internal val BlueGrey100 = Color(0xFFCFD8DC)
+internal val BlueGrey200 = Color(0xFFB0BEC5)
+internal val BlueGrey300 = Color(0xFF90A4AE)
+internal val BlueGrey400 = Color(0xFF78909C)
+internal val BlueGrey500 = Color(0xFF607D8B)
+internal val BlueGrey600 = Color(0xFF546E7A)
+internal val BlueGrey700 = Color(0xFF455A64)
+internal val BlueGrey800 = Color(0xFF37474F)
+internal val BlueGrey900 = Color(0xFF263238)
+
 /**
- * Colors used to communicate a message's status (in-progress / success / error).
+ * Three-role palette for [MessageStatus] visual representation:
  *
- * Each status exposes three roles so the same semantic color can be reused in
- * different UI contexts without compromising contrast:
- *
- * - [container]   — solid background fill, e.g. a selected status filter chip.
- *   Kept identical in both themes because filled chips retain enough contrast
- *   on both light and dark app surfaces.
- * - [onContainer] — text / icon color drawn on top of [container]. Matches the
- *   WCAG contrast requirement against [container] (so the amber chip uses
- *   black while red / green use white).
- * - [onSurface]   — the status color when drawn directly as text on the app
- *   surface (e.g. the status label inside a list row). This role varies per
- *   theme because the Material 500-weight status colors are too bright for a
- *   white light-theme surface but read well on a dimmed dark-theme surface.
+ * - [container]   — chip background fill (same in both themes).
+ * - [onContainer] — text/icon on [container].
+ * - [onSurface]   — status label drawn on the app surface (varies per theme).
  */
 internal data class MessageStatusPalette(
     val container: Color,
@@ -30,13 +75,6 @@ internal data class MessageStatusPalette(
     val onSurface: Color,
 )
 
-/**
- * Theme-aware palette for a [MessageStatus]. The [onSurface] shade is picked
- * from the current [MaterialTheme] — we infer dark vs light by checking the
- * luminance of `colorScheme.surface` so this stays correct whether the app is
- * following the system theme or using an explicit override from Dari's own
- * settings.
- */
 internal val MessageStatus.palette: MessageStatusPalette
     @Composable
     @ReadOnlyComposable
@@ -44,31 +82,19 @@ internal val MessageStatus.palette: MessageStatusPalette
         val isDarkScheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
         return when (this) {
             MessageStatus.IN_PROGRESS -> MessageStatusPalette(
-                container = Color(0xFFFFC107), // amber 500 — bright chip fill
-                onContainer = Color.Black, // amber needs dark text for AA contrast
-                onSurface = if (isDarkScheme) {
-                    Color(0xFFFFD54F) // amber 300 — light enough for dark surface
-                } else {
-                    Color(0xFFBF360C) // deep orange 900 — dark enough for white
-                },
+                container = Amber500,
+                onContainer = Color.Black,
+                onSurface = if (isDarkScheme) Amber300 else Amber800,
             )
             MessageStatus.SUCCESS -> MessageStatusPalette(
-                container = Color(0xFF4CAF50), // green 500
+                container = Green500,
                 onContainer = Color.White,
-                onSurface = if (isDarkScheme) {
-                    Color(0xFF81C784) // green 300
-                } else {
-                    Color(0xFF2E7D32) // green 800
-                },
+                onSurface = if (isDarkScheme) Green300 else Green800,
             )
             MessageStatus.ERROR -> MessageStatusPalette(
-                container = Color(0xFFF44336), // red 500
+                container = Red500,
                 onContainer = Color.White,
-                onSurface = if (isDarkScheme) {
-                    Color(0xFFE57373) // red 300
-                } else {
-                    Color(0xFFC62828) // red 800
-                },
+                onSurface = if (isDarkScheme) Red300 else Red800,
             )
         }
     }

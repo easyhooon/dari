@@ -21,6 +21,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.easyhooon.dari.Dari
 import com.easyhooon.dari.interceptor.DariInterceptor
@@ -90,6 +91,8 @@ class MainActivity : ComponentActivity() {
                 "requestCameraPermission" -> handleRequestCameraPermission(requestId)
                 "sendWithNullFields" -> handleSendWithNullFields(handlerName, requestId, data)
                 "fetchLargeData" -> handleFetchLargeData(handlerName, requestId)
+                "simulateSlowResponse" -> handleSimulateSlowResponse(handlerName, requestId)
+                "simulateError" -> handleSimulateError(handlerName, requestId, data)
                 else -> {
                     val error = """{"error":"Unknown handler","handler":"$handlerName"}"""
                     interceptor?.onWebToAppResponse(handlerName, requestId, error, false)
@@ -249,6 +252,29 @@ class MainActivity : ComponentActivity() {
         }
         interceptor?.onWebToAppResponse(handlerName, requestId, largePayload, true)
         callJs(requestId, true, """{"size":${largePayload.length},"itemCount":10000}""")
+    }
+
+    private fun handleSimulateSlowResponse(handlerName: String, requestId: String) {
+        lifecycleScope.launch {
+            delay(10_000)
+            val response = JSONObject().apply {
+                put("result", "completed after 10s delay")
+            }
+            interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(2), true)
+            callJs(requestId, true, response.toString())
+        }
+    }
+
+    private fun handleSimulateError(handlerName: String, requestId: String, data: String?) {
+        val errorType = runCatching {
+            data?.let { JSONObject(it).optString("errorType", "generic") }
+        }.getOrNull().takeUnless { it.isNullOrBlank() } ?: "generic"
+        val response = JSONObject().apply {
+            put("error", errorType)
+            put("message", "Simulated $errorType error for testing")
+        }
+        interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(2), false)
+        callJs(requestId, false, response.toString())
     }
 
     private fun handleLogEvent(data: String?) {

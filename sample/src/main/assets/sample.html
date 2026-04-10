@@ -104,6 +104,16 @@
         <span>Simulates a large API response that triggers body truncation</span>
     </button>
 
+    <div class="section">Status Test (In Progress / Error)</div>
+    <button class="btn btn-orange" onclick="simulateSlowResponse()">
+        Slow Response (10s delay)
+        <span>Stays IN_PROGRESS for 10 seconds before completing</span>
+    </button>
+    <button class="btn btn-red" onclick="simulateError()">
+        Simulate Error
+        <span>Returns an error response immediately</span>
+    </button>
+
     <div class="section">Fire-and-Forget (No Response)</div>
     <button class="btn btn-purple" onclick="logEvent()">
         Log Event
@@ -197,6 +207,19 @@
             var id = createRequestId();
             log('→ fetchLargeData (~2MB response)', 'req');
             Android.onBridgeRequest('fetchLargeData', id, null);
+        }
+
+        function simulateSlowResponse() {
+            var id = createRequestId();
+            log('→ simulateSlowResponse (10s delay)', 'req');
+            Android.onBridgeRequest('simulateSlowResponse', id, null);
+        }
+
+        function simulateError() {
+            var id = createRequestId();
+            var data = JSON.stringify({ errorType: "network_timeout" });
+            log('→ simulateError', 'req');
+            Android.onBridgeRequest('simulateError', id, data);
         }
 
         function logEvent() {

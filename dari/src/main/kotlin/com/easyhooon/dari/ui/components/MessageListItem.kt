@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.sp
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessageStatus
+import com.easyhooon.dari.ui.theme.Blue500
+import com.easyhooon.dari.ui.theme.BlueGrey400
+import com.easyhooon.dari.ui.theme.Green500
 import com.easyhooon.dari.ui.theme.palette
 import java.time.Instant
 import java.time.ZoneId
@@ -49,8 +52,8 @@ internal fun MessageListItem(
         verticalAlignment = Alignment.Top,
     ) {
         val (directionText, directionColor) = when (entry.direction) {
-            MessageDirection.WEB_TO_APP -> "W\u2192A" to Color(0xFF2196F3)
-            MessageDirection.APP_TO_WEB -> "A\u2192W" to Color(0xFF4CAF50)
+            MessageDirection.WEB_TO_APP -> "W\u2192A" to Blue500
+            MessageDirection.APP_TO_WEB -> "A\u2192W" to Green500
         }
         Text(
             text = directionText,
@@ -80,7 +83,7 @@ internal fun MessageListItem(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFF78909C))
+                            .background(BlueGrey400)
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                     )
                 }

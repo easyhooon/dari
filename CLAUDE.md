@@ -15,6 +15,12 @@
 
 - Do NOT use fully-qualified names (FQN) inline in Kotlin code. Always add a proper `import` statement at the top of the file and reference the type by its simple name. This applies to both production and test code.
 
+## Issues
+
+- Write all issues in **English**.
+- Use clear section headers: `## Summary`, `## Problem` / `## Motivation`, `## Proposed Approach` / `## Proposed Behavior`, etc.
+- Include relevant code snippets, color values, or architecture details where helpful.
+
 ## Skills
 
 - Code review follow-up: use the `/resolve-coderabbit-review` skill to triage and apply CodeRabbit comments on the current PR.
