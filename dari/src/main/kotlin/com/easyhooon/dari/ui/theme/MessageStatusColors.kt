@@ -18,17 +18,6 @@ internal val Amber700 = Color(0xFFFFA000)
 internal val Amber800 = Color(0xFFFF8F00)
 internal val Amber900 = Color(0xFFFF6F00)
 
-// Orange
-internal val Orange100 = Color(0xFFFFE0B2)
-internal val Orange200 = Color(0xFFFFCC80)
-internal val Orange300 = Color(0xFFFFB74D)
-internal val Orange400 = Color(0xFFFFA726)
-internal val Orange500 = Color(0xFFFF9800)
-internal val Orange600 = Color(0xFFFB8C00)
-internal val Orange700 = Color(0xFFF57C00)
-internal val Orange800 = Color(0xFFEF6C00)
-internal val Orange900 = Color(0xFFE65100)
-
 // Green
 internal val Green100 = Color(0xFFC8E6C9)
 internal val Green200 = Color(0xFFA5D6A7)
@@ -95,7 +84,7 @@ internal val MessageStatus.palette: MessageStatusPalette
             MessageStatus.IN_PROGRESS -> MessageStatusPalette(
                 container = Amber500,
                 onContainer = Color.Black,
-                onSurface = if (isDarkScheme) Amber300 else Orange800,
+                onSurface = if (isDarkScheme) Amber300 else Amber800,
             )
             MessageStatus.SUCCESS -> MessageStatusPalette(
                 container = Green500,
