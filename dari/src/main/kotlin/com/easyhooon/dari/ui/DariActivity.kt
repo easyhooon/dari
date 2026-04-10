@@ -72,6 +72,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import com.easyhooon.dari.ui.components.MessageListItem
 import com.easyhooon.dari.ui.components.SettingsBottomSheet
 import com.easyhooon.dari.ui.theme.ApplyDariSystemBars
+import com.easyhooon.dari.ui.theme.DariBlue
 import com.easyhooon.dari.ui.theme.DariTheme
 import com.easyhooon.dari.ui.theme.DariTopBarColors
 import com.easyhooon.dari.ui.theme.palette
@@ -413,12 +414,12 @@ class DariActivity : ComponentActivity() {
                                     Dari.clear()
                                     showClearDialog = false
                                 }) {
-                                    Text("CLEAR")
+                                    Text("CLEAR", color = DariBlue)
                                 }
                             },
                             dismissButton = {
                                 TextButton(onClick = { showClearDialog = false }) {
-                                    Text("CANCEL")
+                                    Text("CANCEL", color = DariBlue)
                                 }
                             },
                         )
