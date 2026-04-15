@@ -20,8 +20,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.IosShare
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -119,8 +119,7 @@ class DariDetailActivity : ComponentActivity() {
             DariTheme(darkTheme = darkMode) {
                 val entries by Dari.repository.entries.collectAsStateWithLifecycle()
                 val entry = entries.find { it.id == id }
-                var shareMenuExpanded by remember { mutableStateOf(false) }
-                var downloadMenuExpanded by remember { mutableStateOf(false) }
+                var exportMenuExpanded by remember { mutableStateOf(false) }
 
                 Scaffold(
                     topBar = {
@@ -134,17 +133,17 @@ class DariDetailActivity : ComponentActivity() {
                             actions = {
                                 entry?.let { current ->
                                     Box {
-                                        IconButton(onClick = { shareMenuExpanded = true }) {
-                                            Icon(Icons.Default.Share, contentDescription = "Share")
+                                        IconButton(onClick = { exportMenuExpanded = true }) {
+                                            Icon(Icons.Default.IosShare, contentDescription = "Export")
                                         }
                                         DropdownMenu(
-                                            expanded = shareMenuExpanded,
-                                            onDismissRequest = { shareMenuExpanded = false },
+                                            expanded = exportMenuExpanded,
+                                            onDismissRequest = { exportMenuExpanded = false },
                                         ) {
                                             DropdownMenuItem(
                                                 text = { Text("Share as TEXT") },
                                                 onClick = {
-                                                    shareMenuExpanded = false
+                                                    exportMenuExpanded = false
                                                     DariExporter.shareSingleAsPlainText(
                                                         this@DariDetailActivity,
                                                         current,
@@ -154,7 +153,7 @@ class DariDetailActivity : ComponentActivity() {
                                             DropdownMenuItem(
                                                 text = { Text("Share as JSON") },
                                                 onClick = {
-                                                    shareMenuExpanded = false
+                                                    exportMenuExpanded = false
                                                     lifecycleScope.launch {
                                                         DariExporter.exportAndShareSingle(
                                                             this@DariDetailActivity,
@@ -164,27 +163,18 @@ class DariDetailActivity : ComponentActivity() {
                                                     }
                                                 },
                                             )
-                                        }
-                                    }
-                                    Box {
-                                        IconButton(onClick = { downloadMenuExpanded = true }) {
-                                            Icon(Icons.Default.Download, contentDescription = "Save")
-                                        }
-                                        DropdownMenu(
-                                            expanded = downloadMenuExpanded,
-                                            onDismissRequest = { downloadMenuExpanded = false },
-                                        ) {
+                                            HorizontalDivider()
                                             DropdownMenuItem(
                                                 text = { Text("Save as TEXT") },
                                                 onClick = {
-                                                    downloadMenuExpanded = false
+                                                    exportMenuExpanded = false
                                                     launchSave(current, ExportFormat.TEXT)
                                                 },
                                             )
                                             DropdownMenuItem(
                                                 text = { Text("Save as JSON") },
                                                 onClick = {
-                                                    downloadMenuExpanded = false
+                                                    exportMenuExpanded = false
                                                     launchSave(current, ExportFormat.JSON)
                                                 },
                                             )
