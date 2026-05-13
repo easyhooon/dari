@@ -21,6 +21,10 @@
 - Use clear section headers: `## Summary`, `## Problem` / `## Motivation`, `## Proposed Approach` / `## Proposed Behavior`, etc.
 - Include relevant code snippets, color values, or architecture details where helpful.
 
+## Release
+
+- Always run `./gradlew clean` before `publishAllPublicationsToMavenCentralRepository` to ensure freshly compiled artifacts are uploaded (not stale build cache).
+
 ## Skills
 
 - Code review follow-up: use the `/resolve-coderabbit-review` skill to triage and apply CodeRabbit comments on the current PR.
