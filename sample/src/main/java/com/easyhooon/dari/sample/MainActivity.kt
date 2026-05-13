@@ -57,6 +57,16 @@ class MainActivity : ComponentActivity() {
 
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
+            // Sample loads from `file:///android_asset/...` and exposes a
+            // JavascriptInterface to the page. Without locking down the
+            // file:// access flags the sample page (or anything that
+            // navigates the WebView) could read other local files via
+            // fetch('file:///...') and reach into other origins. Because
+            // the sample is what people copy-paste, harden it. (CWE-749)
+            settings.allowFileAccess = false
+            settings.allowContentAccess = false
+            settings.allowFileAccessFromFileURLs = false
+            settings.allowUniversalAccessFromFileURLs = false
             webViewClient = WebViewClient()
             addJavascriptInterface(BridgeInterface(), "Android")
             loadUrl("file:///android_asset/sample.html")
