@@ -1,8 +1,10 @@
 package com.easyhooon.dari.ui.theme
 
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
-import androidx.activity.compose.LocalActivity
+import androidx.compose.ui.platform.LocalContext
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -93,7 +95,7 @@ internal fun DariTheme(
  */
 @Composable
 internal fun ApplyDariSystemBars(isDark: Boolean) {
-    val activity = LocalActivity.current as? ComponentActivity ?: return
+    val activity = LocalContext.current.findComponentActivity() ?: return
     DisposableEffect(isDark) {
         val statusBarColor = if (isDark) DariBlueDark else DariBlue
         val statusBarStyle = SystemBarStyle.dark(statusBarColor.toArgb())
@@ -111,6 +113,12 @@ internal fun ApplyDariSystemBars(isDark: Boolean) {
         )
         onDispose { }
     }
+}
+
+private tailrec fun Context.findComponentActivity(): ComponentActivity? = when (this) {
+    is ComponentActivity -> this
+    is ContextWrapper -> baseContext.findComponentActivity()
+    else -> null
 }
 
 object DariTopBarColors {

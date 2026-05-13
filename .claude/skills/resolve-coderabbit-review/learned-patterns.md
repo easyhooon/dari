@@ -19,6 +19,7 @@
 | 칩/배지 배경 대비 부족 (low contrast) → 전경 색 분리 | 1 | #37 | 2026-04-09 |
 | 단일 색상 매핑을 역할별로 분리 (container/onContainer/onSurface) | 1 | #37 | 2026-04-09 |
 | JSONObject 파싱 크래시 방어 (runCatching 래핑) | 1 | #42 | 2026-04-10 |
+| LocalContext 직접 캐스팅 대신 ContextWrapper 언래핑으로 ComponentActivity 탐색 | 1 | #54 | 2026-05-13 |
 
 ## 거절 패턴 (반복적으로 거절한 코멘트 유형)
 
