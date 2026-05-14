@@ -4,7 +4,7 @@ import { join } from 'path';
 
 export const dynamic = 'force-static';
 
-export const alt = 'Dari — WebView Bridge Inspector for Android';
+export const alt = 'Dari - WebView Bridge Inspector for Android';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 

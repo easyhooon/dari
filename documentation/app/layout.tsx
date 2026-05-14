@@ -8,11 +8,11 @@ const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin']
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://easyhooon.github.io/dari'),
-  title: 'Dari — WebView Bridge Inspector for Android',
+  title: 'Dari - WebView Bridge Inspector for Android',
   description: 'A Chucker-inspired debug inspector for WebView bridge communication on Android.',
   openGraph: {
     siteName: 'Dari',
-    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Dari — WebView Bridge Inspector for Android' }],
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Dari - WebView Bridge Inspector for Android' }],
     type: 'website',
   },
   twitter: {
