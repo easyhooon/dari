@@ -13,12 +13,12 @@ export const metadata: Metadata = {
   openGraph: {
     url: 'https://easyhooon.github.io/dari',
     siteName: 'Dari',
-    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Dari - WebView Bridge Inspector for Android' }],
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Dari - WebView Bridge Inspector for Android' }],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    images: ['/opengraph-image'],
+    images: ['/og.png'],
   },
 };
 
