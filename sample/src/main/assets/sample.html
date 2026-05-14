@@ -124,6 +124,16 @@
         <span>Screen tracking without response (requestId = null)</span>
     </button>
 
+    <div class="section">fireAndForget Flag Test</div>
+    <button class="btn btn-green" onclick="fireAndForgetPerCall()">
+        Per-call fireAndForget=true
+        <span>Has requestId, but auto-resolves to SUCCESS immediately</span>
+    </button>
+    <button class="btn btn-orange" onclick="noResponsePending()">
+        No Response (stays IN_PROGRESS)
+        <span>No flag + no response = forever IN_PROGRESS (contrast)</span>
+    </button>
+
     <div id="log"></div>
 
     <script>
@@ -220,6 +230,19 @@
             var data = JSON.stringify({ errorType: "network_timeout" });
             log('→ simulateError', 'req');
             Android.onBridgeRequest('simulateError', id, data);
+        }
+
+        function fireAndForgetPerCall() {
+            var id = createRequestId();
+            var data = JSON.stringify({ action: "track_conversion", value: 42 });
+            log('→ fireAndForgetPerCall (flag=true)', 'req');
+            Android.onBridgeRequest('fireAndForgetPerCall', id, data);
+        }
+
+        function noResponsePending() {
+            var id = createRequestId();
+            log('→ noResponsePending (IN_PROGRESS forever)', 'req');
+            Android.onBridgeRequest('noResponsePending', id, null);
         }
 
         function logEvent() {
