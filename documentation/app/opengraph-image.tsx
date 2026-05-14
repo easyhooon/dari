@@ -26,8 +26,10 @@ export default function Image() {
           gap: 36,
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logoSrc} width={200} height={200} alt="Dari logo" />
+        <div style={{ width: 400, height: 400, borderRadius: 88, overflow: 'hidden', display: 'flex' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logoSrc} width={400} height={400} alt="Dari logo" />
+        </div>
         <div
           style={{
             display: 'flex',
