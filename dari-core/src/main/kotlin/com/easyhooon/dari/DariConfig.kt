@@ -1,5 +1,6 @@
 package com.easyhooon.dari
 
+import com.easyhooon.dari.interceptor.DariInterceptor
 import kotlin.time.Duration
 
 /**
@@ -30,12 +31,12 @@ data class DariConfig(
     val retentionPeriod: Duration? = null,
     /**
      * When `true`, all bridge calls are treated as fire-and-forget by default:
-     * entries are immediately resolved to [com.easyhooon.dari.MessageStatus.SUCCESS]
+     * entries are immediately resolved to [MessageStatus.SUCCESS]
      * without waiting for a response.
      *
      * Can be overridden per call via the `fireAndForget` parameter on
-     * [com.easyhooon.dari.interceptor.DariInterceptor.onWebToAppRequest] and
-     * [com.easyhooon.dari.interceptor.DariInterceptor.onAppToWebMessage].
+     * [DariInterceptor.onWebToAppRequest] and
+     * [DariInterceptor.onAppToWebMessage].
      *
      * Default is `false` to preserve the existing request–response pairing behavior.
      */
