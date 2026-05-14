@@ -1,10 +1,13 @@
 # Dari
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.easyhooon/dari)](https://central.sonatype.com/artifact/io.github.easyhooon/dari)
+[![Documentation](https://img.shields.io/badge/docs-easyhooon.github.io%2Fdari-blue)](https://easyhooon.github.io/dari)
 
 **Dari** (다리) means **"bridge"** in Korean. Dari is an Android library for inspecting WebView bridge communication in real time, inspired by [Chucker](https://github.com/ChuckerTeam/chucker).
 
 Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualizes **WebView JavaScript bridge messages** between your web content and native Android code.
+
+📖 **[Documentation](https://easyhooon.github.io/dari)** — Setup guide, configuration reference, and API docs.
 
 ## Screenshots
 
