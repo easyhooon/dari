@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: 'Dari - WebView Bridge Inspector for Android',
   description: 'A Chucker-inspired debug inspector for WebView bridge communication on Android.',
   openGraph: {
+    url: 'https://easyhooon.github.io/dari',
     siteName: 'Dari',
     images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Dari - WebView Bridge Inspector for Android' }],
     type: 'website',
