@@ -9,6 +9,10 @@ interface DariInterceptor {
     val tag: String?
         get() = null
 
+    // fireAndForget is Boolean? (not Boolean) to represent three states:
+    // null = defer to DariConfig.fireAndForget, true = force fire-and-forget, false = force request-response.
+    // A plain Boolean would collapse null into one of the two values, making per-call override impossible.
+
     /** Called when a Web -> App request is received */
     fun onWebToAppRequest(handlerName: String, requestId: String?, requestData: String?, fireAndForget: Boolean? = null)
 
