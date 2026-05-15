@@ -89,7 +89,8 @@ class MainActivity : ComponentActivity() {
         @RequiresApi(Build.VERSION_CODES.P)
         @JavascriptInterface
         fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
-            interceptor?.onWebToAppRequest(handlerName, requestId, data)
+            val perCallFireAndForget = if (handlerName == "fireAndForgetPerCall") true else null
+            interceptor?.onWebToAppRequest(handlerName, requestId, data, fireAndForget = perCallFireAndForget)
 
             when (handlerName) {
                 "getAppInfo" -> handleGetAppInfo(requestId)
@@ -103,6 +104,8 @@ class MainActivity : ComponentActivity() {
                 "fetchLargeData" -> handleFetchLargeData(handlerName, requestId)
                 "simulateSlowResponse" -> handleSimulateSlowResponse(handlerName, requestId)
                 "simulateError" -> handleSimulateError(handlerName, requestId, data)
+                "fireAndForgetPerCall" -> { /* auto-resolved to SUCCESS by Dari via fireAndForget=true */ }
+                "noResponsePending" -> { /* intentionally no response — stays IN_PROGRESS */ }
                 else -> {
                     val error = """{"error":"Unknown handler","handler":"$handlerName"}"""
                     interceptor?.onWebToAppResponse(handlerName, requestId, error, false)

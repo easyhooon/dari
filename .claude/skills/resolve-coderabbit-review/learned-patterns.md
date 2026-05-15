@@ -20,6 +20,8 @@
 | 단일 색상 매핑을 역할별로 분리 (container/onContainer/onSurface) | 1 | #37 | 2026-04-09 |
 | JSONObject 파싱 크래시 방어 (runCatching 래핑) | 1 | #42 | 2026-04-10 |
 | LocalContext 직접 캐스팅 대신 ContextWrapper 언래핑으로 ComponentActivity 탐색 | 1 | #54 | 2026-05-13 |
+| KDoc 내 인라인 FQN → import 추가 후 simple name으로 교체 | 1 | #60 | 2026-05-14 |
+| Boolean 파라미터를 Boolean?으로 변경하여 null=global default, true/false=per-call override 지원 | 1 | #60 | 2026-05-14 |
 | 동적 라우트 파라미터 하드코딩 → await params로 동적 해석 | 1 | #61 | 2026-05-14 |
 | `<a>` 태그 대신 Next.js `<Link>` 사용 | 1 | #61 | 2026-05-14 |
 | 문서 코드 샘플에 필수 import 힌트 추가 (DX 개선) | 1 | #61 | 2026-05-14 |
