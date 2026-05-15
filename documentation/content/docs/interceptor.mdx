@@ -23,7 +23,7 @@ interface DariInterceptor {
         isSuccess: Boolean,
     )
 
-    fun onAppToWebMessage(
+    fun onAppToWebRequest(
         handlerName: String,
         requestId: String?,
         data: String?,
@@ -72,7 +72,7 @@ Called when the native side sends a response back to JavaScript.
 | `responseData` | `String?` | Response payload |
 | `isSuccess` | `Boolean` | `true` → `SUCCESS`, `false` → `ERROR` |
 
-### `onAppToWebMessage`
+### `onAppToWebRequest`
 
 Called when the native side pushes a message to JavaScript.
 

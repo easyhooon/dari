@@ -23,7 +23,7 @@ interface DariInterceptor {
         isSuccess: Boolean,
     )
 
-    fun onAppToWebMessage(
+    fun onAppToWebRequest(
         handlerName: String,
         requestId: String?,
         data: String?,
@@ -72,7 +72,7 @@ JavaScript가 네이티브 앱으로 메시지를 보낼 때 호출합니다.
 | `responseData` | `String?` | 응답 페이로드 |
 | `isSuccess` | `Boolean` | `true` → `SUCCESS`, `false` → `ERROR` |
 
-### `onAppToWebMessage`
+### `onAppToWebRequest`
 
 네이티브 앱이 JavaScript로 메시지를 푸시할 때 호출합니다.
 

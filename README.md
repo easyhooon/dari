@@ -115,7 +115,7 @@ Call the interceptor when your native code sends a message to JavaScript and whe
 
 ```kotlin
 // When sending a message to JavaScript
-interceptor?.onAppToWebMessage(handlerName, requestId, data)
+interceptor?.onAppToWebRequest(handlerName, requestId, data)
 
 // When the web response is received
 interceptor?.onAppToWebResponse(requestId, isSuccess, responseData)
@@ -200,7 +200,7 @@ The `sample/` module contains a working WebView demo with realistic bridge scena
 |--------|-------------|
 | `onWebToAppRequest()` | Log a Web-to-App request. `requestId` is optional for fire-and-forget messages. |
 | `onWebToAppResponse()` | Log the response to a Web-to-App request. Skipped if `requestId` is null. |
-| `onAppToWebMessage()` | Log an App-to-Web message. `requestId` is optional for fire-and-forget messages. |
+| `onAppToWebRequest()` | Log an App-to-Web message. `requestId` is optional for fire-and-forget messages. |
 | `onAppToWebResponse()` | Log the response to an App-to-Web message. Skipped if `requestId` is null. |
 
 ```kotlin
@@ -224,8 +224,8 @@ interface DariInterceptor {
         isSuccess: Boolean,
     )
 
-    /** Called when an App -> Web message is sent */
-    fun onAppToWebMessage(
+    /** Called when an App -> Web request is sent */
+    fun onAppToWebRequest(
         handlerName: String,
         requestId: String?,
         data: String?,

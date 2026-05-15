@@ -55,7 +55,7 @@ class DefaultDariInterceptor(
         }
     }
 
-    override fun onAppToWebMessage(handlerName: String, requestId: String?, data: String?, fireAndForget: Boolean?) {
+    override fun onAppToWebRequest(handlerName: String, requestId: String?, data: String?, fireAndForget: Boolean?) {
         val (truncatedData, wasTruncated) = MessageEntry.truncateIfNeeded(data, maxContentLength)
         val resolvedAsSuccess = fireAndForget ?: Dari.config.fireAndForget
         val entry = MessageEntry(
