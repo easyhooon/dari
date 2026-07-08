@@ -40,13 +40,13 @@ interface DariInterceptor {
 
 ## DefaultDariInterceptor
 
-기본 구현체입니다. 메시지를 Dari의 Room 데이터베이스에 저장하고 알림을 표시합니다.
+`DefaultDariInterceptor`는 디버그 구현체입니다. 메시지를 Dari의 Room 데이터베이스에 저장하고 알림을 표시합니다.
 
 ```kotlin
-val interceptor = DefaultDariInterceptor(tag = "PaymentBridge")
+val interceptor = Dari.createInterceptor(tag = "PaymentBridge")
 ```
 
-선택적 `tag`를 사용하면 앱에 여러 인터셉터가 활성화된 경우 브릿지 소스별로 메시지를 구분할 수 있습니다.
+앱 코드에서는 `Dari.createInterceptor()`를 사용해야 릴리즈 빌드가 `dari-noop`과 함께 컴파일됩니다. 선택적 `tag`를 사용하면 앱에 여러 인터셉터가 활성화된 경우 브릿지 소스별로 메시지를 구분할 수 있습니다.
 
 ## 메서드
 
@@ -86,13 +86,13 @@ JavaScript가 네이티브 앱의 요청에 응답할 때 호출합니다.
 
 ```kotlin
 // 개별 호출
-interceptor.onWebToAppRequest(
+interceptor?.onWebToAppRequest(
     handlerName = "logEvent",
     requestId = null,
     requestData = """{"event": "button_click"}""",
     fireAndForget = true,
 )
 
-// 전역 설정 — 모든 호출에 적용
+// 전역 설정: 모든 호출에 적용
 DariConfig(fireAndForget = true)
 ```

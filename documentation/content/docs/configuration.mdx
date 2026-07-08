@@ -3,12 +3,12 @@ title: Configuration
 description: DariConfig options reference
 ---
 
-Pass a `DariConfig` instance to `Dari.initialize()` to customize behavior.
+Pass a `DariConfig` instance to `Dari.init()` to customize behavior before or during app startup.
 
 ```kotlin
 // import kotlin.time.Duration.Companion.days
 // import kotlin.time.Duration.Companion.hours
-Dari.initialize(
+Dari.init(
     context = this,
     config = DariConfig(
         maxEntries = 500,
@@ -46,7 +46,7 @@ Opens the Dari inspector screen when the device is shaken.
 ### `retentionPeriod`
 **Type**: `Duration?` | **Default**: `null`
 
-TTL-based cleanup — messages older than this duration are deleted automatically.
+TTL-based cleanup deletes messages older than this duration automatically.
 
 ```kotlin
 // import kotlin.time.Duration.Companion.hours

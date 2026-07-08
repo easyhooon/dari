@@ -3,26 +3,26 @@ title: 모듈 구조
 description: 프로덕션 오버헤드 제로를 위한 세 모듈 아키텍처
 ---
 
-Dari는 릴리즈 빌드에서 디버그 코드를 완전히 제거하기 위해 세 모듈로 분리되어 있습니다.
+Dari는 릴리즈 빌드에 디버그 구현이 포함되지 않도록 세 모듈로 분리되어 있습니다.
 
 ## `dari-core`
 
 UI, Room DB, 알림이 없는 순수 Kotlin/Android 모듈입니다.
 
 포함 내용:
-- `DariConfig` — 설정 데이터 클래스
-- `DariInterceptor` — 브릿지 메시지 캡처 인터페이스
-- `MessageEntry` — 브릿지 호출 라이프사이클 데이터 모델
-- `MessageStatus` — 열거형: `IN_PROGRESS`, `SUCCESS`, `ERROR`
-- `MessageDirection` — 열거형: `WEB_TO_APP`, `APP_TO_WEB`
+- `DariConfig`: 설정 데이터 클래스
+- `DariInterceptor`: 브릿지 메시지 캡처 인터페이스
+- `MessageEntry`: 브릿지 호출 라이프사이클 데이터 모델
+- `MessageStatus`: 열거형: `IN_PROGRESS`, `SUCCESS`, `ERROR`
+- `MessageDirection`: 열거형: `WEB_TO_APP`, `APP_TO_WEB`
 
 ## `dari`
 
 `dari-core`에 의존하는 전체 디버그 구현체입니다.
 
 포함 내용:
-- `DefaultDariInterceptor` — Room에 메시지 저장, 알림 표시
-- `Dari` — 싱글톤 진입점 (`initialize`, `repository`, `config`)
+- `DefaultDariInterceptor`: Room에 메시지 저장, 알림 표시
+- `Dari`: 싱글톤 진입점 (`init`, `createInterceptor`, `clear`)
 - 인스펙터 UI (Jetpack Compose)
 - Room 데이터베이스 + DAO
 - 흔들기 감지 센서
@@ -31,6 +31,6 @@ UI, Room DB, 알림이 없는 순수 Kotlin/Android 모듈입니다.
 
 ## `dari-noop`
 
-`dari-core`에 의존하는 No-op 스텁입니다. 모든 공개 API가 빈 구현이며 — `Dari.initialize()`는 아무것도 하지 않고, `DefaultDariInterceptor` 메서드도 아무것도 기록하지 않습니다.
+`dari-core`에 의존하는 No-op 스텁입니다. `Dari.init()`과 다른 런타임 API는 아무것도 하지 않고, `Dari.createInterceptor()`는 `null`을 반환합니다.
 
 프로덕션 빌드에서 런타임 오버헤드가 전혀 없도록 `releaseImplementation`에 추가하세요.

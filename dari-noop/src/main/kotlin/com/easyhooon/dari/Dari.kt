@@ -14,5 +14,13 @@ object Dari {
     @Suppress("UNUSED_PARAMETER", "FunctionOnlyReturningConstant")
     fun createInterceptor(tag: String? = null): DariInterceptor? = null
 
+    @Suppress("UNUSED_PARAMETER")
+    fun setShakeToOpenEnabled(enabled: Boolean) = Unit
+
+    @Suppress("UNUSED_PARAMETER")
+    fun setDarkMode(value: Boolean?) = Unit
+
+    fun showNotification() = Unit
+
     fun clear() = Unit
 }

@@ -9,8 +9,8 @@ description: Android 프로젝트에 Dari 추가하기
 
 ```kotlin
 dependencies {
-    debugImplementation("io.github.easyhooon:dari:1.4.5")
-    releaseImplementation("io.github.easyhooon:dari-noop:1.4.5")
+    debugImplementation("io.github.easyhooon:dari:1.5.0")
+    releaseImplementation("io.github.easyhooon:dari-noop:1.5.0")
 }
 ```
 
@@ -18,45 +18,45 @@ dependencies {
 
 ## 초기화
 
-`Application` 클래스에서 `Dari.initialize()`를 호출합니다:
+Dari는 AndroidX Startup으로 자동 초기화됩니다. 설정을 바꾸고 싶을 때만 `Application` 클래스에서 `Dari.init()`을 호출합니다:
 
 ```kotlin
 class MyApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        Dari.initialize(this)
+        Dari.init(
+            context = this,
+            config = DariConfig(
+                showNotification = true,
+                shakeToOpen = true,
+            )
+        )
     }
 }
 ```
 
-`DariConfig`를 전달하여 동작을 커스터마이징할 수 있습니다:
-
-```kotlin
-Dari.initialize(
-    context = this,
-    config = DariConfig(
-        showNotification = true,
-        shakeToOpen = true,
-    )
-)
-```
+기본 설정을 사용할 때는 초기화 코드를 작성하지 않아도 됩니다.
 
 ## 브릿지 연결
 
-`DefaultDariInterceptor`를 생성하고 각 브릿지 지점에서 메서드를 호출합니다:
+디버그와 릴리즈 빌드에서 같은 코드가 컴파일되도록 `Dari.createInterceptor()`로 인터셉터를 생성합니다:
 
 ```kotlin
-val interceptor = DefaultDariInterceptor(tag = "MyBridge")
+val interceptor = Dari.createInterceptor(tag = "MyBridge")
+```
 
+각 브릿지 지점에서 인터셉터 메서드를 호출합니다. 릴리즈 빌드에서는 `dari-noop`이 `null`을 반환하므로 safe call을 사용합니다:
+
+```kotlin
 // Web → App: 요청 수신
-interceptor.onWebToAppRequest(
+interceptor?.onWebToAppRequest(
     handlerName = "getUserInfo",
     requestId = "req_001",
     requestData = """{"userId": 123}""",
 )
 
 // Web → App: 응답 전송
-interceptor.onWebToAppResponse(
+interceptor?.onWebToAppResponse(
     handlerName = "getUserInfo",
     requestId = "req_001",
     responseData = """{"name": "John"}""",

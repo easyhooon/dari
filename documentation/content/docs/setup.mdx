@@ -9,54 +9,54 @@ Add the dependencies to your app module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    debugImplementation("io.github.easyhooon:dari:1.4.5")
-    releaseImplementation("io.github.easyhooon:dari-noop:1.4.5")
+    debugImplementation("io.github.easyhooon:dari:1.5.0")
+    releaseImplementation("io.github.easyhooon:dari-noop:1.5.0")
 }
 ```
 
-The `dari-noop` module provides empty implementations of all public APIs so your code compiles in release with zero runtime overhead.
+The `dari-noop` module implements the same public APIs with no-op behavior, so your code compiles in release with no runtime overhead.
 
 ## Initialize
 
-Call `Dari.initialize()` in your `Application` class:
+Dari starts automatically through AndroidX Startup. Call `Dari.init()` only when you need custom configuration:
 
 ```kotlin
 class MyApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        Dari.initialize(this)
+        Dari.init(
+            context = this,
+            config = DariConfig(
+                showNotification = true,
+                shakeToOpen = true,
+            )
+        )
     }
 }
 ```
 
-You can pass a `DariConfig` to customize behavior:
-
-```kotlin
-Dari.initialize(
-    context = this,
-    config = DariConfig(
-        showNotification = true,
-        shakeToOpen = true,
-    )
-)
-```
+If you use the default configuration, you do not need any initialization code.
 
 ## Connect Your Bridge
 
-Instantiate a `DefaultDariInterceptor` and call its methods at each bridge point:
+Create an interceptor through `Dari.createInterceptor()` so the same app code compiles in debug and release builds:
 
 ```kotlin
-val interceptor = DefaultDariInterceptor(tag = "MyBridge")
+val interceptor = Dari.createInterceptor(tag = "MyBridge")
+```
 
+Call the interceptor at each bridge point. In release builds, `dari-noop` returns `null`, so use safe calls:
+
+```kotlin
 // Web → App: request received
-interceptor.onWebToAppRequest(
+interceptor?.onWebToAppRequest(
     handlerName = "getUserInfo",
     requestId = "req_001",
     requestData = """{"userId": 123}""",
 )
 
 // Web → App: response sent back
-interceptor.onWebToAppResponse(
+interceptor?.onWebToAppResponse(
     handlerName = "getUserInfo",
     requestId = "req_001",
     responseData = """{"name": "John"}""",

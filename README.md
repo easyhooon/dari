@@ -149,6 +149,7 @@ class MyApp : Application() {
                 maxContentLength = 500_000,     // Default: 500,000 (truncate large payloads)
                 shakeToOpen = true,             // Default: false
                 retentionPeriod = 1.days,       // Default: null (disabled)
+                fireAndForget = false,          // Default: false
             )
         )
     }
@@ -162,6 +163,7 @@ class MyApp : Application() {
 | `maxContentLength` | `Int` | `500,000` | Truncate request/response payloads exceeding this length |
 | `shakeToOpen` | `Boolean` | `false` | Enable shake gesture to open Dari UI |
 | `retentionPeriod` | `Duration?` | `null` | TTL-based message cleanup (e.g., `1.hours`, `3.days`). `null` disables it |
+| `fireAndForget` | `Boolean` | `false` | Treat bridge calls as one-way by default without waiting for responses |
 
 ## Module Structure
 
@@ -180,6 +182,13 @@ The `sample/` module contains a working WebView demo with realistic bridge scena
 1. A notification appears showing recent bridge messages
 2. Tap the notification to open the message list
 3. Tap any message to see its details (overview, request payload, response payload)
+
+## Security & Privacy
+
+Dari is intended for debug and internal builds. Bridge payloads may contain
+tokens, personal data, or other sensitive values, so avoid sharing exported
+messages without reviewing them first. Use `dari-noop` in release builds to
+keep the same API surface without storing or displaying bridge messages.
 
 ## API Reference
 
@@ -209,11 +218,16 @@ The `sample/` module contains a working WebView demo with realistic bridge scena
  * Injected into WebViewBridge to capture all bridge messages.
  */
 interface DariInterceptor {
+    /** Tag identifying the source of messages captured by this interceptor */
+    val tag: String?
+        get() = null
+
     /** Called when a Web -> App request is received */
     fun onWebToAppRequest(
         handlerName: String,
         requestId: String?,
         requestData: String?,
+        fireAndForget: Boolean? = null,
     )
 
     /** Called when a response is sent for a Web -> App request */
@@ -229,6 +243,7 @@ interface DariInterceptor {
         handlerName: String,
         requestId: String?,
         data: String?,
+        fireAndForget: Boolean? = null,
     )
 
     /** Called when a web response is received for an App -> Web request */
