@@ -40,13 +40,13 @@ interface DariInterceptor {
 
 ## DefaultDariInterceptor
 
-The built-in implementation. Stores messages in Dari's Room database and posts notifications.
+`DefaultDariInterceptor` is the debug implementation. It stores messages in Dari's Room database and posts notifications.
 
 ```kotlin
-val interceptor = DefaultDariInterceptor(tag = "PaymentBridge")
+val interceptor = Dari.createInterceptor(tag = "PaymentBridge")
 ```
 
-The optional `tag` labels messages by bridge source when multiple interceptors are active in the same app.
+Use `Dari.createInterceptor()` in app code so release builds compile against `dari-noop`. The optional `tag` labels messages by bridge source when multiple interceptors are active in the same app.
 
 ## Methods
 
@@ -86,13 +86,13 @@ One-way calls that never receive a response can be marked so they immediately re
 
 ```kotlin
 // Per-call
-interceptor.onWebToAppRequest(
+interceptor?.onWebToAppRequest(
     handlerName = "logEvent",
     requestId = null,
     requestData = """{"event": "button_click"}""",
     fireAndForget = true,
 )
 
-// Global — all calls
+// Global setting: all calls
 DariConfig(fireAndForget = true)
 ```

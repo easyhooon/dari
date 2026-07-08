@@ -1,11 +1,11 @@
 ---
 title: Introduction
-description: Dari — WebView bridge communication inspector for Android
+description: Dari, WebView bridge communication inspector for Android
 ---
 
 ## What is Dari?
 
-Dari is a debug inspector library for Android WebView bridge communication, inspired by [Chucker](https://github.com/ChuckerTeam/chucker). It captures and displays all WebView↔App bridge messages in a persistent notification and an in-app UI — without any changes to your existing bridge logic.
+Dari is a debug inspector library for Android WebView bridge communication, inspired by [Chucker](https://github.com/ChuckerTeam/chucker). It captures and displays all WebView↔App bridge messages in a persistent notification and an in-app UI without changing your existing bridge logic.
 
 ## Features
 
@@ -15,12 +15,13 @@ Dari is a debug inspector library for Android WebView bridge communication, insp
 - **Shake-to-open** gesture to launch the inspector
 - **Status filter** to focus on errors or in-progress calls
 - **Export** captured messages as JSON
-- **No-op module** (`dari-noop`) for release builds — zero overhead in production
+- **No-op module** (`dari-noop`) for release builds with no runtime overhead
 - **Fire-and-forget** support for one-way bridge calls
+- **Same public API surface** across debug and release artifacts
 
 ## How It Works
 
-Dari wraps your existing bridge callbacks with a `DariInterceptor`. Each call is stored as a `MessageEntry` with request/response data, timestamps, and status. The inspector UI shows all entries in real time.
+Create a `DariInterceptor` with `Dari.createInterceptor()` and call it from your existing bridge callbacks. Each debug call is stored as a `MessageEntry` with request/response data, timestamps, and status. The inspector UI shows all entries in real time.
 
 ## Modules
 
