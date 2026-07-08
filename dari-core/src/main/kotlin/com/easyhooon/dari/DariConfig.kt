@@ -36,7 +36,7 @@ data class DariConfig(
      *
      * Can be overridden per call via the `fireAndForget` parameter on
      * [DariInterceptor.onWebToAppRequest] and
-     * [DariInterceptor.onAppToWebMessage].
+     * [DariInterceptor.onAppToWebRequest].
      *
      * Default is `false` to preserve the existing request–response pairing behavior.
      */
