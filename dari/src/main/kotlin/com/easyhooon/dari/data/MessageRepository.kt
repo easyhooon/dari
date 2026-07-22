@@ -2,9 +2,11 @@ package com.easyhooon.dari.data
 
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.data.local.DariDatabase
+import com.easyhooon.dari.data.local.MessageDao
 import com.easyhooon.dari.data.local.toEntity
 import com.easyhooon.dari.data.local.toMessageEntry
 import androidx.annotation.VisibleForTesting
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +27,7 @@ import kotlinx.coroutines.launch
  * while persisting to the database in the background.
  */
 class MessageRepository internal constructor(
-    private val database: DariDatabase,
+    database: DariDatabase,
     private val maxEntries: Int = 500,
     /**
      * Optional TTL in milliseconds. Messages with `requestTimestamp` older than
@@ -34,10 +36,11 @@ class MessageRepository internal constructor(
      */
     private val retentionPeriodMs: Long? = null,
     private val clock: () -> Long = { System.currentTimeMillis() },
+    private val dao: MessageDao = database.messageDao(),
 ) {
 
-    private val dao = database.messageDao()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val temporaryId = AtomicLong(-1L)
 
     private val _entries = MutableStateFlow<List<MessageEntry>>(emptyList())
     val entries: StateFlow<List<MessageEntry>> = _entries.asStateFlow()
@@ -75,8 +78,7 @@ class MessageRepository internal constructor(
         RetentionPolicy.cutoff(clock(), retentionPeriodMs)
 
     fun addEntry(entry: MessageEntry) {
-        // Use negative timestamp as temporary id to avoid collision with auto-increment ids
-        val tempId = -entry.requestTimestamp
+        val tempId = temporaryId.getAndDecrement()
         val entryWithTempId = entry.copy(id = tempId)
 
         // Add to memory first for immediate UI update (applying TTL filter on the fly).
