@@ -6,10 +6,15 @@ import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessageStatus
 import com.easyhooon.dari.data.local.DariDatabase
+import com.easyhooon.dari.data.local.MessageDao
+import com.easyhooon.dari.data.local.MessageEntity
 import com.easyhooon.dari.data.local.toEntity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -22,7 +27,7 @@ class MessageRepositoryTest {
     private lateinit var repository: MessageRepository
 
     @Before
-    fun setup() {
+    fun setup() = runBlocking {
         // Uses in-memory database (not persisted to disk) for test isolation.
         // Automatically garbage-collected when the test instance is discarded.
         database = Room.inMemoryDatabaseBuilder(
@@ -30,6 +35,7 @@ class MessageRepositoryTest {
             DariDatabase::class.java,
         ).allowMainThreadQueries().build()
         repository = MessageRepository(database, maxEntries = 3)
+        repository.initialized.await()
     }
 
     @After
@@ -50,11 +56,12 @@ class MessageRepositoryTest {
     }
 
     @Test
-    fun addEntry_incrementsMessageCount() {
+    fun addEntry_incrementsMessageCount() = runBlocking {
         repository.addEntry(createEntry("1"))
         repository.addEntry(createEntry("2"))
 
-        assertEquals(2, repository.messageCount.value)
+        val count = withTimeout(5_000) { repository.messageCount.first { it == 2 } }
+        assertEquals(2, count)
     }
 
     @Test
@@ -69,6 +76,34 @@ class MessageRepositoryTest {
         assertEquals("2", entries[0].requestId)
         assertEquals("3", entries[1].requestId)
         assertEquals("4", entries[2].requestId)
+    }
+
+    @Test
+    fun addEntry_keepsIdsUniqueWhenTimestampsMatch() = runBlocking {
+        val timestamp = 1_721_607_904_839L
+        val dao = ControllableMessageDao(database.messageDao())
+        val controlledRepository = MessageRepository(database, maxEntries = 3, dao = dao)
+        controlledRepository.initialized.await()
+
+        try {
+            controlledRepository.addEntry(createEntry("1").copy(requestTimestamp = timestamp))
+            controlledRepository.addEntry(createEntry("2").copy(requestTimestamp = timestamp))
+            assertEquals(2, controlledRepository.entries.value.map { it.id }.distinct().size)
+
+            dao.insertResults.send(101L)
+            val afterFirstInsert = withTimeout(5_000) {
+                controlledRepository.entries.first { entries -> entries.any { it.id == 101L } }
+            }
+            assertEquals(2, afterFirstInsert.map { it.id }.distinct().size)
+
+            dao.insertResults.send(102L)
+            val afterSecondInsert = withTimeout(5_000) {
+                controlledRepository.entries.first { entries -> entries.all { it.id > 0 } }
+            }
+            assertEquals(2, afterSecondInsert.map { it.id }.distinct().size)
+        } finally {
+            controlledRepository.close()
+        }
     }
 
     @Test
@@ -90,13 +125,15 @@ class MessageRepositoryTest {
     }
 
     @Test
-    fun clear_removesAllEntriesAndResetsCount() {
+    fun clear_removesAllEntriesAndResetsCount() = runBlocking {
         repository.addEntry(createEntry("1"))
         repository.addEntry(createEntry("2"))
+        withTimeout(5_000) { repository.messageCount.first { it == 2 } }
         repository.clear()
 
         assertTrue(repository.entries.value.isEmpty())
-        assertEquals(0, repository.messageCount.value)
+        val count = withTimeout(5_000) { repository.messageCount.first { it == 0 } }
+        assertEquals(0, count)
     }
 
     @Test
@@ -121,4 +158,10 @@ class MessageRepositoryTest {
         handlerName = "testHandler",
         direction = MessageDirection.WEB_TO_APP,
     )
+
+    private class ControllableMessageDao(delegate: MessageDao) : MessageDao by delegate {
+        val insertResults = Channel<Long>()
+
+        override suspend fun insert(entity: MessageEntity): Long = insertResults.receive()
+    }
 }
