@@ -24,12 +24,7 @@ export function LanguageSwitcher() {
   }, []);
 
   const getLocalePath = (locale: string) => {
-    const basePath = '/dari';
     let path = pathname;
-
-    if (path.startsWith(basePath)) {
-      path = path.slice(basePath.length) || '/';
-    }
 
     for (const lang of i18n.languages) {
       if (path.startsWith(`/${lang}/`) || path === `/${lang}`) {
@@ -39,9 +34,9 @@ export function LanguageSwitcher() {
     }
 
     if (locale === i18n.defaultLanguage) {
-      return `${basePath}${path}`;
+      return `${path}`;
     }
-    return `${basePath}/${locale}${path}`;
+    return `/${locale}${path}`;
   };
 
   if (i18n.languages.length <= 1) return null;
