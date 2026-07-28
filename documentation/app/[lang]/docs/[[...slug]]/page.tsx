@@ -2,6 +2,7 @@ import { source } from '@/lib/source';
 import { DocsPage, DocsBody, DocsTitle, DocsDescription } from 'fumadocs-ui/page';
 import { notFound } from 'next/navigation';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
+import { i18n } from '@/lib/i18n';
 
 export default async function Page({
   params,
@@ -26,7 +27,7 @@ export default async function Page({
 }
 
 export async function generateStaticParams() {
-  return source.generateParams().map((p) => ({ ...p, lang: 'ko' }));
+  return source.generateParams().filter((p) => p.lang !== i18n.defaultLanguage);
 }
 
 export async function generateMetadata({
