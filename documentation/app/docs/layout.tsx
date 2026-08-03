@@ -7,7 +7,7 @@ import { LanguageSwitcher } from '@/components/language-switcher';
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <DocsLayout
-      tree={source.pageTree[i18n.defaultLanguage]}
+      tree={source.getPageTree(i18n.defaultLanguage)}
       {...baseOptions}
       sidebar={{ footer: <LanguageSwitcher /> }}
     >

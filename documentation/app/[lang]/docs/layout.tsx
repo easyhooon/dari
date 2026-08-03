@@ -12,7 +12,7 @@ export default async function Layout({
   params: Promise<{ lang: string }>;
 }) {
   const { lang } = await params;
-  const tree = source.pageTree[lang];
+  const tree = source.getPageTree(lang);
   if (!tree) notFound();
 
   return (
