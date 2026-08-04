@@ -119,6 +119,9 @@ class MessageRepository internal constructor(
                     tag = tag,
                     responseData = entry.responseData,
                     responseDataTruncated = entry.responseDataTruncated,
+                    responseContentType = entry.responsePayloadMetadata?.contentType,
+                    responseOriginalSizeBytes = entry.responsePayloadMetadata?.originalSizeBytes,
+                    responseDecodeStatus = entry.responsePayloadMetadata?.decodeStatus,
                     status = entry.status,
                     responseTimestamp = entry.responseTimestamp,
                 )

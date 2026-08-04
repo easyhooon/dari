@@ -48,6 +48,35 @@ val interceptor = Dari.createInterceptor(tag = "PaymentBridge")
 
 Use `Dari.createInterceptor()` in app code so release builds compile against `dari-noop`. The optional `tag` labels messages by bridge source when multiple interceptors are active in the same app.
 
+## Protocol Buffers (optional)
+
+The string/JSON interface remains the default. For protobuf payloads, provide a decoder when creating the interceptor:
+
+```kotlin
+val protobufInterceptor = Dari.createInterceptor(
+    tag = "OrderBridge",
+    protobufDecoder = ProtobufPayloadDecoder { payload, context ->
+        when (context.handlerName to context.part) {
+            "createOrder" to PayloadPart.REQUEST ->
+                JsonFormat.printer().print(CreateOrderRequest.parseFrom(payload))
+            "createOrder" to PayloadPart.RESPONSE ->
+                JsonFormat.printer().print(CreateOrderResponse.parseFrom(payload))
+            else -> null
+        }
+    },
+)
+
+protobufInterceptor?.onWebToAppProtobufRequest(
+    handlerName = "createOrder",
+    requestId = requestId,
+    requestData = protobufBytes,
+)
+```
+
+The decoder belongs to the consuming app, so Dari does not require a specific protobuf runtime. Returning `null` marks the decoder as unavailable for that handler. Decode failures are captured without crashing message inspection. Decoding runs synchronously on the interceptor caller's thread, so keep decoder work bounded.
+
+Base64 is not required by Dari. Decode Base64 before calling the interceptor when using a string-only bridge, or pass bytes received from an `ArrayBuffer` bridge directly.
+
 ## Methods
 
 ### `onWebToAppRequest`

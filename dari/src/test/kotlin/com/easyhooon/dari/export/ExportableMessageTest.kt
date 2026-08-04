@@ -3,6 +3,9 @@ package com.easyhooon.dari.export
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessageStatus
+import com.easyhooon.dari.MessagePayloadMetadata
+import com.easyhooon.dari.PayloadContentType
+import com.easyhooon.dari.PayloadDecodeStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -107,5 +110,25 @@ class ExportableMessageTest {
 
         assertEquals(true, exportable.requestDataTruncated)
         assertEquals(true, exportable.responseDataTruncated)
+    }
+
+    @Test
+    fun `toExportable includes protobuf payload metadata`() {
+        val metadata = MessagePayloadMetadata(
+            contentType = PayloadContentType.PROTOBUF,
+            originalSizeBytes = 7,
+            decodeStatus = PayloadDecodeStatus.DECODED,
+        )
+        val exportable = createEntry().copy(
+            requestPayloadMetadata = metadata,
+            responsePayloadMetadata = metadata.copy(decodeStatus = PayloadDecodeStatus.FAILED),
+        ).toExportable()
+
+        assertEquals("PROTOBUF", exportable.requestContentType)
+        assertEquals(7, exportable.requestOriginalSizeBytes)
+        assertEquals("DECODED", exportable.requestDecodeStatus)
+        assertEquals("PROTOBUF", exportable.responseContentType)
+        assertEquals(7, exportable.responseOriginalSizeBytes)
+        assertEquals("FAILED", exportable.responseDecodeStatus)
     }
 }

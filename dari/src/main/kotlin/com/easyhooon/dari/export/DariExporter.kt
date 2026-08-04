@@ -181,8 +181,8 @@ internal object DariExporter {
             MessageDirection.WEB_TO_APP -> "Web \u2192 App"
             MessageDirection.APP_TO_WEB -> "App \u2192 Web"
         }
-        val requestSize = entry.requestData?.toByteArray(Charsets.UTF_8)?.size ?: 0
-        val responseSize = entry.responseData?.toByteArray(Charsets.UTF_8)?.size ?: 0
+        val requestSize = entry.requestSizeBytes
+        val responseSize = entry.responseSizeBytes
 
         return buildString {
             appendLine("Handler: ${entry.handlerName}")
@@ -202,6 +202,14 @@ internal object DariExporter {
             appendLine("Request size: ${formatSize(requestSize)}${if (entry.requestDataTruncated) " (truncated)" else ""}")
             appendLine("Response size: ${formatSize(responseSize)}${if (entry.responseDataTruncated) " (truncated)" else ""}")
             appendLine("Total size: ${formatSize(requestSize + responseSize)}")
+            entry.requestPayloadMetadata?.let { metadata ->
+                appendLine("Request content type: ${metadata.contentType}")
+                appendLine("Request decode status: ${metadata.decodeStatus}")
+            }
+            entry.responsePayloadMetadata?.let { metadata ->
+                appendLine("Response content type: ${metadata.contentType}")
+                appendLine("Response decode status: ${metadata.decodeStatus}")
+            }
             appendLine()
             appendLine("---------- Request ----------")
             appendLine()
