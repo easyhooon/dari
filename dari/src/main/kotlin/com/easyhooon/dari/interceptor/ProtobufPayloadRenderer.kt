@@ -15,11 +15,11 @@ internal object ProtobufPayloadRenderer {
     fun render(
         payload: ByteArray,
         context: ProtobufDecodeContext,
-        decoder: ProtobufPayloadDecoder,
+        decoder: ProtobufPayloadDecoder?,
         maxContentLength: Int,
     ): RenderedProtobufPayload {
         val (displayData, decodeStatus) = try {
-            val decoded = decoder.decode(payload, context)
+            val decoded = decoder?.decode(payload, context)
             if (decoded == null) {
                 "(protobuf decoder unavailable)" to PayloadDecodeStatus.DECODER_UNAVAILABLE
             } else {

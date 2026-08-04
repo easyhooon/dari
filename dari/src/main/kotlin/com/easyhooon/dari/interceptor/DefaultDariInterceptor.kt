@@ -199,13 +199,10 @@ class DefaultDariInterceptor(
         direction: MessageDirection,
         part: PayloadPart,
     ): RenderedProtobufPayload {
-        val decoder = checkNotNull(protobufDecoder) {
-            "Create the interceptor with a ProtobufPayloadDecoder before capturing protobuf payloads"
-        }
         return ProtobufPayloadRenderer.render(
             payload = payload,
             context = ProtobufDecodeContext(handlerName, direction, part),
-            decoder = decoder,
+            decoder = protobufDecoder,
             maxContentLength = maxContentLength,
         )
     }
