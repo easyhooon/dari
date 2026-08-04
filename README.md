@@ -138,6 +138,8 @@ When `requestId` is `null`, the message is treated as standalone and won't be ma
 
 The existing `String`/JSON methods remain unchanged. To inspect protobuf payloads, create an interceptor with a decoder supplied by your app:
 
+There is no protobuf feature flag or `DariConfig` toggle. Using this interceptor overload and the protobuf capture methods opts the bridge into protobuf inspection. See the [full guide](https://easyhooon.github.io/dari/docs/protobuf) or [Korean guide](https://easyhooon.github.io/dari/ko/docs/protobuf).
+
 ```kotlin
 import com.easyhooon.dari.interceptor.PayloadPart.REQUEST
 import com.easyhooon.dari.interceptor.PayloadPart.RESPONSE

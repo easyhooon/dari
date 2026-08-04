@@ -1,0 +1,148 @@
+---
+title: Protocol Buffers
+description: Enable and integrate optional protobuf payload inspection
+---
+
+## Activation
+
+Protocol Buffers support is available in Dari 1.6.0 and later. There is no feature flag and no `DariConfig` toggle for it.
+
+The integration is opt-in at the interceptor boundary:
+
+1. Create the interceptor with a `ProtobufPayloadDecoder`.
+2. Pass the original `ByteArray` to the protobuf request and response methods.
+
+The same interceptor still supports every existing String/JSON method because `ProtobufDariInterceptor` extends `DariInterceptor`.
+
+| Requirement | Needed? | Notes |
+| --- | --- | --- |
+| Dari 1.6.0 or later | Yes | Use matching `dari` and `dari-noop` versions |
+| `protobufEnabled` flag | No | No protobuf configuration flag exists |
+| App-owned protobuf runtime and generated messages | Yes | Dari does not add or select a protobuf runtime |
+| Decoder that returns display text | Yes | It may return `null` when a handler is unknown |
+| Base64 | Only for string-only bridges | Dari itself accepts the decoded `ByteArray` |
+| Changes to `.proto` files or message fields | No | Existing schemas and wire payloads remain unchanged |
+
+## 1. Create a protobuf-capable interceptor
+
+The application owns schema-aware decoding. Return a human-readable string for each handler and request/response type; JSON is recommended when convenient because Dari formats it in the decoded view.
+
+```kotlin
+import com.easyhooon.dari.Dari
+import com.easyhooon.dari.interceptor.PayloadPart.REQUEST
+import com.easyhooon.dari.interceptor.PayloadPart.RESPONSE
+import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
+import com.easyhooon.dari.interceptor.ProtobufPayloadDecoder
+
+val interceptor: ProtobufDariInterceptor? = Dari.createInterceptor(
+    tag = "OrderBridge",
+    protobufDecoder = ProtobufPayloadDecoder { payload, context ->
+        when (context.handlerName to context.part) {
+            "createOrder" to REQUEST ->
+                JsonFormat.printer().print(CreateOrderRequest.parseFrom(payload))
+            "createOrder" to RESPONSE ->
+                JsonFormat.printer().print(CreateOrderResponse.parseFrom(payload))
+            else -> null
+        }
+    },
+)
+```
+
+If only raw inspection is needed, the decoder can intentionally return `null`:
+
+```kotlin
+val interceptor = Dari.createInterceptor(
+    protobufDecoder = ProtobufPayloadDecoder { _, _ -> null },
+)
+```
+
+Dari will record the payload as protobuf with `DECODER_UNAVAILABLE` while keeping its raw preview and original byte size.
+
+## 2. Capture the original bytes
+
+Call Dari at the same request and response boundaries already used by the bridge. Do not convert the payload to JSON before capture.
+
+```kotlin
+interceptor?.onWebToAppProtobufRequest(
+    handlerName = "createOrder",
+    requestId = requestId,
+    requestData = requestBytes,
+)
+
+val response = CreateOrderResponse.newBuilder()
+    .setOrderId("order-123")
+    .build()
+
+interceptor?.onWebToAppProtobufResponse(
+    handlerName = "createOrder",
+    requestId = requestId,
+    responseData = response.toByteArray(),
+    isSuccess = true,
+)
+```
+
+Use a stable `requestId` to pair a request and response. Pass `null` only for standalone or fire-and-forget messages.
+
+## Direction and method mapping
+
+| Bridge event | Dari method |
+| --- | --- |
+| Web sends request to App | `onWebToAppProtobufRequest()` |
+| App responds to Web | `onWebToAppProtobufResponse()` |
+| App sends request to Web | `onAppToWebProtobufRequest()` |
+| Web responds to App | `onAppToWebProtobufResponse()` |
+
+`handlerName`, direction, and request/response part are provided to the decoder through `ProtobufDecodeContext`, allowing request and response messages to use different generated types.
+
+## Base64 and bridge transport
+
+Base64 is not required by protobuf or Dari.
+
+- If the bridge already provides bytes, pass them directly to Dari.
+- If a string-only bridge transports Base64, decode it first and pass the resulting bytes.
+
+```kotlin
+@JavascriptInterface
+fun onProtobufRequest(requestId: String, base64Data: String) {
+    val bytes = Base64.decode(base64Data, Base64.NO_WRAP)
+    interceptor?.onWebToAppProtobufRequest(
+        handlerName = "createOrder",
+        requestId = requestId,
+        requestData = bytes,
+    )
+}
+```
+
+The Base64 shown in Dari's Raw view is generated for display and does not indicate how the application transported the payload.
+
+## What Dari displays
+
+The REQUEST and RESPONSE tabs provide two views:
+
+- **Decoded**: text returned by the application-provided decoder
+- **Raw**: the captured protobuf bytes rendered as Hex and Base64
+
+The `Decoded` and `Raw` controls are available independently in both the REQUEST and RESPONSE tabs. This lets you compare the schema-aware value with the actual wire bytes for each side of the bridge exchange.
+
+<table>
+  <thead>
+    <tr>
+      <th>Decoded</th>
+      <th>Raw (Hex and Base64)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img src="/dari/protobuf-decoded.png" alt="Decoded protobuf response in Dari" width="360" /></td>
+      <td><img src="/dari/protobuf-raw.png" alt="Raw protobuf response as Hex and Base64 in Dari" width="360" /></td>
+    </tr>
+  </tbody>
+</table>
+
+The screenshots show the RESPONSE tab; the REQUEST tab provides the same two views. Dari records the original byte size and decode status. The raw capture is limited to the first 4 KB, and larger payloads are marked as truncated. Decoder failures are recorded without interrupting bridge communication.
+
+## Runtime behavior
+
+- Decoding runs synchronously on the interceptor caller's thread, so keep parsing and display conversion bounded.
+- Release builds use `dari-noop`; `Dari.createInterceptor()` returns `null`, and safe calls have no runtime overhead.
+- Existing String/JSON calls can continue on the same protobuf-capable interceptor.
