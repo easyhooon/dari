@@ -6,6 +6,7 @@ import com.easyhooon.dari.MessageStatus
 import com.easyhooon.dari.MessagePayloadMetadata
 import com.easyhooon.dari.PayloadContentType
 import com.easyhooon.dari.PayloadDecodeStatus
+import com.easyhooon.dari.RawPayloadPreview
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -118,6 +119,7 @@ class ExportableMessageTest {
             contentType = PayloadContentType.PROTOBUF,
             originalSizeBytes = 7,
             decodeStatus = PayloadDecodeStatus.DECODED,
+            rawPreview = RawPayloadPreview("AQID", 3, true),
         )
         val exportable = createEntry().copy(
             requestPayloadMetadata = metadata,
@@ -127,8 +129,14 @@ class ExportableMessageTest {
         assertEquals("PROTOBUF", exportable.requestContentType)
         assertEquals(7, exportable.requestOriginalSizeBytes)
         assertEquals("DECODED", exportable.requestDecodeStatus)
+        assertEquals("AQID", exportable.requestRawPreviewBase64)
+        assertEquals(3, exportable.requestRawPreviewSizeBytes)
+        assertEquals(true, exportable.requestRawPreviewTruncated)
         assertEquals("PROTOBUF", exportable.responseContentType)
         assertEquals(7, exportable.responseOriginalSizeBytes)
         assertEquals("FAILED", exportable.responseDecodeStatus)
+        assertEquals("AQID", exportable.responseRawPreviewBase64)
+        assertEquals(3, exportable.responseRawPreviewSizeBytes)
+        assertEquals(true, exportable.responseRawPreviewTruncated)
     }
 }

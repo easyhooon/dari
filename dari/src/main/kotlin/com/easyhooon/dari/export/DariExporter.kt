@@ -7,6 +7,8 @@ import android.util.Log
 import androidx.core.content.FileProvider
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
+import com.easyhooon.dari.MessagePayloadMetadata
+import com.easyhooon.dari.RawPayloadFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -211,14 +213,29 @@ internal object DariExporter {
                 appendLine("Response decode status: ${metadata.decodeStatus}")
             }
             appendLine()
-            appendLine("---------- Request ----------")
+            appendLine("---------- Request (Decoded) ----------")
             appendLine()
             appendLine(formatJson(entry.requestData) ?: "(empty)")
+            entry.requestPayloadMetadata?.let { appendRawPreview("Request", it) }
             appendLine()
-            appendLine("---------- Response ----------")
+            appendLine("---------- Response (Decoded) ----------")
             appendLine()
-            append(formatJson(entry.responseData) ?: "(empty)")
+            appendLine(formatJson(entry.responseData) ?: "(empty)")
+            entry.responsePayloadMetadata?.let { appendRawPreview("Response", it) }
         }
+    }
+
+    private fun StringBuilder.appendRawPreview(label: String, metadata: MessagePayloadMetadata) {
+        val preview = metadata.rawPreview ?: return
+        appendLine()
+        appendLine("---------- $label (Raw / Hex) ----------")
+        appendLine("Captured: ${preview.previewSizeBytes} of ${metadata.originalSizeBytes} bytes${if (preview.truncated) " (truncated)" else ""}")
+        appendLine()
+        appendLine(RawPayloadFormatter.formatHex(preview))
+        appendLine()
+        appendLine("---------- $label (Raw / Base64) ----------")
+        appendLine()
+        appendLine(preview.base64.ifEmpty { "(empty)" })
     }
 
     private fun formatJson(jsonString: String?): String? {

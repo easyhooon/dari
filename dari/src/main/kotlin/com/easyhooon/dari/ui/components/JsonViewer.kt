@@ -38,8 +38,13 @@ internal fun JsonViewer(jsonString: String) {
         }
     }
 
+    CodeViewer(formatted)
+}
+
+@Composable
+internal fun CodeViewer(text: String) {
     Text(
-        text = formatted,
+        text = text,
         modifier = Modifier
             .fillMaxWidth()
             .background(

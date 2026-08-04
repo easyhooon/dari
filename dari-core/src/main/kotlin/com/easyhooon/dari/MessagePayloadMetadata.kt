@@ -5,6 +5,14 @@ data class MessagePayloadMetadata(
     val contentType: PayloadContentType,
     val originalSizeBytes: Int,
     val decodeStatus: PayloadDecodeStatus,
+    val rawPreview: RawPayloadPreview? = null,
+)
+
+/** Bounded binary preview retained for raw payload inspection. */
+data class RawPayloadPreview(
+    val base64: String,
+    val previewSizeBytes: Int,
+    val truncated: Boolean,
 )
 
 enum class PayloadContentType {

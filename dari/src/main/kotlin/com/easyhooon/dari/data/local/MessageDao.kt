@@ -17,7 +17,7 @@ internal interface MessageDao {
     suspend fun insert(entity: MessageEntity): Long
 
     @Query(
-        "UPDATE messages SET responseData = :responseData, responseDataTruncated = :responseDataTruncated, responseContentType = :responseContentType, responseOriginalSizeBytes = :responseOriginalSizeBytes, responseDecodeStatus = :responseDecodeStatus, status = :status, responseTimestamp = :responseTimestamp WHERE requestId = :requestId AND (tag = :tag OR (:tag IS NULL AND tag IS NULL))"
+        "UPDATE messages SET responseData = :responseData, responseDataTruncated = :responseDataTruncated, responseContentType = :responseContentType, responseOriginalSizeBytes = :responseOriginalSizeBytes, responseDecodeStatus = :responseDecodeStatus, responseRawPreviewBase64 = :responseRawPreviewBase64, responseRawPreviewSizeBytes = :responseRawPreviewSizeBytes, responseRawPreviewTruncated = :responseRawPreviewTruncated, status = :status, responseTimestamp = :responseTimestamp WHERE requestId = :requestId AND (tag = :tag OR (:tag IS NULL AND tag IS NULL))"
     )
     suspend fun updateByRequestId(
         requestId: String,
@@ -27,6 +27,9 @@ internal interface MessageDao {
         responseContentType: PayloadContentType?,
         responseOriginalSizeBytes: Int?,
         responseDecodeStatus: PayloadDecodeStatus?,
+        responseRawPreviewBase64: String?,
+        responseRawPreviewSizeBytes: Int?,
+        responseRawPreviewTruncated: Boolean?,
         status: MessageStatus,
         responseTimestamp: Long?,
     )
