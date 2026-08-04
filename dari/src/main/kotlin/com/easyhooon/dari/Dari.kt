@@ -15,6 +15,8 @@ import com.easyhooon.dari.data.local.DariDatabase
 import java.io.File
 import com.easyhooon.dari.interceptor.DariInterceptor
 import com.easyhooon.dari.interceptor.DefaultDariInterceptor
+import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
+import com.easyhooon.dari.interceptor.ProtobufPayloadDecoder
 import com.easyhooon.dari.notification.DariNotification
 import com.easyhooon.dari.shake.DariShakeManager
 import com.easyhooon.dari.ui.DariActivity
@@ -118,6 +120,15 @@ object Dari {
      */
     @Suppress("RedundantNullableReturnType") // Returns null in noop module
     fun createInterceptor(tag: String? = null): DariInterceptor? = DefaultDariInterceptor(tag)
+
+    /**
+     * Creates an interceptor that supports both the existing string payloads and protobuf bytes.
+     * The decoder is supplied by the consuming app, so Dari does not impose a protobuf runtime.
+     */
+    fun createInterceptor(
+        tag: String? = null,
+        protobufDecoder: ProtobufPayloadDecoder,
+    ): ProtobufDariInterceptor? = DefaultDariInterceptor(tag, protobufDecoder)
 
     /**
      * Adds a new message to the notification.

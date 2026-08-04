@@ -3,6 +3,10 @@ package com.easyhooon.dari.export
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessageStatus
+import com.easyhooon.dari.MessagePayloadMetadata
+import com.easyhooon.dari.PayloadContentType
+import com.easyhooon.dari.PayloadDecodeStatus
+import com.easyhooon.dari.RawPayloadPreview
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonArray
@@ -131,6 +135,25 @@ class DariExporterTest {
             createEntry(requestData = "not json at all"),
         )
         assertTrue(text.contains("not json at all"))
+    }
+
+    @Test
+    fun `formatSingleEntry includes protobuf raw preview`() {
+        val metadata = MessagePayloadMetadata(
+            contentType = PayloadContentType.PROTOBUF,
+            originalSizeBytes = 4,
+            decodeStatus = PayloadDecodeStatus.DECODED,
+            rawPreview = RawPayloadPreview("AQID", 3, true),
+        )
+        val text = DariExporter.formatSingleEntry(
+            createEntry().copy(requestPayloadMetadata = metadata),
+        )
+
+        assertTrue(text.contains("Request (Raw / Hex)"))
+        assertTrue(text.contains("01 02 03"))
+        assertTrue(text.contains("Request (Raw / Base64)"))
+        assertTrue(text.contains("AQID"))
+        assertTrue(text.contains("Captured: 3 of 4 bytes (truncated)"))
     }
 
     @Test

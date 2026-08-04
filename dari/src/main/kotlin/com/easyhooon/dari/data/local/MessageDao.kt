@@ -3,6 +3,8 @@ package com.easyhooon.dari.data.local
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import com.easyhooon.dari.PayloadContentType
+import com.easyhooon.dari.PayloadDecodeStatus
 import com.easyhooon.dari.MessageStatus
 
 @Dao
@@ -15,13 +17,19 @@ internal interface MessageDao {
     suspend fun insert(entity: MessageEntity): Long
 
     @Query(
-        "UPDATE messages SET responseData = :responseData, responseDataTruncated = :responseDataTruncated, status = :status, responseTimestamp = :responseTimestamp WHERE requestId = :requestId AND (tag = :tag OR (:tag IS NULL AND tag IS NULL))"
+        "UPDATE messages SET responseData = :responseData, responseDataTruncated = :responseDataTruncated, responseContentType = :responseContentType, responseOriginalSizeBytes = :responseOriginalSizeBytes, responseDecodeStatus = :responseDecodeStatus, responseRawPreviewBase64 = :responseRawPreviewBase64, responseRawPreviewSizeBytes = :responseRawPreviewSizeBytes, responseRawPreviewTruncated = :responseRawPreviewTruncated, status = :status, responseTimestamp = :responseTimestamp WHERE requestId = :requestId AND (tag = :tag OR (:tag IS NULL AND tag IS NULL))"
     )
     suspend fun updateByRequestId(
         requestId: String,
         tag: String?,
         responseData: String?,
         responseDataTruncated: Boolean,
+        responseContentType: PayloadContentType?,
+        responseOriginalSizeBytes: Int?,
+        responseDecodeStatus: PayloadDecodeStatus?,
+        responseRawPreviewBase64: String?,
+        responseRawPreviewSizeBytes: Int?,
+        responseRawPreviewTruncated: Boolean?,
         status: MessageStatus,
         responseTimestamp: Long?,
     )

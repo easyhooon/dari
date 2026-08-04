@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +26,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,8 +51,11 @@ import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.Dari
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
+import com.easyhooon.dari.MessagePayloadMetadata
+import com.easyhooon.dari.RawPayloadFormatter
 import com.easyhooon.dari.export.DariExporter
 import com.easyhooon.dari.export.ExportFormat
+import com.easyhooon.dari.ui.components.CodeViewer
 import com.easyhooon.dari.ui.components.JsonViewer
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.easyhooon.dari.ui.theme.ApplyDariSystemBars
@@ -250,8 +255,8 @@ private fun DetailTabs(entry: MessageEntry) {
         ) { page ->
             when (page) {
                 0 -> OverviewTab(entry)
-                1 -> DataTab(entry.requestData)
-                2 -> DataTab(entry.responseData)
+                1 -> DataTab(entry.requestData, entry.requestPayloadMetadata)
+                2 -> DataTab(entry.responseData, entry.responsePayloadMetadata)
             }
         }
     }
@@ -259,8 +264,8 @@ private fun DetailTabs(entry: MessageEntry) {
 
 @Composable
 private fun OverviewTab(entry: MessageEntry) {
-    val requestSize = entry.requestData?.toByteArray(Charsets.UTF_8)?.size ?: 0
-    val responseSize = entry.responseData?.toByteArray(Charsets.UTF_8)?.size ?: 0
+    val requestSize = entry.requestSizeBytes
+    val responseSize = entry.responseSizeBytes
 
     Column(
         modifier = Modifier
@@ -294,6 +299,20 @@ private fun OverviewTab(entry: MessageEntry) {
         OverviewRow("Request size", formatSize(requestSize) + if (entry.requestDataTruncated) " (truncated)" else "")
         OverviewRow("Response size", formatSize(responseSize) + if (entry.responseDataTruncated) " (truncated)" else "")
         OverviewRow("Total size", formatSize(requestSize + responseSize))
+        entry.requestPayloadMetadata?.let { metadata ->
+            OverviewRow("Request type", metadata.contentType.name)
+            OverviewRow("Request decode", metadata.decodeStatus.name)
+            metadata.rawPreview?.let { preview ->
+                OverviewRow("Request raw", formatRawPreviewSize(preview.previewSizeBytes, metadata.originalSizeBytes))
+            }
+        }
+        entry.responsePayloadMetadata?.let { metadata ->
+            OverviewRow("Response type", metadata.contentType.name)
+            OverviewRow("Response decode", metadata.decodeStatus.name)
+            metadata.rawPreview?.let { preview ->
+                OverviewRow("Response raw", formatRawPreviewSize(preview.previewSizeBytes, metadata.originalSizeBytes))
+            }
+        }
     }
 }
 
@@ -318,8 +337,49 @@ private fun OverviewRow(label: String, value: String) {
     }
 }
 
+private enum class PayloadViewMode {
+    DECODED,
+    RAW,
+}
+
 @Composable
-private fun DataTab(data: String?) {
+private fun DataTab(data: String?, metadata: MessagePayloadMetadata?) {
+    val rawPreview = metadata?.rawPreview
+    var viewMode by remember(rawPreview?.base64) { mutableStateOf(PayloadViewMode.DECODED) }
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        if (rawPreview != null) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                FilterChip(
+                    selected = viewMode == PayloadViewMode.DECODED,
+                    onClick = { viewMode = PayloadViewMode.DECODED },
+                    label = { Text("Decoded") },
+                )
+                FilterChip(
+                    selected = viewMode == PayloadViewMode.RAW,
+                    onClick = { viewMode = PayloadViewMode.RAW },
+                    label = { Text("Raw") },
+                )
+            }
+        }
+
+        Box(modifier = Modifier.weight(1f)) {
+            if (viewMode == PayloadViewMode.RAW && rawPreview != null) {
+                RawPayloadView(metadata)
+            } else {
+                DecodedPayloadView(data)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DecodedPayloadView(data: String?) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -335,6 +395,47 @@ private fun DataTab(data: String?) {
         } else {
             JsonViewer(jsonString = data)
         }
+    }
+}
+
+@Composable
+private fun RawPayloadView(metadata: MessagePayloadMetadata) {
+    val preview = metadata.rawPreview ?: return
+    val hex = remember(preview.base64) { RawPayloadFormatter.formatHex(preview) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+    ) {
+        Text(
+            text = "Captured ${formatRawPreviewSize(preview.previewSizeBytes, metadata.originalSizeBytes)}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        if (preview.truncated) {
+            Text(
+                text = "Raw preview is limited to the first ${formatSize(preview.previewSizeBytes)}.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("HEX", fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(6.dp))
+        CodeViewer(hex)
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("BASE64", fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(6.dp))
+        CodeViewer(preview.base64.ifEmpty { "(empty)" })
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Base64 is a display encoding of the captured bytes, not part of protobuf itself.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -354,3 +455,10 @@ private fun formatSize(bytes: Int): String = when {
     bytes < 1024 * 1024 -> "${"%.1f".format(bytes / 1024f)} KB"
     else -> "${"%.1f".format(bytes / (1024f * 1024f))} MB"
 }
+
+private fun formatRawPreviewSize(previewBytes: Int, originalBytes: Int): String =
+    if (previewBytes < originalBytes) {
+        "${formatSize(previewBytes)} of ${formatSize(originalBytes)} (truncated)"
+    } else {
+        formatSize(originalBytes)
+    }
