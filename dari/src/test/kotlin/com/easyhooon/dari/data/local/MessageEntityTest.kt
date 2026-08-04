@@ -5,6 +5,7 @@ import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessagePayloadMetadata
 import com.easyhooon.dari.PayloadContentType
 import com.easyhooon.dari.PayloadDecodeStatus
+import com.easyhooon.dari.RawPayloadPreview
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -15,6 +16,11 @@ class MessageEntityTest {
             contentType = PayloadContentType.PROTOBUF,
             originalSizeBytes = 42,
             decodeStatus = PayloadDecodeStatus.DECODED,
+            rawPreview = RawPayloadPreview(
+                base64 = "AQID",
+                previewSizeBytes = 3,
+                truncated = true,
+            ),
         )
         val entry = MessageEntry(
             requestId = "request-1",

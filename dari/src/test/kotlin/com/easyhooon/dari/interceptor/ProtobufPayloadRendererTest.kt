@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Base64
 
 class ProtobufPayloadRendererTest {
     private val context = ProtobufDecodeContext(
@@ -34,6 +35,9 @@ class ProtobufPayloadRendererTest {
         assertEquals(PayloadContentType.PROTOBUF, result.metadata.contentType)
         assertEquals(3, result.metadata.originalSizeBytes)
         assertEquals(PayloadDecodeStatus.DECODED, result.metadata.decodeStatus)
+        assertEquals("AQID", result.metadata.rawPreview?.base64)
+        assertEquals(3, result.metadata.rawPreview?.previewSizeBytes)
+        assertFalse(result.metadata.rawPreview?.truncated ?: true)
     }
 
     @Test
@@ -74,5 +78,21 @@ class ProtobufPayloadRendererTest {
         assertTrue(result.wasTruncated)
         assertTrue(result.data.startsWith("abcde"))
         assertEquals(2, result.metadata.originalSizeBytes)
+    }
+
+    @Test
+    fun `render limits raw payload preview to four kilobytes`() {
+        val result = ProtobufPayloadRenderer.render(
+            payload = ByteArray(4 * 1024 + 1) { it.toByte() },
+            context = context,
+            decoder = null,
+            maxContentLength = 100,
+        )
+
+        val preview = requireNotNull(result.metadata.rawPreview)
+        assertEquals(4 * 1024, preview.previewSizeBytes)
+        assertEquals(4 * 1024, Base64.getDecoder().decode(preview.base64).size)
+        assertTrue(preview.truncated)
+        assertEquals(4 * 1024 + 1, result.metadata.originalSizeBytes)
     }
 }

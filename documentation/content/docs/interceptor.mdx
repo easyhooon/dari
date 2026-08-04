@@ -77,6 +77,8 @@ The decoder belongs to the consuming app, so Dari does not require a specific pr
 
 Base64 is not required by Dari. Decode Base64 before calling the interceptor when using a string-only bridge, or pass bytes received from an `ArrayBuffer` bridge directly.
 
+The REQUEST and RESPONSE tabs offer `Decoded` and `Raw` views. Dari retains at most the first 4 KB of each protobuf payload for the raw preview and displays it as Hex and Base64 while preserving the original byte size and truncation state. The displayed Base64 is generated for inspection and does not imply that the bridge used Base64 transport.
+
 ## Methods
 
 ### `onWebToAppRequest`
