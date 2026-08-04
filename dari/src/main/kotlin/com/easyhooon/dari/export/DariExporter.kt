@@ -7,6 +7,8 @@ import android.util.Log
 import androidx.core.content.FileProvider
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
+import com.easyhooon.dari.MessagePayloadMetadata
+import com.easyhooon.dari.RawPayloadFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -181,8 +183,8 @@ internal object DariExporter {
             MessageDirection.WEB_TO_APP -> "Web \u2192 App"
             MessageDirection.APP_TO_WEB -> "App \u2192 Web"
         }
-        val requestSize = entry.requestData?.toByteArray(Charsets.UTF_8)?.size ?: 0
-        val responseSize = entry.responseData?.toByteArray(Charsets.UTF_8)?.size ?: 0
+        val requestSize = entry.requestSizeBytes
+        val responseSize = entry.responseSizeBytes
 
         return buildString {
             appendLine("Handler: ${entry.handlerName}")
@@ -202,15 +204,38 @@ internal object DariExporter {
             appendLine("Request size: ${formatSize(requestSize)}${if (entry.requestDataTruncated) " (truncated)" else ""}")
             appendLine("Response size: ${formatSize(responseSize)}${if (entry.responseDataTruncated) " (truncated)" else ""}")
             appendLine("Total size: ${formatSize(requestSize + responseSize)}")
+            entry.requestPayloadMetadata?.let { metadata ->
+                appendLine("Request content type: ${metadata.contentType}")
+                appendLine("Request decode status: ${metadata.decodeStatus}")
+            }
+            entry.responsePayloadMetadata?.let { metadata ->
+                appendLine("Response content type: ${metadata.contentType}")
+                appendLine("Response decode status: ${metadata.decodeStatus}")
+            }
             appendLine()
-            appendLine("---------- Request ----------")
+            appendLine("---------- Request (Decoded) ----------")
             appendLine()
             appendLine(formatJson(entry.requestData) ?: "(empty)")
+            entry.requestPayloadMetadata?.let { appendRawPreview("Request", it) }
             appendLine()
-            appendLine("---------- Response ----------")
+            appendLine("---------- Response (Decoded) ----------")
             appendLine()
-            append(formatJson(entry.responseData) ?: "(empty)")
+            appendLine(formatJson(entry.responseData) ?: "(empty)")
+            entry.responsePayloadMetadata?.let { appendRawPreview("Response", it) }
         }
+    }
+
+    private fun StringBuilder.appendRawPreview(label: String, metadata: MessagePayloadMetadata) {
+        val preview = metadata.rawPreview ?: return
+        appendLine()
+        appendLine("---------- $label (Raw / Hex) ----------")
+        appendLine("Captured: ${preview.previewSizeBytes} of ${metadata.originalSizeBytes} bytes${if (preview.truncated) " (truncated)" else ""}")
+        appendLine()
+        appendLine(RawPayloadFormatter.formatHex(preview))
+        appendLine()
+        appendLine("---------- $label (Raw / Base64) ----------")
+        appendLine()
+        appendLine(preview.base64.ifEmpty { "(empty)" })
     }
 
     private fun formatJson(jsonString: String?): String? {

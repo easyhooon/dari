@@ -67,6 +67,25 @@ class MessageEntryTest {
     }
 
     @Test
+    fun `binary metadata size takes precedence over rendered text size`() {
+        val entry = MessageEntry(
+            handlerName = "test",
+            direction = MessageDirection.WEB_TO_APP,
+            requestData = "rendered protobuf text",
+            responseData = "response",
+            requestPayloadMetadata = MessagePayloadMetadata(
+                contentType = PayloadContentType.PROTOBUF,
+                originalSizeBytes = 4,
+                decodeStatus = PayloadDecodeStatus.DECODED,
+            ),
+        )
+
+        assertEquals(4, entry.requestSizeBytes)
+        assertEquals(8, entry.responseSizeBytes)
+        assertEquals(12, entry.totalSizeBytes)
+    }
+
+    @Test
     fun `default status is IN_PROGRESS`() {
         val entry = MessageEntry(
             requestId = "1",

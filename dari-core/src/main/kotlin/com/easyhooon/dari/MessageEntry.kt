@@ -21,7 +21,40 @@ data class MessageEntry(
     val status: MessageStatus = MessageStatus.IN_PROGRESS,
     val requestTimestamp: Long = System.currentTimeMillis(),
     val responseTimestamp: Long? = null,
+    val requestPayloadMetadata: MessagePayloadMetadata? = null,
+    val responsePayloadMetadata: MessagePayloadMetadata? = null,
 ) {
+
+    /** Preserves the pre-protobuf constructor for binary compatibility. */
+    constructor(
+        id: Long,
+        requestId: String?,
+        handlerName: String,
+        direction: MessageDirection,
+        tag: String?,
+        requestData: String?,
+        responseData: String?,
+        requestDataTruncated: Boolean,
+        responseDataTruncated: Boolean,
+        status: MessageStatus,
+        requestTimestamp: Long,
+        responseTimestamp: Long?,
+    ) : this(
+        id = id,
+        requestId = requestId,
+        handlerName = handlerName,
+        direction = direction,
+        tag = tag,
+        requestData = requestData,
+        responseData = responseData,
+        requestDataTruncated = requestDataTruncated,
+        responseDataTruncated = responseDataTruncated,
+        status = status,
+        requestTimestamp = requestTimestamp,
+        responseTimestamp = responseTimestamp,
+        requestPayloadMetadata = null,
+        responsePayloadMetadata = null,
+    )
 
     /**
      * Secondary constructor preserving the original parameter order for
@@ -53,13 +86,15 @@ data class MessageEntry(
     val durationMs: Long?
         get() = responseTimestamp?.let { it - requestTimestamp }
 
-    /** Total byte size of request + response data */
+    val requestSizeBytes: Int
+        get() = requestPayloadMetadata?.originalSizeBytes ?: requestData.utf8Size()
+
+    val responseSizeBytes: Int
+        get() = responsePayloadMetadata?.originalSizeBytes ?: responseData.utf8Size()
+
+    /** Total byte size of the original request and response payloads. */
     val totalSizeBytes: Int
-        get() {
-            val requestSize = requestData?.toByteArray(Charsets.UTF_8)?.size ?: 0
-            val responseSize = responseData?.toByteArray(Charsets.UTF_8)?.size ?: 0
-            return requestSize + responseSize
-        }
+        get() = requestSizeBytes + responseSizeBytes
 
     companion object {
         /**
@@ -73,3 +108,5 @@ data class MessageEntry(
         }
     }
 }
+
+private fun String?.utf8Size(): Int = this?.toByteArray(Charsets.UTF_8)?.size ?: 0
