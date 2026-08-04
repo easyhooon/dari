@@ -41,7 +41,7 @@ class ProtobufPayloadRendererTest {
         val result = ProtobufPayloadRenderer.render(
             payload = byteArrayOf(1),
             context = context,
-            decoder = ProtobufPayloadDecoder { _, _ -> null },
+            decoder = null,
             maxContentLength = 100,
         )
 
