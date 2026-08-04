@@ -50,34 +50,7 @@ Use `Dari.createInterceptor()` in app code so release builds compile against `da
 
 ## Protocol Buffers (optional)
 
-The string/JSON interface remains the default. For protobuf payloads, provide a decoder when creating the interceptor:
-
-```kotlin
-val protobufInterceptor = Dari.createInterceptor(
-    tag = "OrderBridge",
-    protobufDecoder = ProtobufPayloadDecoder { payload, context ->
-        when (context.handlerName to context.part) {
-            "createOrder" to PayloadPart.REQUEST ->
-                JsonFormat.printer().print(CreateOrderRequest.parseFrom(payload))
-            "createOrder" to PayloadPart.RESPONSE ->
-                JsonFormat.printer().print(CreateOrderResponse.parseFrom(payload))
-            else -> null
-        }
-    },
-)
-
-protobufInterceptor?.onWebToAppProtobufRequest(
-    handlerName = "createOrder",
-    requestId = requestId,
-    requestData = protobufBytes,
-)
-```
-
-The decoder belongs to the consuming app, so Dari does not require a specific protobuf runtime. Returning `null` marks the decoder as unavailable for that handler. Decode failures are captured without crashing message inspection. Decoding runs synchronously on the interceptor caller's thread, so keep decoder work bounded.
-
-Base64 is not required by Dari. Decode Base64 before calling the interceptor when using a string-only bridge, or pass bytes received from an `ArrayBuffer` bridge directly.
-
-The REQUEST and RESPONSE tabs offer `Decoded` and `Raw` views. Dari retains at most the first 4 KB of each protobuf payload for the raw preview and displays it as Hex and Base64 while preserving the original byte size and truncation state. The displayed Base64 is generated for inspection and does not imply that the bridge used Base64 transport.
+Protobuf inspection has no feature flag and does not replace the string/JSON API. See the [Protocol Buffers guide](./protobuf) for activation requirements, decoder setup, bridge transport options, and all request/response methods.
 
 ## Methods
 
