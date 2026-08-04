@@ -134,6 +134,12 @@
         <span>No flag + no response = forever IN_PROGRESS (contrast)</span>
     </button>
 
+    <div class="section">Protocol Buffers</div>
+    <button class="btn btn-blue" onclick="sendProtobufGreeting()">
+        Send Protobuf Greeting
+        <span>StringValue bytes transported through the string-only bridge as Base64</span>
+    </button>
+
     <div id="log"></div>
 
     <script>
@@ -255,6 +261,69 @@
             var data = JSON.stringify({ screen: "sample_page", timestamp: Date.now() });
             log('→ trackScreenView (fire-and-forget)', 'req');
             Android.onBridgeRequestFireAndForget('trackScreenView', data);
+        }
+
+        // Minimal google.protobuf.StringValue codec: field 1, wire type 2.
+        function encodeStringValue(value) {
+            var valueBytes = new TextEncoder().encode(value);
+            return new Uint8Array([10].concat(encodeVarint(valueBytes.length), Array.from(valueBytes)));
+        }
+
+        function decodeStringValue(bytes) {
+            if (bytes[0] !== 10) throw new Error('Unexpected StringValue wire format');
+            var lengthInfo = decodeVarint(bytes, 1);
+            var valueBytes = bytes.slice(lengthInfo.next, lengthInfo.next + lengthInfo.value);
+            return new TextDecoder().decode(valueBytes);
+        }
+
+        function encodeVarint(value) {
+            var result = [];
+            while (value > 127) {
+                result.push((value & 127) | 128);
+                value >>>= 7;
+            }
+            result.push(value);
+            return result;
+        }
+
+        function decodeVarint(bytes, offset) {
+            var value = 0;
+            var shift = 0;
+            while (offset < bytes.length) {
+                var byte = bytes[offset++];
+                value |= (byte & 127) << shift;
+                if ((byte & 128) === 0) return { value: value, next: offset };
+                shift += 7;
+            }
+            throw new Error('Invalid varint');
+        }
+
+        function bytesToBase64(bytes) {
+            var binary = '';
+            bytes.forEach(function(byte) { binary += String.fromCharCode(byte); });
+            return btoa(binary);
+        }
+
+        function base64ToBytes(value) {
+            var binary = atob(value);
+            return Uint8Array.from(binary, function(char) { return char.charCodeAt(0); });
+        }
+
+        function sendProtobufGreeting() {
+            var id = createRequestId();
+            var message = 'Hello from protobuf!';
+            var base64Data = bytesToBase64(encodeStringValue(message));
+            log('→ protobufGreeting: ' + message, 'req');
+            Android.onProtobufBridgeRequest(id, base64Data);
+        }
+
+        function onProtobufBridgeResponse(requestId, success, base64Data) {
+            try {
+                var message = decodeStringValue(base64ToBytes(base64Data));
+                log((success ? '← ' : '✗ ') + message, success ? 'res' : 'err');
+            } catch (error) {
+                log('✗ Failed to decode protobuf response: ' + error.message, 'err');
+            }
         }
 
         // Called from native side with the response
