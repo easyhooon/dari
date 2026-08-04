@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.VibratorManager
 import android.provider.Settings
+import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -20,16 +21,29 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.lifecycleScope
+import com.easyhooon.dari.Dari
+import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
+import com.easyhooon.dari.interceptor.ProtobufPayloadDecoder
+import com.google.protobuf.StringValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.easyhooon.dari.Dari
-import com.easyhooon.dari.interceptor.DariInterceptor
 import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
 
-    private val interceptor: DariInterceptor? = Dari.createInterceptor(tag = "Sample")
+    private val interceptor: ProtobufDariInterceptor? = Dari.createInterceptor(
+        tag = "Sample",
+        protobufDecoder = ProtobufPayloadDecoder { payload, context ->
+            if (context.handlerName != PROTOBUF_HANDLER) return@ProtobufPayloadDecoder null
+
+            JSONObject().apply {
+                put("type", "google.protobuf.StringValue")
+                put("value", StringValue.parseFrom(payload).value)
+                put("part", context.part.name)
+            }.toString(2)
+        },
+    )
     private var webView: WebView? = null
 
     // Pending camera permission request info
@@ -85,6 +99,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun callProtobufJs(requestId: String, success: Boolean, data: ByteArray) {
+        val base64Data = Base64.encodeToString(data, Base64.NO_WRAP)
+        webView?.post {
+            webView?.evaluateJavascript(
+                "javascript:onProtobufBridgeResponse('$requestId', $success, '$base64Data')",
+                null,
+            )
+        }
+    }
+
     inner class BridgeInterface {
         @RequiresApi(Build.VERSION_CODES.P)
         @JavascriptInterface
@@ -112,6 +136,34 @@ class MainActivity : ComponentActivity() {
                     callJs(requestId, false, error)
                 }
             }
+        }
+
+        @JavascriptInterface
+        fun onProtobufBridgeRequest(requestId: String, base64Data: String) {
+            val requestData = Base64.decode(base64Data, Base64.NO_WRAP)
+            interceptor?.onWebToAppProtobufRequest(PROTOBUF_HANDLER, requestId, requestData)
+
+            val result = runCatching {
+                val request = StringValue.parseFrom(requestData)
+                StringValue.newBuilder()
+                    .setValue("Android received: ${request.value}")
+                    .build()
+            }
+            val response = result.getOrElse { error ->
+                StringValue.newBuilder()
+                    .setValue("Invalid protobuf: ${error.message}")
+                    .build()
+            }
+            val success = result.isSuccess
+            val responseData = response.toByteArray()
+
+            interceptor?.onWebToAppProtobufResponse(
+                PROTOBUF_HANDLER,
+                requestId,
+                responseData,
+                success,
+            )
+            callProtobufJs(requestId, success, responseData)
         }
 
         /**
@@ -304,5 +356,9 @@ class MainActivity : ComponentActivity() {
         val timestamp = json?.optLong("timestamp", 0) ?: 0
         // In a real app, this would send to analytics service
         android.util.Log.d("Dari-Sample", "Screen view: $screen at $timestamp")
+    }
+
+    private companion object {
+        const val PROTOBUF_HANDLER = "protobufGreeting"
     }
 }
