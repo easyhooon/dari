@@ -54,6 +54,7 @@ Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualiz
 - Message list UI with search, filter by handler name, and **tag-based filtering**
 - Detail view with Overview / Request / Response tabs
 - JSON pretty-printing for request and response payloads
+- Optional Protocol Buffers inspection through an app-provided decoder
 - Export messages as text or JSON
 - **Shake-to-open** — shake device to launch Dari UI (with haptic feedback)
 - **Dark mode** — System / Light / Dark theme toggle
@@ -133,6 +134,37 @@ interceptor?.onWebToAppRequest(handlerName, null, data)
 
 When `requestId` is `null`, the message is treated as standalone and won't be matched with a response.
 
+#### 5. Protocol Buffers (optional)
+
+The existing `String`/JSON methods remain unchanged. To inspect protobuf payloads, create an interceptor with a decoder supplied by your app:
+
+```kotlin
+import com.easyhooon.dari.interceptor.PayloadPart.REQUEST
+import com.easyhooon.dari.interceptor.PayloadPart.RESPONSE
+import com.easyhooon.dari.interceptor.ProtobufPayloadDecoder
+
+val protobufInterceptor = Dari.createInterceptor(
+    tag = "OrderBridge",
+    protobufDecoder = ProtobufPayloadDecoder { payload, context ->
+        when (context.handlerName to context.part) {
+            "createOrder" to REQUEST ->
+                JsonFormat.printer().print(CreateOrderRequest.parseFrom(payload))
+            "createOrder" to RESPONSE ->
+                JsonFormat.printer().print(CreateOrderResponse.parseFrom(payload))
+            else -> null
+        }
+    },
+)
+
+protobufInterceptor?.onWebToAppProtobufRequest(
+    handlerName = "createOrder",
+    requestId = requestId,
+    requestData = protobufBytes,
+)
+```
+
+Dari does not depend on a protobuf runtime. The consuming app owns generated message types and decoding. Decoding runs synchronously on the interceptor caller's thread, so decoder work should stay bounded. Base64 is only needed when the app's bridge is string-only; an `ArrayBuffer` bridge can pass the bytes directly.
+
 ### Custom Configuration
 
 You can customize Dari by calling `init` with a config before auto-initialization occurs, or in your `Application.onCreate()`:
@@ -198,6 +230,7 @@ keep the same API surface without storing or displaying bridge messages.
 |--------|-------------|
 | `init(context, config)` | Initialize with custom configuration |
 | `createInterceptor(tag?)` | Create a `DariInterceptor` with an optional tag (returns `null` in noop) |
+| `createInterceptor(tag?, protobufDecoder)` | Create a protobuf-capable interceptor while retaining all string/JSON methods |
 | `setShakeToOpenEnabled(enabled)` | Enable/disable shake-to-open at runtime (persisted) |
 | `setDarkMode(value)` | Override dark mode: `true` / `false` / `null` (system default). Persisted |
 | `showNotification()` | Show the notification (e.g., after permission grant) |
@@ -211,6 +244,8 @@ keep the same API surface without storing or displaying bridge messages.
 | `onWebToAppResponse()` | Log the response to a Web-to-App request. Skipped if `requestId` is null. |
 | `onAppToWebRequest()` | Log an App-to-Web message. `requestId` is optional for fire-and-forget messages. |
 | `onAppToWebResponse()` | Log the response to an App-to-Web message. Skipped if `requestId` is null. |
+
+`ProtobufDariInterceptor` extends this interface with matching `on*ProtobufRequest()` and `on*ProtobufResponse()` methods that accept `ByteArray` payloads.
 
 ```kotlin
 /**

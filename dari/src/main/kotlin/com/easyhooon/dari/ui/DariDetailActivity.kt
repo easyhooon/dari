@@ -259,8 +259,8 @@ private fun DetailTabs(entry: MessageEntry) {
 
 @Composable
 private fun OverviewTab(entry: MessageEntry) {
-    val requestSize = entry.requestData?.toByteArray(Charsets.UTF_8)?.size ?: 0
-    val responseSize = entry.responseData?.toByteArray(Charsets.UTF_8)?.size ?: 0
+    val requestSize = entry.requestSizeBytes
+    val responseSize = entry.responseSizeBytes
 
     Column(
         modifier = Modifier
@@ -294,6 +294,14 @@ private fun OverviewTab(entry: MessageEntry) {
         OverviewRow("Request size", formatSize(requestSize) + if (entry.requestDataTruncated) " (truncated)" else "")
         OverviewRow("Response size", formatSize(responseSize) + if (entry.responseDataTruncated) " (truncated)" else "")
         OverviewRow("Total size", formatSize(requestSize + responseSize))
+        entry.requestPayloadMetadata?.let { metadata ->
+            OverviewRow("Request type", metadata.contentType.name)
+            OverviewRow("Request decode", metadata.decodeStatus.name)
+        }
+        entry.responsePayloadMetadata?.let { metadata ->
+            OverviewRow("Response type", metadata.contentType.name)
+            OverviewRow("Response decode", metadata.decodeStatus.name)
+        }
     }
 }
 

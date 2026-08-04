@@ -17,6 +17,12 @@ internal data class ExportableMessage(
     @SerialName("response_data") val responseData: String? = null,
     @SerialName("request_data_truncated") val requestDataTruncated: Boolean = false,
     @SerialName("response_data_truncated") val responseDataTruncated: Boolean = false,
+    @SerialName("request_content_type") val requestContentType: String? = null,
+    @SerialName("request_original_size_bytes") val requestOriginalSizeBytes: Int? = null,
+    @SerialName("request_decode_status") val requestDecodeStatus: String? = null,
+    @SerialName("response_content_type") val responseContentType: String? = null,
+    @SerialName("response_original_size_bytes") val responseOriginalSizeBytes: Int? = null,
+    @SerialName("response_decode_status") val responseDecodeStatus: String? = null,
     val status: String,
     @SerialName("request_timestamp") val requestTimestamp: Long,
     @SerialName("response_timestamp") val responseTimestamp: Long? = null,
@@ -36,6 +42,12 @@ internal fun MessageEntry.toExportable(): ExportableMessage = ExportableMessage(
     responseData = responseData,
     requestDataTruncated = requestDataTruncated,
     responseDataTruncated = responseDataTruncated,
+    requestContentType = requestPayloadMetadata?.contentType?.name,
+    requestOriginalSizeBytes = requestPayloadMetadata?.originalSizeBytes,
+    requestDecodeStatus = requestPayloadMetadata?.decodeStatus?.name,
+    responseContentType = responsePayloadMetadata?.contentType?.name,
+    responseOriginalSizeBytes = responsePayloadMetadata?.originalSizeBytes,
+    responseDecodeStatus = responsePayloadMetadata?.decodeStatus?.name,
     status = when (status) {
         MessageStatus.IN_PROGRESS -> "IN_PROGRESS"
         MessageStatus.SUCCESS -> "SUCCESS"

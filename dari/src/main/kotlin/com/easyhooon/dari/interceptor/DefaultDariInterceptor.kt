@@ -14,7 +14,11 @@ import com.easyhooon.dari.MessageStatus
  */
 class DefaultDariInterceptor(
     override val tag: String? = null,
-) : DariInterceptor {
+    private val protobufDecoder: ProtobufPayloadDecoder? = null,
+) : ProtobufDariInterceptor {
+
+    /** Preserves the original constructor for binary compatibility. */
+    constructor(tag: String?) : this(tag, null)
 
     private val maxContentLength: Int
         get() = Dari.config.maxContentLength
@@ -84,5 +88,125 @@ class DefaultDariInterceptor(
                 responseTimestamp = System.currentTimeMillis(),
             )
         }
+    }
+
+    override fun onWebToAppProtobufRequest(
+        handlerName: String,
+        requestId: String?,
+        requestData: ByteArray,
+        fireAndForget: Boolean?,
+    ) {
+        val rendered = renderProtobuf(
+            payload = requestData,
+            handlerName = handlerName,
+            direction = MessageDirection.WEB_TO_APP,
+            part = PayloadPart.REQUEST,
+        )
+        val resolvedAsSuccess = fireAndForget ?: Dari.config.fireAndForget
+        val entry = MessageEntry(
+            requestId = requestId,
+            handlerName = handlerName,
+            direction = MessageDirection.WEB_TO_APP,
+            tag = tag,
+            requestData = rendered.data,
+            requestDataTruncated = rendered.wasTruncated,
+            requestPayloadMetadata = rendered.metadata,
+            status = if (resolvedAsSuccess) MessageStatus.SUCCESS else MessageStatus.IN_PROGRESS,
+        )
+        Dari.repository.addEntry(entry)
+        Dari.postMessageNotification(handlerName, MessageDirection.WEB_TO_APP, tag)
+    }
+
+    override fun onWebToAppProtobufResponse(
+        handlerName: String,
+        requestId: String?,
+        responseData: ByteArray,
+        isSuccess: Boolean,
+    ) {
+        if (requestId == null) return
+
+        val rendered = renderProtobuf(
+            payload = responseData,
+            handlerName = handlerName,
+            direction = MessageDirection.WEB_TO_APP,
+            part = PayloadPart.RESPONSE,
+        )
+        Dari.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
+            entry.copy(
+                responseData = rendered.data,
+                responseDataTruncated = rendered.wasTruncated,
+                responsePayloadMetadata = rendered.metadata,
+                status = if (isSuccess) MessageStatus.SUCCESS else MessageStatus.ERROR,
+                responseTimestamp = System.currentTimeMillis(),
+            )
+        }
+    }
+
+    override fun onAppToWebProtobufRequest(
+        handlerName: String,
+        requestId: String?,
+        requestData: ByteArray,
+        fireAndForget: Boolean?,
+    ) {
+        val rendered = renderProtobuf(
+            payload = requestData,
+            handlerName = handlerName,
+            direction = MessageDirection.APP_TO_WEB,
+            part = PayloadPart.REQUEST,
+        )
+        val resolvedAsSuccess = fireAndForget ?: Dari.config.fireAndForget
+        val entry = MessageEntry(
+            requestId = requestId,
+            handlerName = handlerName,
+            direction = MessageDirection.APP_TO_WEB,
+            tag = tag,
+            requestData = rendered.data,
+            requestDataTruncated = rendered.wasTruncated,
+            requestPayloadMetadata = rendered.metadata,
+            status = if (resolvedAsSuccess) MessageStatus.SUCCESS else MessageStatus.IN_PROGRESS,
+        )
+        Dari.repository.addEntry(entry)
+        Dari.postMessageNotification(handlerName, MessageDirection.APP_TO_WEB, tag)
+    }
+
+    override fun onAppToWebProtobufResponse(
+        requestId: String?,
+        isSuccess: Boolean,
+        responseData: ByteArray,
+    ) {
+        if (requestId == null) return
+
+        Dari.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
+            val rendered = renderProtobuf(
+                payload = responseData,
+                handlerName = entry.handlerName,
+                direction = MessageDirection.APP_TO_WEB,
+                part = PayloadPart.RESPONSE,
+            )
+            entry.copy(
+                responseData = rendered.data,
+                responseDataTruncated = rendered.wasTruncated,
+                responsePayloadMetadata = rendered.metadata,
+                status = if (isSuccess) MessageStatus.SUCCESS else MessageStatus.ERROR,
+                responseTimestamp = System.currentTimeMillis(),
+            )
+        }
+    }
+
+    private fun renderProtobuf(
+        payload: ByteArray,
+        handlerName: String,
+        direction: MessageDirection,
+        part: PayloadPart,
+    ): RenderedProtobufPayload {
+        val decoder = checkNotNull(protobufDecoder) {
+            "Create the interceptor with a ProtobufPayloadDecoder before capturing protobuf payloads"
+        }
+        return ProtobufPayloadRenderer.render(
+            payload = payload,
+            context = ProtobufDecodeContext(handlerName, direction, part),
+            decoder = decoder,
+            maxContentLength = maxContentLength,
+        )
     }
 }
