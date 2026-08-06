@@ -97,6 +97,14 @@ object Dari {
         preferences.setDarkMode(value)
     }
 
+    /**
+     * Enable or disable controls for folding nested JSON objects and arrays.
+     * Persists across process restarts.
+     */
+    fun setJsonFoldingEnabled(enabled: Boolean) {
+        preferences.setJsonFoldingEnabled(enabled)
+    }
+
     private fun applyShakeToOpen(enabled: Boolean) {
         shakeManager?.unregister()
         shakeManager = if (enabled) {

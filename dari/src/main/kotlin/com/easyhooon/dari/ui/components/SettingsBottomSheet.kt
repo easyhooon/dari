@@ -4,6 +4,8 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -53,6 +56,8 @@ internal fun SettingsBottomSheet(
     onShakeToOpenChange: (Boolean) -> Unit,
     darkMode: Boolean?,
     onDarkModeChange: (Boolean?) -> Unit,
+    jsonFoldingEnabled: Boolean,
+    onJsonFoldingEnabledChange: (Boolean) -> Unit,
     onClearMessages: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -67,6 +72,7 @@ internal fun SettingsBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(bottom = 24.dp),
         ) {
             Text(
@@ -89,6 +95,13 @@ internal fun SettingsBottomSheet(
             DarkModeRow(
                 darkMode = darkMode,
                 onDarkModeChange = onDarkModeChange,
+            )
+            SettingToggleRow(
+                icon = Icons.Default.Code,
+                title = "JSON folding",
+                description = "Show controls to collapse or expand nested objects and arrays",
+                checked = jsonFoldingEnabled,
+                onCheckedChange = onJsonFoldingEnabledChange,
             )
 
             HorizontalDivider(
