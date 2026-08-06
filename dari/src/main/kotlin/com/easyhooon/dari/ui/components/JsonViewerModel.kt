@@ -98,8 +98,9 @@ private fun MutableList<JsonTreeRow>.appendArray(
     trailingComma: Boolean,
     collapsedPaths: Set<String>,
 ) {
-    val expanded = path !in collapsedPaths
-    appendContainerStart(array, path, label, key, depth, trailingComma, expanded, "[")
+    val collapsible = path != ROOT_PATH
+    val expanded = !collapsible || path !in collapsedPaths
+    appendContainerStart(array, path, label, key, depth, trailingComma, expanded, collapsible, "[")
     if (!expanded) return
 
     array.forEachIndexed { index, child ->
@@ -125,8 +126,9 @@ private fun MutableList<JsonTreeRow>.appendObject(
     trailingComma: Boolean,
     collapsedPaths: Set<String>,
 ) {
-    val expanded = path !in collapsedPaths
-    appendContainerStart(jsonObject, path, label, key, depth, trailingComma, expanded, "{")
+    val collapsible = path != ROOT_PATH
+    val expanded = !collapsible || path !in collapsedPaths
+    appendContainerStart(jsonObject, path, label, key, depth, trailingComma, expanded, collapsible, "{")
     if (!expanded) return
 
     jsonObject.entries.forEachIndexed { index, (childKey, child) ->
@@ -151,6 +153,7 @@ private fun MutableList<JsonTreeRow>.appendContainerStart(
     depth: Int,
     trailingComma: Boolean,
     expanded: Boolean,
+    collapsible: Boolean,
     openingBracket: String,
 ) {
     add(
@@ -159,9 +162,9 @@ private fun MutableList<JsonTreeRow>.appendContainerStart(
             depth = depth,
             text = keyPrefix(key) +
                 if (expanded) openingBracket else element.collapsedSummary() + comma(trailingComma),
-            containerPath = path,
-            expanded = expanded,
-            toggleLabel = label,
+            containerPath = path.takeIf { collapsible },
+            expanded = expanded.takeIf { collapsible },
+            toggleLabel = label.takeIf { collapsible },
         ),
     )
 }

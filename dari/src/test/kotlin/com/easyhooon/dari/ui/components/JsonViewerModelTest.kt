@@ -62,16 +62,32 @@ class JsonViewerModelTest {
     }
 
     @Test
-    fun `collapsing the root shows one summary row`() {
+    fun `root remains expanded and is not collapsible`() {
         val root = structuredElement(
             """{"items":[],"meta":{}}""",
         )
 
         val rows = buildJsonTreeRows(root, collapsedPaths = setOf("$"))
 
-        assertEquals(1, rows.size)
-        assertEquals("{2 fields}", rows.single().text)
-        assertEquals(false, rows.single().expanded)
+        val rootRow = rows.first()
+        assertEquals("{", rootRow.text)
+        assertEquals(null, rootRow.containerPath)
+        assertEquals(null, rootRow.expanded)
+        assertTrue(rows.any { it.text == "\"items\": [" })
+        assertTrue(rows.any { it.text == "\"meta\": {" })
+    }
+
+    @Test
+    fun `root array remains expanded and is not collapsible`() {
+        val root = structuredElement("""[{"id":1}]""")
+
+        val rows = buildJsonTreeRows(root, collapsedPaths = setOf("$"))
+
+        val rootRow = rows.first()
+        assertEquals("[", rootRow.text)
+        assertEquals(null, rootRow.containerPath)
+        assertEquals(null, rootRow.expanded)
+        assertTrue(rows.any { it.text == "\"id\": 1" })
     }
 
     private fun structuredElement(json: String) =
