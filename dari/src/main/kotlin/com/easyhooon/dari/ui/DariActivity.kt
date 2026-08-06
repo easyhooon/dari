@@ -151,6 +151,10 @@ class DariActivity : ComponentActivity() {
                 val shakeToOpen by Dari.preferences.shakeToOpenFlow().collectAsStateWithLifecycle(
                     initialValue = Dari.preferences.shakeToOpen,
                 )
+                val jsonFoldingEnabled by Dari.preferences.jsonFoldingEnabledFlow()
+                    .collectAsStateWithLifecycle(
+                        initialValue = Dari.preferences.jsonFoldingEnabled,
+                    )
                 var isSearchMode by rememberSaveable { mutableStateOf(false) }
                 var searchQuery by rememberSaveable { mutableStateOf("") }
                 var selectedTag by rememberSaveable { mutableStateOf<String?>(null) }
@@ -396,6 +400,8 @@ class DariActivity : ComponentActivity() {
                             onShakeToOpenChange = { Dari.setShakeToOpenEnabled(it) },
                             darkMode = darkMode,
                             onDarkModeChange = { Dari.setDarkMode(it) },
+                            jsonFoldingEnabled = jsonFoldingEnabled,
+                            onJsonFoldingEnabledChange = { Dari.setJsonFoldingEnabled(it) },
                             onClearMessages = {
                                 showSettingsSheet = false
                                 showClearDialog = true
