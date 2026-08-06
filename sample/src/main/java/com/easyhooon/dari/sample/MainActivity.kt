@@ -125,6 +125,7 @@ class MainActivity : ComponentActivity() {
                 "openAppSettings" -> handleOpenAppSettings(handlerName, requestId)
                 "requestCameraPermission" -> handleRequestCameraPermission(requestId)
                 "sendWithNullFields" -> handleSendWithNullFields(handlerName, requestId, data)
+                "fetchTravelItinerary" -> handleFetchTravelItinerary(handlerName, requestId)
                 "fetchLargeData" -> handleFetchLargeData(handlerName, requestId)
                 "simulateSlowResponse" -> handleSimulateSlowResponse(handlerName, requestId)
                 "simulateError" -> handleSimulateError(handlerName, requestId, data)
@@ -317,6 +318,129 @@ class MainActivity : ComponentActivity() {
         }
         interceptor?.onWebToAppResponse(handlerName, requestId, largePayload, true)
         callJs(requestId, true, """{"size":${largePayload.length},"itemCount":10000}""")
+    }
+
+    // Keep the complete payload together so its expandable shape stays easy to inspect.
+    @Suppress("LongMethod")
+    private fun handleFetchTravelItinerary(handlerName: String, requestId: String) {
+        val response = JSONObject(
+            """
+            {
+              "trip": {
+                "id": "TRIP-2026-JEJU-03",
+                "title": "Jeju Summer Escape",
+                "destination": {
+                  "city": "Jeju",
+                  "country": "South Korea",
+                  "coordinates": {
+                    "latitude": 33.4996,
+                    "longitude": 126.5312
+                  }
+                },
+                "travelers": [
+                  {
+                    "name": "Mina",
+                    "role": "planner",
+                    "preferences": {
+                      "seat": "window",
+                      "meal": "vegetarian"
+                    }
+                  },
+                  {
+                    "name": "Joon",
+                    "role": "photographer",
+                    "preferences": {
+                      "seat": "aisle",
+                      "meal": "standard"
+                    }
+                  }
+                ],
+                "days": [
+                  {
+                    "day": 1,
+                    "date": "2026-08-14",
+                    "theme": "Ocean & Sunset",
+                    "activities": [
+                      {
+                        "time": "10:30",
+                        "title": "Check in at Aewol",
+                        "location": {
+                          "name": "Aewol Stay",
+                          "district": "Aewol-eup"
+                        },
+                        "tags": ["stay", "ocean-view"],
+                        "reservation": {
+                          "status": "confirmed",
+                          "confirmationCode": "AWL-4815"
+                        }
+                      },
+                      {
+                        "time": "18:40",
+                        "title": "Sunset coastal walk",
+                        "location": {
+                          "name": "Handam Coastal Trail",
+                          "district": "Aewol-eup"
+                        },
+                        "tags": ["sunset", "walking"],
+                        "reservation": null
+                      }
+                    ]
+                  },
+                  {
+                    "day": 2,
+                    "date": "2026-08-15",
+                    "theme": "Forest & Local Food",
+                    "activities": [
+                      {
+                        "time": "09:00",
+                        "title": "Walk through Bijarim Forest",
+                        "location": {
+                          "name": "Bijarim Forest",
+                          "district": "Gujwa-eup"
+                        },
+                        "tags": ["forest", "nature"],
+                        "reservation": {
+                          "status": "not-required",
+                          "confirmationCode": null
+                        }
+                      },
+                      {
+                        "time": "13:00",
+                        "title": "Jeju seasonal table",
+                        "location": {
+                          "name": "Sorang Kitchen",
+                          "district": "Seogwipo-si"
+                        },
+                        "tags": ["food", "local"],
+                        "reservation": {
+                          "status": "confirmed",
+                          "confirmationCode": "SRG-1300"
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "summary": {
+                  "totalDays": 2,
+                  "estimatedBudget": {
+                    "amount": 780000,
+                    "currency": "KRW"
+                  },
+                  "highlights": [
+                    "ocean-view stay",
+                    "coastal sunset",
+                    "forest trail",
+                    "local cuisine"
+                  ]
+                }
+              }
+            }
+            """.trimIndent(),
+        ).apply {
+            put("requestId", requestId)
+        }
+        interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(), true)
+        callJs(requestId, true, """{"tripId":"TRIP-2026-JEJU-03","dayCount":2}""")
     }
 
     private fun handleSimulateSlowResponse(handlerName: String, requestId: String) {

@@ -98,10 +98,16 @@
         <span>Request containing explicit null values</span>
     </button>
 
+    <div class="section">Expandable JSON</div>
+    <button class="btn btn-green" onclick="fetchTravelItinerary()">
+        View Travel Itinerary
+        <span>A polished trip response with nested days, activities, and reservations</span>
+    </button>
+
     <div class="section">Large Payload (Truncation Test)</div>
     <button class="btn btn-red" onclick="fetchLargeData()">
-        Fetch Large Data (~2MB)
-        <span>Simulates a large API response that triggers body truncation</span>
+        Fetch Truncated Data (~2MB)
+        <span>Intentionally exceeds the capture limit; raw fallback is expected</span>
     </button>
 
     <div class="section">Status Test (In Progress / Error)</div>
@@ -221,8 +227,14 @@
 
         function fetchLargeData() {
             var id = createRequestId();
-            log('→ fetchLargeData (~2MB response)', 'req');
+            log('→ fetchLargeData (~2MB, truncated)', 'req');
             Android.onBridgeRequest('fetchLargeData', id, null);
+        }
+
+        function fetchTravelItinerary() {
+            var id = createRequestId();
+            log('→ fetchTravelItinerary (expandable JSON)', 'req');
+            Android.onBridgeRequest('fetchTravelItinerary', id, null);
         }
 
         function simulateSlowResponse() {

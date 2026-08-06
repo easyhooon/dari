@@ -119,6 +119,10 @@ class DariDetailActivity : ComponentActivity() {
             val darkMode by Dari.preferences.darkModeFlow().collectAsStateWithLifecycle(
                 initialValue = Dari.preferences.darkMode,
             )
+            val jsonFoldingEnabled by Dari.preferences.jsonFoldingEnabledFlow()
+                .collectAsStateWithLifecycle(
+                    initialValue = Dari.preferences.jsonFoldingEnabled,
+                )
             val isDark = darkMode ?: isSystemInDarkTheme()
             ApplyDariSystemBars(isDark)
             DariTheme(darkTheme = darkMode) {
@@ -199,7 +203,7 @@ class DariDetailActivity : ComponentActivity() {
                         if (entry == null) {
                             Text("Message not found", modifier = Modifier.padding(16.dp))
                         } else {
-                            DetailTabs(entry)
+                            DetailTabs(entry, jsonFoldingEnabled)
                         }
                     }
 
@@ -212,7 +216,10 @@ class DariDetailActivity : ComponentActivity() {
 private val TAB_TITLES = listOf("OVERVIEW", "REQUEST", "RESPONSE")
 
 @Composable
-private fun DetailTabs(entry: MessageEntry) {
+private fun DetailTabs(
+    entry: MessageEntry,
+    jsonFoldingEnabled: Boolean,
+) {
     val pagerState = rememberPagerState(pageCount = { TAB_TITLES.size })
     val coroutineScope = rememberCoroutineScope()
 
@@ -255,8 +262,8 @@ private fun DetailTabs(entry: MessageEntry) {
         ) { page ->
             when (page) {
                 0 -> OverviewTab(entry)
-                1 -> DataTab(entry.requestData, entry.requestPayloadMetadata)
-                2 -> DataTab(entry.responseData, entry.responsePayloadMetadata)
+                1 -> DataTab(entry.requestData, entry.requestPayloadMetadata, jsonFoldingEnabled)
+                2 -> DataTab(entry.responseData, entry.responsePayloadMetadata, jsonFoldingEnabled)
             }
         }
     }
@@ -343,7 +350,11 @@ private enum class PayloadViewMode {
 }
 
 @Composable
-private fun DataTab(data: String?, metadata: MessagePayloadMetadata?) {
+private fun DataTab(
+    data: String?,
+    metadata: MessagePayloadMetadata?,
+    jsonFoldingEnabled: Boolean,
+) {
     val rawPreview = metadata?.rawPreview
     var viewMode by remember(rawPreview?.base64) { mutableStateOf(PayloadViewMode.DECODED) }
 
@@ -372,18 +383,20 @@ private fun DataTab(data: String?, metadata: MessagePayloadMetadata?) {
             if (viewMode == PayloadViewMode.RAW && rawPreview != null) {
                 RawPayloadView(metadata)
             } else {
-                DecodedPayloadView(data)
+                DecodedPayloadView(data, jsonFoldingEnabled)
             }
         }
     }
 }
 
 @Composable
-private fun DecodedPayloadView(data: String?) {
-    Column(
+private fun DecodedPayloadView(
+    data: String?,
+    jsonFoldingEnabled: Boolean,
+) {
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
         if (data.isNullOrBlank()) {
@@ -393,7 +406,11 @@ private fun DecodedPayloadView(data: String?) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            JsonViewer(jsonString = data)
+            JsonViewer(
+                jsonString = data,
+                foldingEnabled = jsonFoldingEnabled,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }

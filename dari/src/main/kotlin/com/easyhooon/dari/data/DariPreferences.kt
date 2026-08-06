@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /**
- * Persists user-toggled Dari settings (shake-to-open, dark mode) so changes
+ * Persists user-toggled Dari settings so changes
  * survive process restarts and override the initial [com.easyhooon.dari.DariConfig]
  * defaults.
  *
@@ -41,15 +41,16 @@ internal class DariPreferences(
     /** User override for dark mode; `null` means "follow the system theme". */
     private val _darkMode = MutableStateFlow<Boolean?>(null)
 
+    private val _jsonFoldingEnabled = MutableStateFlow(true)
+
     init {
-        // One-shot blocking read so [shakeToOpen] and [darkMode] are correct
-        // for the very first synchronous caller (e.g. Dari.init's shake
-        // registration, or Compose initialValue). DataStore file is tiny so
-        // this takes ~a few ms on cold start.
+        // One-shot blocking read so settings are correct for the first synchronous
+        // caller (e.g. Dari.init or Compose initialValue).
         runBlocking {
             val snapshot = dataStore.data.first()
             _shakeToOpen.value = snapshot[KEY_SHAKE_TO_OPEN] ?: defaultShakeToOpen
             _darkMode.value = snapshot[KEY_DARK_MODE]
+            _jsonFoldingEnabled.value = snapshot[KEY_JSON_FOLDING_ENABLED] ?: true
         }
 
         // Keep the StateFlows in sync with any subsequent DataStore writes.
@@ -57,6 +58,7 @@ internal class DariPreferences(
             dataStore.data.collect { prefs ->
                 _shakeToOpen.value = prefs[KEY_SHAKE_TO_OPEN] ?: defaultShakeToOpen
                 _darkMode.value = prefs[KEY_DARK_MODE]
+                _jsonFoldingEnabled.value = prefs[KEY_JSON_FOLDING_ENABLED] ?: true
             }
         }
     }
@@ -95,8 +97,23 @@ internal class DariPreferences(
 
     // endregion
 
+    // region JSON folding
+
+    val jsonFoldingEnabled: Boolean get() = _jsonFoldingEnabled.value
+
+    fun jsonFoldingEnabledFlow(): Flow<Boolean> = _jsonFoldingEnabled.asStateFlow()
+
+    fun setJsonFoldingEnabled(value: Boolean) {
+        scope.launch {
+            dataStore.edit { it[KEY_JSON_FOLDING_ENABLED] = value }
+        }
+    }
+
+    // endregion
+
     companion object {
         private val KEY_SHAKE_TO_OPEN = booleanPreferencesKey("shake_to_open")
         private val KEY_DARK_MODE = booleanPreferencesKey("dark_mode")
+        private val KEY_JSON_FOLDING_ENABLED = booleanPreferencesKey("json_folding_enabled")
     }
 }
