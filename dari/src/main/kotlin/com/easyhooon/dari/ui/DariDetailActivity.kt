@@ -380,10 +380,9 @@ private fun DataTab(data: String?, metadata: MessagePayloadMetadata?) {
 
 @Composable
 private fun DecodedPayloadView(data: String?) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
         if (data.isNullOrBlank()) {
@@ -393,7 +392,10 @@ private fun DecodedPayloadView(data: String?) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            JsonViewer(jsonString = data)
+            JsonViewer(
+                jsonString = data,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }
