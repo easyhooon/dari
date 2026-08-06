@@ -73,8 +73,8 @@ class JsonViewerModelTest {
         assertEquals("{", rootRow.text)
         assertEquals(null, rootRow.containerPath)
         assertEquals(null, rootRow.expanded)
-        assertTrue(rows.any { it.text == "\"items\": [" })
-        assertTrue(rows.any { it.text == "\"meta\": {" })
+        assertTrue(rows.any { it.text == "\"items\": []," })
+        assertTrue(rows.any { it.text == "\"meta\": {}" })
     }
 
     @Test
@@ -88,6 +88,68 @@ class JsonViewerModelTest {
         assertEquals(null, rootRow.containerPath)
         assertEquals(null, rootRow.expanded)
         assertTrue(rows.any { it.text == "\"id\": 1" })
+    }
+
+    @Test
+    fun `default state collapses nonempty containers from the second level`() {
+        val root = structuredElement(
+            """{"trip":{"destination":{"city":"Jeju"},"days":[{"activities":[1]}]}}""",
+        )
+
+        val collapsedPaths = defaultCollapsedPaths(root)
+
+        assertEquals(
+            setOf(
+                "$/trip/destination",
+                "$/trip/days",
+                "$/trip/days/0",
+                "$/trip/days/0/activities",
+            ),
+            collapsedPaths,
+        )
+    }
+
+    @Test
+    fun `empty containers render without collapse controls`() {
+        val root = structuredElement("""{"items":[],"meta":{}}""")
+
+        val rows = buildJsonTreeRows(root, collapsedPaths = emptySet())
+
+        val emptyRows = rows.filter { it.key == "items" || it.key == "meta" }
+        assertEquals(listOf("\"items\": [],", "\"meta\": {}"), emptyRows.map { it.text })
+        assertTrue(emptyRows.all { it.containerPath == null && it.expanded == null })
+    }
+
+    @Test
+    fun `primitive rows expose syntax token types`() {
+        val root = structuredElement(
+            """{"string":"value","number":1,"boolean":true,"null":null}""",
+        )
+
+        val tokenTypes = buildJsonTreeRows(root, collapsedPaths = emptySet())
+            .filter { it.key != null }
+            .associate { it.key to it.tokenType }
+
+        assertEquals(JsonTokenType.STRING, tokenTypes["string"])
+        assertEquals(JsonTokenType.NUMBER, tokenTypes["number"])
+        assertEquals(JsonTokenType.BOOLEAN, tokenTypes["boolean"])
+        assertEquals(JsonTokenType.NULL, tokenTypes["null"])
+    }
+
+    @Test
+    fun `disabling folding expands every container without controls`() {
+        val root = structuredElement(
+            """{"trip":{"days":[{"activities":[1]}]}}""",
+        )
+
+        val rows = buildJsonTreeRows(
+            element = root,
+            collapsedPaths = defaultCollapsedPaths(root),
+            foldingEnabled = false,
+        )
+
+        assertTrue(rows.all { it.containerPath == null && it.expanded == null })
+        assertTrue(rows.any { it.text == "1" })
     }
 
     private fun structuredElement(json: String) =

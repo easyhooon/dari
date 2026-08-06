@@ -30,13 +30,20 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * Composable that displays valid JSON as an expandable tree.
@@ -44,6 +51,7 @@ import kotlinx.serialization.json.JsonElement
 @Composable
 internal fun JsonViewer(
     jsonString: String,
+    foldingEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val content = remember(jsonString) { parseJsonViewerContent(jsonString) }
@@ -51,6 +59,7 @@ internal fun JsonViewer(
         is JsonViewerContent.Structured -> JsonTreeViewer(
             element = content.element,
             stateKey = jsonString,
+            foldingEnabled = foldingEnabled,
             modifier = modifier,
         )
 
@@ -66,10 +75,21 @@ internal fun JsonViewer(
 private fun JsonTreeViewer(
     element: JsonElement,
     stateKey: String,
+    foldingEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val collapsedPaths = remember(stateKey) { mutableStateMapOf<String, Unit>() }
-    val rows = buildJsonTreeRows(element, collapsedPaths.keys)
+    val collapsedPaths = remember(stateKey, foldingEnabled) {
+        mutableStateMapOf<String, Unit>().apply {
+            if (foldingEnabled) {
+                defaultCollapsedPaths(element).forEach { path -> this[path] = Unit }
+            }
+        }
+    }
+    val rows = buildJsonTreeRows(
+        element = element,
+        collapsedPaths = collapsedPaths.keys,
+        foldingEnabled = foldingEnabled,
+    )
     val horizontalScrollState = rememberScrollState()
     val shape = RoundedCornerShape(8.dp)
 
@@ -98,6 +118,7 @@ private fun JsonTreeViewer(
                 ) { row ->
                     JsonTreeLine(
                         row = row,
+                        showDisclosureGutter = foldingEnabled,
                         onToggle = { path, expanded ->
                             if (expanded) {
                                 collapsedPaths[path] = Unit
@@ -115,6 +136,7 @@ private fun JsonTreeViewer(
 @Composable
 private fun JsonTreeLine(
     row: JsonTreeRow,
+    showDisclosureGutter: Boolean,
     onToggle: (path: String, expanded: Boolean) -> Unit,
 ) {
     val containerPath = row.containerPath
@@ -131,6 +153,10 @@ private fun JsonTreeLine(
     } else {
         Modifier
     }
+    val syntaxColors = jsonSyntaxColors()
+    val highlightedText = remember(row, syntaxColors) {
+        row.toAnnotatedString(syntaxColors)
+    }
 
     Row(
         modifier = Modifier
@@ -138,7 +164,7 @@ private fun JsonTreeLine(
             .then(interactionModifier)
             .padding(horizontal = 12.dp, vertical = 2.dp),
     ) {
-        Spacer(modifier = Modifier.width((row.depth * 16).dp))
+        Spacer(modifier = Modifier.width((row.depth * JSON_INDENT_DP).dp))
         if (expanded != null) {
             Icon(
                 imageVector = if (expanded) {
@@ -147,13 +173,14 @@ private fun JsonTreeLine(
                     Icons.AutoMirrored.Filled.KeyboardArrowRight
                 },
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                modifier = Modifier.size(JSON_DISCLOSURE_ICON_SIZE),
             )
-        } else {
-            Spacer(modifier = Modifier.size(16.dp))
+        } else if (showDisclosureGutter && row.depth > 0) {
+            Spacer(modifier = Modifier.size(JSON_DISCLOSURE_ICON_SIZE))
         }
         Text(
-            text = row.text,
+            text = highlightedText,
             style = MaterialTheme.typography.bodySmall.copy(
                 fontFamily = FontFamily.Monospace,
                 fontSize = 12.sp,
@@ -161,6 +188,57 @@ private fun JsonTreeLine(
             softWrap = false,
         )
     }
+}
+
+private data class JsonSyntaxColors(
+    val key: Color,
+    val string: Color,
+    val number: Color,
+    val boolean: Color,
+    val nullValue: Color,
+    val container: Color,
+    val punctuation: Color,
+)
+
+@Composable
+private fun jsonSyntaxColors(): JsonSyntaxColors {
+    val colorScheme = MaterialTheme.colorScheme
+    val isDark = colorScheme.surface.luminance() < 0.5f
+    return JsonSyntaxColors(
+        key = if (isDark) Color(0xFF90CAF9) else Color(0xFF1565C0),
+        string = if (isDark) Color(0xFFA5D6A7) else Color(0xFF2E7D32),
+        number = if (isDark) Color(0xFFCE93D8) else Color(0xFF7B1FA2),
+        boolean = if (isDark) Color(0xFFFFCC80) else Color(0xFFEF6C00),
+        nullValue = if (isDark) Color(0xFFBDBDBD) else Color(0xFF757575),
+        container = colorScheme.onSurface,
+        punctuation = colorScheme.onSurfaceVariant,
+    )
+}
+
+private fun JsonTreeRow.toAnnotatedString(colors: JsonSyntaxColors): AnnotatedString = buildAnnotatedString {
+    val keyText = key?.let { JsonPrimitive(it).toString() }
+    val prefix = keyText?.let { "$it: " }.orEmpty()
+    if (keyText != null) {
+        withStyle(SpanStyle(color = colors.key)) { append(keyText) }
+        withStyle(SpanStyle(color = colors.punctuation)) { append(": ") }
+    }
+
+    val valueWithComma = text.removePrefix(prefix)
+    val hasTrailingComma = valueWithComma.endsWith(',')
+    val value = if (hasTrailingComma) valueWithComma.dropLast(1) else valueWithComma
+    withStyle(SpanStyle(color = colors.colorFor(tokenType))) { append(value) }
+    if (hasTrailingComma) {
+        withStyle(SpanStyle(color = colors.punctuation)) { append(',') }
+    }
+}
+
+private fun JsonSyntaxColors.colorFor(tokenType: JsonTokenType): Color = when (tokenType) {
+    JsonTokenType.PUNCTUATION -> punctuation
+    JsonTokenType.CONTAINER -> container
+    JsonTokenType.STRING -> string
+    JsonTokenType.NUMBER -> number
+    JsonTokenType.BOOLEAN -> boolean
+    JsonTokenType.NULL -> nullValue
 }
 
 @Composable
@@ -181,3 +259,6 @@ internal fun CodeViewer(text: String) {
         ),
     )
 }
+
+private val JSON_DISCLOSURE_ICON_SIZE = 14.dp
+private const val JSON_INDENT_DP = 14
