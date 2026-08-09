@@ -226,7 +226,7 @@ dari/
 
 ```kotlin
 commonMain.dependencies {
-    implementation("io.github.easyhooon:dari-core:$dariVersion")
+    implementation("io.github.easyhooon:dari-core:<version>")
 }
 ```
 
