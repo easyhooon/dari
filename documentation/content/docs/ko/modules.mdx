@@ -7,7 +7,13 @@ Dari는 릴리즈 빌드에 디버그 구현이 포함되지 않도록 세 모�
 
 ## `dari-core`
 
-UI, Room DB, 알림이 없는 순수 Kotlin/Android 모듈입니다.
+Android, JVM, iOS를 지원하는 Kotlin Multiplatform 계약 모듈입니다. UI, Room DB, 알림이 없으며 `commonMain`에 추가할 수 있습니다.
+
+```kotlin
+commonMain.dependencies {
+  implementation("io.github.easyhooon:dari-core:<version>")
+}
+```
 
 포함 내용:
 - `DariConfig`: 설정 데이터 클래스
@@ -15,6 +21,8 @@ UI, Room DB, 알림이 없는 순수 Kotlin/Android 모듈입니다.
 - `MessageEntry`: 브릿지 호출 라이프사이클 데이터 모델
 - `MessageStatus`: 열거형: `IN_PROGRESS`, `SUCCESS`, `ERROR`
 - `MessageDirection`: 열거형: `WEB_TO_APP`, `APP_TO_WEB`
+
+현재 KMP 지원 범위는 공통 모델과 인터셉터 계약입니다. 인스펙터 런타임, WebView 연동, 저장소, UI는 `dari` 모듈의 Android 전용 기능으로 유지됩니다.
 
 ## `dari`
 
