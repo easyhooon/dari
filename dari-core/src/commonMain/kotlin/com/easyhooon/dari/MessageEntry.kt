@@ -19,7 +19,7 @@ data class MessageEntry(
     val requestDataTruncated: Boolean = false,
     val responseDataTruncated: Boolean = false,
     val status: MessageStatus = MessageStatus.IN_PROGRESS,
-    val requestTimestamp: Long = System.currentTimeMillis(),
+    val requestTimestamp: Long = currentTimeMillis(),
     val responseTimestamp: Long? = null,
     val requestPayloadMetadata: MessagePayloadMetadata? = null,
     val responsePayloadMetadata: MessagePayloadMetadata? = null,
@@ -109,4 +109,4 @@ data class MessageEntry(
     }
 }
 
-private fun String?.utf8Size(): Int = this?.toByteArray(Charsets.UTF_8)?.size ?: 0
+private fun String?.utf8Size(): Int = this?.encodeToByteArray()?.size ?: 0

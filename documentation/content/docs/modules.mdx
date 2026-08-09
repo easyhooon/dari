@@ -7,7 +7,13 @@ Dari is split into three modules to keep release builds free of debug code.
 
 ## `dari-core`
 
-Pure Kotlin/Android module with no UI, no Room database, and no notifications.
+Kotlin Multiplatform contracts module for Android, JVM, and iOS. It has no UI, Room database, or notifications and can be added to `commonMain`:
+
+```kotlin
+commonMain.dependencies {
+  implementation("io.github.easyhooon:dari-core:<version>")
+}
+```
 
 Contains:
 - `DariConfig`: configuration data class
@@ -15,6 +21,8 @@ Contains:
 - `MessageEntry`: data model for a bridge call lifecycle
 - `MessageStatus`: enum: `IN_PROGRESS`, `SUCCESS`, `ERROR`
 - `MessageDirection`: enum: `WEB_TO_APP`, `APP_TO_WEB`
+
+KMP support currently covers these shared models and interception contracts. The inspector runtime, WebView integration, persistence, and UI remain Android-only in `dari`.
 
 ## `dari`
 
