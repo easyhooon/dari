@@ -7,6 +7,7 @@ on:
       - "dari/build.gradle.kts"
       - "dari-noop/build.gradle.kts"
       - "gradle/**"
+      - "gradlew"
       - "build.gradle.kts"
       - ".github/workflows/kmp-core.yml"
   push:
@@ -16,6 +17,7 @@ on:
       - "dari/build.gradle.kts"
       - "dari-noop/build.gradle.kts"
       - "gradle/**"
+      - "gradlew"
       - "build.gradle.kts"
       - ".github/workflows/kmp-core.yml"
 
