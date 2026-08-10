@@ -1,3 +1,4 @@
+import org.gradle.plugins.signing.Sign
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -9,6 +10,12 @@ plugins {
 
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions.jvmTarget.set(JvmTarget.JVM_11)
+}
+
+tasks.withType<Sign>().configureEach {
+    onlyIf("publication signing is enabled") {
+        !providers.gradleProperty("skipPublicationSigning").isPresent
+    }
 }
 
 kotlin {
