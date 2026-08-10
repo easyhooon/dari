@@ -39,6 +39,7 @@ jobs:
       - name: Verify shared contracts and Android consumers
         run: >-
           ./gradlew
+          -PskipPublicationSigning
           :dari-core:jvmTest
           :dari-core:testAndroidHostTest
           :dari-core:compileKotlinIosX64
