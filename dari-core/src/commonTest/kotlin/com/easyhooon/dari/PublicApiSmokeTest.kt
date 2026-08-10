@@ -4,7 +4,7 @@ import com.easyhooon.dari.interceptor.DariInterceptor
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class PublicApiCompatibilityTest {
+class PublicApiSmokeTest {
     @Test
     fun `legacy positional message constructor remains available`() {
         val entry = MessageEntry(
