@@ -1,26 +1,44 @@
-import com.vanniktech.maven.publish.SonatypeHost
+import org.gradle.plugins.signing.Sign
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.vanniktech.maven.publish)
 }
 
-android {
-    namespace = "com.easyhooon.dari.core"
-    compileSdk = 36
+tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions.jvmTarget.set(JvmTarget.JVM_11)
+}
 
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+tasks.withType<Sign>().configureEach {
+    onlyIf("publication signing is enabled") {
+        !providers.gradleProperty("skipPublicationSigning").isPresent
     }
 }
 
-dependencies {
-    testImplementation(libs.junit)
+kotlin {
+    android {
+        namespace = "com.easyhooon.dari.core"
+        compileSdk = 36
+        minSdk = 26
+
+        withJava()
+        withHostTestBuilder {}
+    }
+
+    jvm()
+
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+
+    sourceSets {
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
+    }
 }
 
 mavenPublishing {
@@ -58,6 +76,6 @@ mavenPublishing {
         }
     }
 
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral()
     signAllPublications()
 }
