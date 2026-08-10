@@ -1,9 +1,9 @@
 package com.easyhooon.dari
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertThrows
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
@@ -12,7 +12,7 @@ import kotlin.time.Duration.Companion.seconds
 class DariConfigTest {
 
     @Test
-    fun `default retention period is null (disabled)`() {
+    fun `default retention period is null when disabled`() {
         assertNull(DariConfig().retentionPeriod)
     }
 
@@ -30,14 +30,14 @@ class DariConfigTest {
 
     @Test
     fun `zero retention period throws`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             DariConfig(retentionPeriod = Duration.ZERO)
         }
     }
 
     @Test
     fun `negative retention period throws`() {
-        assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             DariConfig(retentionPeriod = (-1).seconds)
         }
     }
@@ -45,7 +45,7 @@ class DariConfigTest {
     @Test
     fun `other validation still applies`() {
         // Sanity check that retentionPeriod was added without breaking maxContentLength validation.
-        assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             DariConfig(maxContentLength = 0)
         }
     }

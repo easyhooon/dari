@@ -216,11 +216,21 @@ class MyApp : Application() {
 
 ```
 dari/
-├── dari-core/     ← Shared types (DariConfig, MessageEntry, DariInterceptor, etc.)
+├── dari-core/     ← KMP contracts for Android, JVM, and iOS
 ├── dari/          ← Debug library (interceptor, UI, notifications)
 ├── dari-noop/     ← Release no-op (same API surface, zero overhead)
 └── sample/        ← Sample app with WebView bridge demo
 ```
+
+`dari-core` can be added to `commonMain` in a Kotlin Multiplatform project:
+
+```kotlin
+commonMain.dependencies {
+    implementation("io.github.easyhooon:dari-core:<version>")
+}
+```
+
+This shares message models and interceptor contracts across Android, JVM, and iOS targets. The inspector runtime, UI, persistence, notifications, and WebView integration in `dari` remain Android-only.
 
 ## Sample App
 

@@ -1,0 +1,54 @@
+name: KMP Core
+
+on:
+  pull_request:
+    paths:
+      - "dari-core/**"
+      - "dari/build.gradle.kts"
+      - "dari-noop/build.gradle.kts"
+      - "gradle/**"
+      - "gradlew"
+      - "build.gradle.kts"
+      - ".github/workflows/kmp-core.yml"
+  push:
+    branches: [main]
+    paths:
+      - "dari-core/**"
+      - "dari/build.gradle.kts"
+      - "dari-noop/build.gradle.kts"
+      - "gradle/**"
+      - "gradlew"
+      - "build.gradle.kts"
+      - ".github/workflows/kmp-core.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Verify shared contracts and Android consumers
+        run: >-
+          ./gradlew
+          -PskipPublicationSigning
+          :dari-core:jvmTest
+          :dari-core:testAndroidHostTest
+          :dari-core:compileKotlinIosX64
+          :dari-core:compileKotlinIosArm64
+          :dari-core:compileKotlinIosSimulatorArm64
+          :dari-core:compileTestKotlinIosX64
+          :dari-core:compileTestKotlinIosArm64
+          :dari-core:compileTestKotlinIosSimulatorArm64
+          :dari-core:ktlintCheck
+          :dari-core:publishToMavenLocal
+          :dari:assemble
+          :dari-noop:assemble
