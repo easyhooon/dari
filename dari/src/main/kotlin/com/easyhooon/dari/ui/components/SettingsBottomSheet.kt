@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Code
@@ -58,6 +59,8 @@ internal fun SettingsBottomSheet(
     onDarkModeChange: (Boolean?) -> Unit,
     jsonFoldingEnabled: Boolean,
     onJsonFoldingEnabledChange: (Boolean) -> Unit,
+    showTagChip: Boolean,
+    onShowTagChipChange: (Boolean) -> Unit,
     onClearMessages: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -102,6 +105,13 @@ internal fun SettingsBottomSheet(
                 description = "Show controls to collapse or expand nested objects and arrays",
                 checked = jsonFoldingEnabled,
                 onCheckedChange = onJsonFoldingEnabledChange,
+            )
+            SettingToggleRow(
+                icon = Icons.AutoMirrored.Filled.Label,
+                title = "Bridge tag chip",
+                description = "Show bridge tags beside handler names",
+                checked = showTagChip,
+                onCheckedChange = onShowTagChipChange,
             )
 
             HorizontalDivider(

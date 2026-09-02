@@ -28,6 +28,9 @@ object Dari {
     @Suppress("UNUSED_PARAMETER")
     fun setDarkMode(value: Boolean?) = Unit
 
+    @Suppress("UNUSED_PARAMETER")
+    fun setShowTagChip(show: Boolean) = Unit
+
     fun showNotification() = Unit
 
     fun clear() = Unit
