@@ -258,6 +258,7 @@ keep the same API surface without storing or displaying bridge messages.
 | `createInterceptor(tag?, protobufDecoder)` | Create a protobuf-capable interceptor while retaining all string/JSON methods |
 | `setShakeToOpenEnabled(enabled)` | Enable/disable shake-to-open at runtime (persisted) |
 | `setDarkMode(value)` | Override dark mode: `true` / `false` / `null` (system default). Persisted |
+| `setShowTagChip(show)` | Show/hide bridge tag chips in the message list. Persisted |
 | `showNotification()` | Show the notification (e.g., after permission grant) |
 | `clear()` | Clear all stored messages and dismiss notification |
 

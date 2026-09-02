@@ -42,6 +42,7 @@ import java.util.Locale
 @Composable
 internal fun MessageListItem(
     entry: MessageEntry,
+    showTagChip: Boolean,
     onClick: () -> Unit,
 ) {
     Row(
@@ -73,7 +74,7 @@ internal fun MessageListItem(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                entry.tag?.let { tag ->
+                entry.tag?.takeIf { showTagChip }?.let { tag ->
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = tag,
