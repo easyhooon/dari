@@ -11,6 +11,7 @@ internal data class ExportableMessage(
     val id: Long,
     @SerialName("request_id") val requestId: String? = null,
     @SerialName("handler_name") val handlerName: String,
+    @SerialName("display_name") val displayName: String? = null,
     val direction: String,
     val tag: String? = null,
     @SerialName("request_data") val requestData: String? = null,
@@ -39,6 +40,7 @@ internal fun MessageEntry.toExportable(): ExportableMessage = ExportableMessage(
     id = id,
     requestId = requestId,
     handlerName = handlerName,
+    displayName = displayName,
     direction = when (direction) {
         MessageDirection.WEB_TO_APP -> "WEB_TO_APP"
         MessageDirection.APP_TO_WEB -> "APP_TO_WEB"

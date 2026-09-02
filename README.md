@@ -266,9 +266,9 @@ keep the same API surface without storing or displaying bridge messages.
 
 | Method | Description |
 |--------|-------------|
-| `onWebToAppRequest()` | Log a Web-to-App request. `requestId` is optional for fire-and-forget messages. |
+| `onWebToAppRequest()` | Log a Web-to-App request. An overload accepts a separate optional `displayName`. |
 | `onWebToAppResponse()` | Log the response to a Web-to-App request. Skipped if `requestId` is null. |
-| `onAppToWebRequest()` | Log an App-to-Web message. `requestId` is optional for fire-and-forget messages. |
+| `onAppToWebRequest()` | Log an App-to-Web message. An overload accepts a separate optional `displayName`. |
 | `onAppToWebResponse()` | Log the response to an App-to-Web message. Skipped if `requestId` is null. |
 
 `ProtobufDariInterceptor` extends this interface with matching `on*ProtobufRequest()` and `on*ProtobufResponse()` methods that accept `ByteArray` payloads.
@@ -291,6 +291,14 @@ interface DariInterceptor {
         fireAndForget: Boolean? = null,
     )
 
+    fun onWebToAppRequest(
+        handlerName: String,
+        displayName: String?,
+        requestId: String?,
+        requestData: String?,
+        fireAndForget: Boolean? = null,
+    )
+
     /** Called when a response is sent for a Web -> App request */
     fun onWebToAppResponse(
         handlerName: String,
@@ -302,6 +310,14 @@ interface DariInterceptor {
     /** Called when an App -> Web request is sent */
     fun onAppToWebRequest(
         handlerName: String,
+        requestId: String?,
+        data: String?,
+        fireAndForget: Boolean? = null,
+    )
+
+    fun onAppToWebRequest(
+        handlerName: String,
+        displayName: String?,
         requestId: String?,
         data: String?,
         fireAndForget: Boolean? = null,

@@ -149,8 +149,13 @@ object Dari {
     /**
      * Adds a new message to the notification.
      */
-    internal fun postMessageNotification(handlerName: String, direction: MessageDirection, tag: String? = null) {
-        notification?.postMessage(handlerName, direction, tag)
+    internal fun postMessageNotification(
+        handlerName: String,
+        displayName: String?,
+        direction: MessageDirection,
+        tag: String? = null,
+    ) {
+        notification?.postMessage(handlerName, displayName, direction, tag)
     }
 
     /**

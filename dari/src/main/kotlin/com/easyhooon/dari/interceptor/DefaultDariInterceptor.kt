@@ -23,7 +23,20 @@ class DefaultDariInterceptor(
     private val maxContentLength: Int
         get() = Dari.config.maxContentLength
 
-    override fun onWebToAppRequest(handlerName: String, requestId: String?, requestData: String?, fireAndForget: Boolean?) {
+    override fun onWebToAppRequest(
+        handlerName: String,
+        requestId: String?,
+        requestData: String?,
+        fireAndForget: Boolean?,
+    ) = onWebToAppRequest(handlerName, null, requestId, requestData, fireAndForget)
+
+    override fun onWebToAppRequest(
+        handlerName: String,
+        displayName: String?,
+        requestId: String?,
+        requestData: String?,
+        fireAndForget: Boolean?,
+    ) {
         val (truncatedData, wasTruncated) = MessageEntry.truncateIfNeeded(requestData, maxContentLength)
         val resolvedAsSuccess = fireAndForget ?: Dari.config.fireAndForget
         val entry = MessageEntry(
@@ -34,9 +47,10 @@ class DefaultDariInterceptor(
             requestData = truncatedData,
             requestDataTruncated = wasTruncated,
             status = if (resolvedAsSuccess) MessageStatus.SUCCESS else MessageStatus.IN_PROGRESS,
+            displayName = displayName.normalized(),
         )
         Dari.repository.addEntry(entry)
-        Dari.postMessageNotification(handlerName, MessageDirection.WEB_TO_APP, tag)
+        Dari.postMessageNotification(handlerName, entry.displayName, MessageDirection.WEB_TO_APP, tag)
     }
 
     override fun onWebToAppResponse(
@@ -59,7 +73,20 @@ class DefaultDariInterceptor(
         }
     }
 
-    override fun onAppToWebRequest(handlerName: String, requestId: String?, data: String?, fireAndForget: Boolean?) {
+    override fun onAppToWebRequest(
+        handlerName: String,
+        requestId: String?,
+        data: String?,
+        fireAndForget: Boolean?,
+    ) = onAppToWebRequest(handlerName, null, requestId, data, fireAndForget)
+
+    override fun onAppToWebRequest(
+        handlerName: String,
+        displayName: String?,
+        requestId: String?,
+        data: String?,
+        fireAndForget: Boolean?,
+    ) {
         val (truncatedData, wasTruncated) = MessageEntry.truncateIfNeeded(data, maxContentLength)
         val resolvedAsSuccess = fireAndForget ?: Dari.config.fireAndForget
         val entry = MessageEntry(
@@ -70,9 +97,10 @@ class DefaultDariInterceptor(
             requestData = truncatedData,
             requestDataTruncated = wasTruncated,
             status = if (resolvedAsSuccess) MessageStatus.SUCCESS else MessageStatus.IN_PROGRESS,
+            displayName = displayName.normalized(),
         )
         Dari.repository.addEntry(entry)
-        Dari.postMessageNotification(handlerName, MessageDirection.APP_TO_WEB, tag)
+        Dari.postMessageNotification(handlerName, entry.displayName, MessageDirection.APP_TO_WEB, tag)
     }
 
     override fun onAppToWebResponse(requestId: String?, isSuccess: Boolean, responseData: String?) {
@@ -95,6 +123,14 @@ class DefaultDariInterceptor(
         requestId: String?,
         requestData: ByteArray,
         fireAndForget: Boolean?,
+    ) = onWebToAppProtobufRequest(handlerName, null, requestId, requestData, fireAndForget)
+
+    override fun onWebToAppProtobufRequest(
+        handlerName: String,
+        displayName: String?,
+        requestId: String?,
+        requestData: ByteArray,
+        fireAndForget: Boolean?,
     ) {
         val rendered = renderProtobuf(
             payload = requestData,
@@ -112,9 +148,10 @@ class DefaultDariInterceptor(
             requestDataTruncated = rendered.wasTruncated,
             requestPayloadMetadata = rendered.metadata,
             status = if (resolvedAsSuccess) MessageStatus.SUCCESS else MessageStatus.IN_PROGRESS,
+            displayName = displayName.normalized(),
         )
         Dari.repository.addEntry(entry)
-        Dari.postMessageNotification(handlerName, MessageDirection.WEB_TO_APP, tag)
+        Dari.postMessageNotification(handlerName, entry.displayName, MessageDirection.WEB_TO_APP, tag)
     }
 
     override fun onWebToAppProtobufResponse(
@@ -147,6 +184,14 @@ class DefaultDariInterceptor(
         requestId: String?,
         requestData: ByteArray,
         fireAndForget: Boolean?,
+    ) = onAppToWebProtobufRequest(handlerName, null, requestId, requestData, fireAndForget)
+
+    override fun onAppToWebProtobufRequest(
+        handlerName: String,
+        displayName: String?,
+        requestId: String?,
+        requestData: ByteArray,
+        fireAndForget: Boolean?,
     ) {
         val rendered = renderProtobuf(
             payload = requestData,
@@ -164,9 +209,10 @@ class DefaultDariInterceptor(
             requestDataTruncated = rendered.wasTruncated,
             requestPayloadMetadata = rendered.metadata,
             status = if (resolvedAsSuccess) MessageStatus.SUCCESS else MessageStatus.IN_PROGRESS,
+            displayName = displayName.normalized(),
         )
         Dari.repository.addEntry(entry)
-        Dari.postMessageNotification(handlerName, MessageDirection.APP_TO_WEB, tag)
+        Dari.postMessageNotification(handlerName, entry.displayName, MessageDirection.APP_TO_WEB, tag)
     }
 
     override fun onAppToWebProtobufResponse(
@@ -207,3 +253,5 @@ class DefaultDariInterceptor(
         )
     }
 }
+
+private fun String?.normalized(): String? = this?.takeIf { it.isNotBlank() }

@@ -7,6 +7,8 @@ package com.easyhooon.dari
  * @property id Auto-generated unique identifier for list key and entry lookup.
  * @property requestId Optional external request ID for matching request-response pairs.
  *                     When null, the entry is treated as a standalone (fire-and-forget) message.
+ * @property handlerName Stable bridge handler identifier.
+ * @property displayName Optional human-readable handler description.
  */
 data class MessageEntry(
     val id: Long = 0L,
@@ -23,7 +25,42 @@ data class MessageEntry(
     val responseTimestamp: Long? = null,
     val requestPayloadMetadata: MessagePayloadMetadata? = null,
     val responsePayloadMetadata: MessagePayloadMetadata? = null,
+    val displayName: String? = null,
 ) {
+
+    /** Preserves the pre-display-name constructor signature for binary callers. */
+    constructor(
+        id: Long,
+        requestId: String?,
+        handlerName: String,
+        direction: MessageDirection,
+        tag: String?,
+        requestData: String?,
+        responseData: String?,
+        requestDataTruncated: Boolean,
+        responseDataTruncated: Boolean,
+        status: MessageStatus,
+        requestTimestamp: Long,
+        responseTimestamp: Long?,
+        requestPayloadMetadata: MessagePayloadMetadata?,
+        responsePayloadMetadata: MessagePayloadMetadata?,
+    ) : this(
+        id = id,
+        requestId = requestId,
+        handlerName = handlerName,
+        direction = direction,
+        tag = tag,
+        requestData = requestData,
+        responseData = responseData,
+        requestDataTruncated = requestDataTruncated,
+        responseDataTruncated = responseDataTruncated,
+        status = status,
+        requestTimestamp = requestTimestamp,
+        responseTimestamp = responseTimestamp,
+        requestPayloadMetadata = requestPayloadMetadata,
+        responsePayloadMetadata = responsePayloadMetadata,
+        displayName = null,
+    )
 
     /** Preserves the pre-protobuf constructor for binary compatibility. */
     constructor(

@@ -68,6 +68,7 @@ import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessageStatus
 import com.easyhooon.dari.export.DariExporter
 import com.easyhooon.dari.export.ExportFormat
+import com.easyhooon.dari.matchesHandlerQuery
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.easyhooon.dari.ui.components.MessageListItem
 import com.easyhooon.dari.ui.components.SettingsBottomSheet
@@ -185,7 +186,7 @@ class DariActivity : ComponentActivity() {
 
                 val filteredEntries = entries.reversed().filter { entry ->
                     val matchesSearch = searchQuery.isBlank() ||
-                        entry.handlerName.contains(searchQuery, ignoreCase = true)
+                        entry.matchesHandlerQuery(searchQuery)
                     val matchesTag = selectedTag == null || entry.tag == selectedTag
                     val matchesStatus = selectedStatus == null || entry.status == selectedStatus
                     matchesSearch && matchesTag && matchesStatus

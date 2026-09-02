@@ -16,6 +16,14 @@ interface DariInterceptor {
         fireAndForget: Boolean? = null,
     )
 
+    fun onWebToAppRequest(
+        handlerName: String,
+        displayName: String?,
+        requestId: String?,
+        requestData: String?,
+        fireAndForget: Boolean? = null,
+    )
+
     fun onWebToAppResponse(
         handlerName: String,
         requestId: String?,
@@ -25,6 +33,14 @@ interface DariInterceptor {
 
     fun onAppToWebRequest(
         handlerName: String,
+        requestId: String?,
+        data: String?,
+        fireAndForget: Boolean? = null,
+    )
+
+    fun onAppToWebRequest(
+        handlerName: String,
+        displayName: String?,
         requestId: String?,
         data: String?,
         fireAndForget: Boolean? = null,
@@ -83,6 +99,21 @@ Called when the native side pushes a message to JavaScript.
 ### `onAppToWebResponse`
 
 Called when JavaScript responds to a native-initiated message.
+
+## Optional display names
+
+Use the request overload with `displayName` when a stable handler identifier needs a human-readable label:
+
+```kotlin
+interceptor?.onWebToAppRequest(
+    handlerName = "N:4-1",
+    displayName = "Today's health goal",
+    requestId = requestId,
+    requestData = payload,
+)
+```
+
+Dari stores and exports both values separately, searches both, and renders `N:4-1(Today's health goal)` in the message list and notification. Blank display names behave like `null`. The same overload is available for App-to-Web and protobuf requests; existing signatures remain supported.
 
 ## Fire-and-Forget
 

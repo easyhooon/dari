@@ -53,6 +53,15 @@ class DariExporterTest {
     }
 
     @Test
+    fun `formatSingleEntry contains display name as a separate field`() {
+        val text = DariExporter.formatSingleEntry(
+            createEntry(handlerName = "N:4-1").copy(displayName = "오늘의 건강목표"),
+        )
+
+        assertTrue(text.contains("Display name: 오늘의 건강목표"))
+    }
+
+    @Test
     fun `formatSingleEntry contains direction for WEB_TO_APP`() {
         val text = DariExporter.formatSingleEntry(createEntry(direction = MessageDirection.WEB_TO_APP))
         assertTrue(text.contains("Web \u2192 App"))
@@ -185,6 +194,7 @@ class DariExporterTest {
         )
 
         assertTrue(jsonString.contains("handler_name"))
+        assertTrue(jsonString.contains("display_name"))
         assertTrue(jsonString.contains("request_id"))
         assertTrue(jsonString.contains("request_data"))
         assertTrue(jsonString.contains("response_data"))
@@ -211,6 +221,7 @@ class DariExporterTest {
         val parsed = Json.parseToJsonElement(jsonString).jsonArray[0].jsonObject
 
         assertTrue(parsed.containsKey("request_data"))
+        assertTrue(parsed.containsKey("display_name"))
         assertTrue(parsed.containsKey("response_data"))
         assertTrue(parsed.containsKey("response_timestamp"))
         assertTrue(parsed.containsKey("duration_ms"))
