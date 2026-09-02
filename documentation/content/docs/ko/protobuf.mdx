@@ -65,6 +65,7 @@ val interceptor = Dari.createInterceptor(
 ```kotlin
 interceptor?.onWebToAppProtobufRequest(
     handlerName = "createOrder",
+    displayName = "주문 생성",
     requestId = requestId,
     requestData = requestBytes,
 )
@@ -81,7 +82,7 @@ interceptor?.onWebToAppProtobufResponse(
 )
 ```
 
-요청과 응답을 연결하려면 동일하고 안정적인 `requestId`를 사용합니다. 단독 메시지 또는 fire-and-forget인 경우에만 `null`을 전달합니다.
+요청과 응답을 연결하려면 동일하고 안정적인 `requestId`를 사용합니다. 단독 메시지 또는 fire-and-forget인 경우에만 `null`을 전달합니다. `displayName`은 선택 사항이며 안정적인 `handlerName`과 분리해 저장됩니다.
 
 ## 방향별 메서드
 

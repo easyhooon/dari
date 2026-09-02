@@ -188,6 +188,9 @@ internal object DariExporter {
 
         return buildString {
             appendLine("Handler: ${entry.handlerName}")
+            entry.displayName?.takeIf { it.isNotBlank() }?.let {
+                appendLine("Display name: $it")
+            }
             appendLine("Direction: $direction")
             appendLine("Status: ${entry.status}")
             appendLine("Tag: ${entry.tag ?: "-"}")

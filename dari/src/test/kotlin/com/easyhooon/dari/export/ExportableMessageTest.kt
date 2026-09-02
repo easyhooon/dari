@@ -83,6 +83,16 @@ class ExportableMessageTest {
     }
 
     @Test
+    fun `toExportable preserves display name separately from handler name`() {
+        val exportable = createEntry(handlerName = "N:4-1")
+            .copy(displayName = "오늘의 건강목표")
+            .toExportable()
+
+        assertEquals("N:4-1", exportable.handlerName)
+        assertEquals("오늘의 건강목표", exportable.displayName)
+    }
+
+    @Test
     fun `toExportable handles null optional fields`() {
         val entry = createEntry(
             requestId = null,
