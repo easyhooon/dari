@@ -155,6 +155,9 @@ class DariActivity : ComponentActivity() {
                     .collectAsStateWithLifecycle(
                         initialValue = Dari.preferences.jsonFoldingEnabled,
                     )
+                val showTagChip by Dari.preferences.showTagChipFlow().collectAsStateWithLifecycle(
+                    initialValue = Dari.preferences.showTagChip,
+                )
                 var isSearchMode by rememberSaveable { mutableStateOf(false) }
                 var searchQuery by rememberSaveable { mutableStateOf("") }
                 var selectedTag by rememberSaveable { mutableStateOf<String?>(null) }
@@ -378,6 +381,7 @@ class DariActivity : ComponentActivity() {
                                 ) { entry ->
                                     MessageListItem(
                                         entry = entry,
+                                        showTagChip = showTagChip,
                                         onClick = {
                                             val intent = Intent(
                                                 this@DariActivity,
@@ -402,6 +406,8 @@ class DariActivity : ComponentActivity() {
                             onDarkModeChange = { Dari.setDarkMode(it) },
                             jsonFoldingEnabled = jsonFoldingEnabled,
                             onJsonFoldingEnabledChange = { Dari.setJsonFoldingEnabled(it) },
+                            showTagChip = showTagChip,
+                            onShowTagChipChange = { Dari.setShowTagChip(it) },
                             onClearMessages = {
                                 showSettingsSheet = false
                                 showClearDialog = true

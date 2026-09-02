@@ -105,6 +105,14 @@ object Dari {
         preferences.setJsonFoldingEnabled(enabled)
     }
 
+    /**
+     * Show or hide bridge tag chips beside handler names in the message list.
+     * Persists across process restarts.
+     */
+    fun setShowTagChip(show: Boolean) {
+        preferences.setShowTagChip(show)
+    }
+
     private fun applyShakeToOpen(enabled: Boolean) {
         shakeManager?.unregister()
         shakeManager = if (enabled) {

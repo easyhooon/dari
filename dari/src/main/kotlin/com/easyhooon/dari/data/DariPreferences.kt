@@ -43,6 +43,8 @@ internal class DariPreferences(
 
     private val _jsonFoldingEnabled = MutableStateFlow(true)
 
+    private val _showTagChip = MutableStateFlow(true)
+
     init {
         // One-shot blocking read so settings are correct for the first synchronous
         // caller (e.g. Dari.init or Compose initialValue).
@@ -51,6 +53,7 @@ internal class DariPreferences(
             _shakeToOpen.value = snapshot[KEY_SHAKE_TO_OPEN] ?: defaultShakeToOpen
             _darkMode.value = snapshot[KEY_DARK_MODE]
             _jsonFoldingEnabled.value = snapshot[KEY_JSON_FOLDING_ENABLED] ?: true
+            _showTagChip.value = snapshot[KEY_SHOW_TAG_CHIP] ?: true
         }
 
         // Keep the StateFlows in sync with any subsequent DataStore writes.
@@ -59,6 +62,7 @@ internal class DariPreferences(
                 _shakeToOpen.value = prefs[KEY_SHAKE_TO_OPEN] ?: defaultShakeToOpen
                 _darkMode.value = prefs[KEY_DARK_MODE]
                 _jsonFoldingEnabled.value = prefs[KEY_JSON_FOLDING_ENABLED] ?: true
+                _showTagChip.value = prefs[KEY_SHOW_TAG_CHIP] ?: true
             }
         }
     }
@@ -111,9 +115,24 @@ internal class DariPreferences(
 
     // endregion
 
+    // region tag chip
+
+    val showTagChip: Boolean get() = _showTagChip.value
+
+    fun showTagChipFlow(): Flow<Boolean> = _showTagChip.asStateFlow()
+
+    fun setShowTagChip(value: Boolean) {
+        scope.launch {
+            dataStore.edit { it[KEY_SHOW_TAG_CHIP] = value }
+        }
+    }
+
+    // endregion
+
     companion object {
         private val KEY_SHAKE_TO_OPEN = booleanPreferencesKey("shake_to_open")
         private val KEY_DARK_MODE = booleanPreferencesKey("dark_mode")
         private val KEY_JSON_FOLDING_ENABLED = booleanPreferencesKey("json_folding_enabled")
+        private val KEY_SHOW_TAG_CHIP = booleanPreferencesKey("show_tag_chip")
     }
 }
