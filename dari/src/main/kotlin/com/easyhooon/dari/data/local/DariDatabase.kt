@@ -10,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [MessageEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -23,7 +23,7 @@ internal abstract class DariDatabase : RoomDatabase() {
 
         fun create(context: Context): DariDatabase {
             return Room.databaseBuilder(context, DariDatabase::class.java, DB_NAME)
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
         }
@@ -47,6 +47,12 @@ internal abstract class DariDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE `messages` ADD COLUMN `responseRawPreviewBase64` TEXT")
                 db.execSQL("ALTER TABLE `messages` ADD COLUMN `responseRawPreviewSizeBytes` INTEGER")
                 db.execSQL("ALTER TABLE `messages` ADD COLUMN `responseRawPreviewTruncated` INTEGER")
+            }
+        }
+
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `messages` ADD COLUMN `displayName` TEXT")
             }
         }
     }

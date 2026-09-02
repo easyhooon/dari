@@ -16,6 +16,14 @@ interface DariInterceptor {
         fireAndForget: Boolean? = null,
     )
 
+    fun onWebToAppRequest(
+        handlerName: String,
+        displayName: String?,
+        requestId: String?,
+        requestData: String?,
+        fireAndForget: Boolean? = null,
+    )
+
     fun onWebToAppResponse(
         handlerName: String,
         requestId: String?,
@@ -25,6 +33,14 @@ interface DariInterceptor {
 
     fun onAppToWebRequest(
         handlerName: String,
+        requestId: String?,
+        data: String?,
+        fireAndForget: Boolean? = null,
+    )
+
+    fun onAppToWebRequest(
+        handlerName: String,
+        displayName: String?,
         requestId: String?,
         data: String?,
         fireAndForget: Boolean? = null,
@@ -83,6 +99,21 @@ JavaScript가 네이티브 앱으로 메시지를 보낼 때 호출합니다.
 ### `onAppToWebResponse`
 
 JavaScript가 네이티브 앱의 요청에 응답할 때 호출합니다.
+
+## 선택적 표시 이름
+
+안정적인 핸들러 식별자에 읽기 쉬운 이름을 함께 표시하려면 `displayName`이 있는 요청 overload를 사용합니다:
+
+```kotlin
+interceptor?.onWebToAppRequest(
+    handlerName = "N:4-1",
+    displayName = "오늘의 건강목표",
+    requestId = requestId,
+    requestData = payload,
+)
+```
+
+Dari는 두 값을 분리하여 저장·내보내고 검색 시 두 값 모두를 확인합니다. 목록과 알림에는 `N:4-1(오늘의 건강목표)`로 표시됩니다. 공백 표시 이름은 `null`처럼 처리합니다. App-to-Web 및 protobuf 요청에도 같은 overload를 사용할 수 있으며 기존 시그니처도 계속 지원합니다.
 
 ## Fire-and-Forget (단방향 호출)
 

@@ -11,6 +11,21 @@ import org.junit.Test
 
 class MessageEntityTest {
     @Test
+    fun `display name survives entity round trip`() {
+        val entry = MessageEntry(
+            requestId = "request-1",
+            handlerName = "N:4-1",
+            direction = MessageDirection.WEB_TO_APP,
+            displayName = "오늘의 건강목표",
+        )
+
+        val restored = entry.toEntity().copy(id = 7).toMessageEntry()
+
+        assertEquals("N:4-1", restored.handlerName)
+        assertEquals("오늘의 건강목표", restored.displayName)
+    }
+
+    @Test
     fun `protobuf metadata survives entity round trip`() {
         val metadata = MessagePayloadMetadata(
             contentType = PayloadContentType.PROTOBUF,

@@ -27,4 +27,29 @@ class MessageEntryTest {
         assertEquals(2, entry.responseSizeBytes)
         assertEquals(13, entry.totalSizeBytes)
     }
+
+    @Test
+    fun `display name is stored separately from the stable handler name`() {
+        val entry = MessageEntry(
+            handlerName = "N:4-1",
+            direction = MessageDirection.WEB_TO_APP,
+            displayName = "오늘의 건강목표",
+        )
+
+        assertEquals("N:4-1", entry.handlerName)
+        assertEquals("오늘의 건강목표", entry.displayName)
+    }
+
+    @Test
+    fun `display name remains attached when a response updates the entry`() {
+        val entry = MessageEntry(
+            handlerName = "N:4-1",
+            direction = MessageDirection.WEB_TO_APP,
+            displayName = "오늘의 건강목표",
+        )
+
+        val completed = entry.copy(status = MessageStatus.SUCCESS, responseData = "done")
+
+        assertEquals("오늘의 건강목표", completed.displayName)
+    }
 }
