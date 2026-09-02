@@ -65,6 +65,7 @@ Call Dari at the same request and response boundaries already used by the bridge
 ```kotlin
 interceptor?.onWebToAppProtobufRequest(
     handlerName = "createOrder",
+    displayName = "Create order",
     requestId = requestId,
     requestData = requestBytes,
 )
@@ -81,7 +82,7 @@ interceptor?.onWebToAppProtobufResponse(
 )
 ```
 
-Use a stable `requestId` to pair a request and response. Pass `null` only for standalone or fire-and-forget messages.
+Use a stable `requestId` to pair a request and response. Pass `null` only for standalone or fire-and-forget messages. `displayName` is optional and is stored separately from the stable `handlerName`.
 
 ## Direction and method mapping
 

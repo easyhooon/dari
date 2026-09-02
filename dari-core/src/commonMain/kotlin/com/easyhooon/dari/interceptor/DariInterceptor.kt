@@ -16,11 +16,33 @@ interface DariInterceptor {
     /** Called when a Web -> App request is received */
     fun onWebToAppRequest(handlerName: String, requestId: String?, requestData: String?, fireAndForget: Boolean? = null)
 
+    /** Called when a Web -> App request has a separate human-readable name. */
+    fun onWebToAppRequest(
+        handlerName: String,
+        displayName: String?,
+        requestId: String?,
+        requestData: String?,
+        fireAndForget: Boolean? = null,
+    ) {
+        onWebToAppRequest(handlerName, requestId, requestData, fireAndForget)
+    }
+
     /** Called when a response is sent for a Web -> App request */
     fun onWebToAppResponse(handlerName: String, requestId: String?, responseData: String?, isSuccess: Boolean)
 
     /** Called when an App -> Web request is sent */
     fun onAppToWebRequest(handlerName: String, requestId: String?, data: String?, fireAndForget: Boolean? = null)
+
+    /** Called when an App -> Web request has a separate human-readable name. */
+    fun onAppToWebRequest(
+        handlerName: String,
+        displayName: String?,
+        requestId: String?,
+        data: String?,
+        fireAndForget: Boolean? = null,
+    ) {
+        onAppToWebRequest(handlerName, requestId, data, fireAndForget)
+    }
 
     /** Called when a web response is received for an App -> Web request */
     fun onAppToWebResponse(requestId: String?, isSuccess: Boolean, responseData: String?)

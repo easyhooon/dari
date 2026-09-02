@@ -9,6 +9,7 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.R
+import com.easyhooon.dari.handlerLabel
 import com.easyhooon.dari.ui.DariActivity
 
 /**
@@ -54,12 +55,17 @@ internal class DariNotification(private val context: Context) {
     /**
      * Adds a new bridge message to the notification.
      */
-    fun postMessage(handlerName: String, direction: MessageDirection, @Suppress("UNUSED_PARAMETER") tag: String? = null) {
+    fun postMessage(
+        handlerName: String,
+        displayName: String?,
+        direction: MessageDirection,
+        @Suppress("UNUSED_PARAMETER") tag: String? = null,
+    ) {
         val directionLabel = when (direction) {
             MessageDirection.WEB_TO_APP -> "W\u2192A"
             MessageDirection.APP_TO_WEB -> "A\u2192W"
         }
-        val line = "$directionLabel  $handlerName"
+        val line = "$directionLabel  ${handlerLabel(handlerName, displayName)}"
 
         if (recentLines.size >= MAX_LINES) {
             recentLines.removeFirst()

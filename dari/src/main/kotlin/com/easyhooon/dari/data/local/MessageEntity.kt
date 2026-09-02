@@ -16,6 +16,7 @@ internal data class MessageEntity(
     val id: Long = 0,
     val requestId: String?,
     val handlerName: String,
+    val displayName: String? = null,
     val direction: MessageDirection,
     val tag: String? = null,
     val requestData: String? = null,
@@ -42,6 +43,7 @@ internal data class MessageEntity(
 internal fun MessageEntry.toEntity(): MessageEntity = MessageEntity(
     requestId = requestId,
     handlerName = handlerName,
+    displayName = displayName,
     direction = direction,
     tag = tag,
     requestData = requestData,
@@ -69,6 +71,7 @@ internal fun MessageEntity.toMessageEntry(): MessageEntry = MessageEntry(
     id = id,
     requestId = requestId,
     handlerName = handlerName,
+    displayName = displayName,
     direction = direction,
     tag = tag,
     requestData = requestData,

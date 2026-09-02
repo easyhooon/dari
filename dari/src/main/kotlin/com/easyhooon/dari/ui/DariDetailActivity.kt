@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.Dari
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
+import com.easyhooon.dari.handlerLabel
 import com.easyhooon.dari.MessagePayloadMetadata
 import com.easyhooon.dari.RawPayloadFormatter
 import com.easyhooon.dari.export.DariExporter
@@ -133,7 +134,9 @@ class DariDetailActivity : ComponentActivity() {
                 Scaffold(
                     topBar = {
                         TopAppBar(
-                            title = { Text(entry?.handlerName ?: "Detail") },
+                            title = {
+                                Text(entry?.let { handlerLabel(it.handlerName, it.displayName) } ?: "Detail")
+                            },
                             navigationIcon = {
                                 IconButton(onClick = { finish() }) {
                                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -286,6 +289,9 @@ private fun OverviewTab(entry: MessageEntry) {
         }
 
         OverviewRow("Handler", entry.handlerName)
+        entry.displayName?.takeIf { it.isNotBlank() }?.let {
+            OverviewRow("Display name", it)
+        }
         OverviewRow("Direction", direction)
         OverviewRow("Status", entry.status.name)
         OverviewRow("Tag", entry.tag ?: "-")

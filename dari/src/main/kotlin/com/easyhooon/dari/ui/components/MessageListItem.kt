@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessageStatus
+import com.easyhooon.dari.handlerLabel
 import com.easyhooon.dari.ui.theme.Blue500
 import com.easyhooon.dari.ui.theme.BlueGrey400
 import com.easyhooon.dari.ui.theme.Green500
@@ -67,7 +68,7 @@ internal fun MessageListItem(
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = entry.handlerName,
+                    text = handlerLabel(entry.handlerName, entry.displayName),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,

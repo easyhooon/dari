@@ -32,6 +32,16 @@ interface ProtobufDariInterceptor : DariInterceptor {
         fireAndForget: Boolean? = null,
     )
 
+    fun onWebToAppProtobufRequest(
+        handlerName: String,
+        displayName: String?,
+        requestId: String?,
+        requestData: ByteArray,
+        fireAndForget: Boolean? = null,
+    ) {
+        onWebToAppProtobufRequest(handlerName, requestId, requestData, fireAndForget)
+    }
+
     fun onWebToAppProtobufResponse(
         handlerName: String,
         requestId: String?,
@@ -45,6 +55,16 @@ interface ProtobufDariInterceptor : DariInterceptor {
         requestData: ByteArray,
         fireAndForget: Boolean? = null,
     )
+
+    fun onAppToWebProtobufRequest(
+        handlerName: String,
+        displayName: String?,
+        requestId: String?,
+        requestData: ByteArray,
+        fireAndForget: Boolean? = null,
+    ) {
+        onAppToWebProtobufRequest(handlerName, requestId, requestData, fireAndForget)
+    }
 
     fun onAppToWebProtobufResponse(
         requestId: String?,
