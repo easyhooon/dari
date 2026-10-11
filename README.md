@@ -1,4 +1,4 @@
-[Featured in Android Weekly #748](https://androidweekly.net/issues/issue-748)
+[![Featured in Android Weekly #748](https://androidweekly.net/issues/issue-748/badge)](https://androidweekly.net/issues/issue-748)
 # Dari
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.easyhooon/dari)](https://central.sonatype.com/artifact/io.github.easyhooon/dari)
