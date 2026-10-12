@@ -11,6 +11,17 @@ Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualiz
 
 📖 **[Documentation](https://easyhooon.github.io/dari)** — Setup guide, configuration reference, and API docs.
 
+## Star History
+
+GitHub stars for `easyhooon/dari` over time. This live chart shows repository stars, not library downloads.
+
+<a href="https://www.star-history.com/#easyhooon/dari&amp;Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=easyhooon%2Fdari&amp;type=Date&amp;theme=dark" />
+    <img alt="Dari GitHub star history" src="https://api.star-history.com/svg?repos=easyhooon%2Fdari&amp;type=Date" />
+  </picture>
+</a>
+
 ## Screenshots
 
 <table>
