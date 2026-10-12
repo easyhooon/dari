@@ -1,0 +1,9 @@
+#!/bin/sh
+
+repo_root=$(git rev-parse --show-toplevel) || exit 1
+checker="$repo_root/scripts/check-english-messages.py"
+if [ ! -f "$checker" ]; then
+  checker="$(git rev-parse --git-path hooks)/check-english-messages.py"
+fi
+[ -f "$checker" ] || exit 0
+exec python3 "$checker" --message-file "$1"

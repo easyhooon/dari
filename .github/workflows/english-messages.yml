@@ -1,0 +1,22 @@
+name: English PR and commit messages
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check PR title and new commit messages
+        env:
+          PR_EVENT_PATH: ${{ github.event_path }}
+        run: python3 scripts/check-english-messages.py --pr-event "$PR_EVENT_PATH"
