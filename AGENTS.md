@@ -6,6 +6,7 @@
 - Do NOT include "Generated with Codex" or similar AI attribution in PR descriptions.
 - Do NOT use a `codex/` branch prefix. Follow the existing type-based convention, such as `feat/`, `fix/`, `chore/`, `docs/`, or `refactor/`.
 - **Keep commit messages compact.** Subject ≤ 72 chars. Body only when the "why" isn't obvious from the diff — 1–3 short lines, no multi-paragraph essays. Don't restate what the diff already shows.
+- Write commit subjects and bodies in English. Write PR titles in English too. Keep code, documentation, quoted user content, and existing history in their original language.
 
 ## Code Style
 
