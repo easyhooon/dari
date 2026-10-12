@@ -53,7 +53,9 @@ Reversed roles, as in necto: the app listens, the desktop connects.
   `/proc/net/unix` via `adb shell` to find debuggable apps; retry connect every 2 s.
 - Access control: on accept, `LocalSocket.getPeerCredentials()` and allow only UID 2000 (shell)
   or 0 (root). Blocks other apps on the device from connecting.
-  **Verify on a real device before coding** that adb-forwarded connections report UID 2000.
+  Verified on Galaxy S25+ (Android 17): an `adb forward` connection reports `uid=2000`
+  (the adbd process), and no SELinux denial occurs. adb connects to the app socket lazily,
+  so the desktop must send data (the handshake) before the app sees the connection.
 - adb: shell out to the `adb` binary (`ANDROID_HOME`/`ANDROID_SDK_ROOT`/`PATH`, user-overridable).
 
 ## Protocol (v1)
@@ -101,7 +103,7 @@ public `MessageEntry`). Wire `id` = `captureId`.
 
 | # | Scope | Estimate |
 | --- | --- | --- |
-| 0 | Spike: abstract socket + peer UID check over `adb forward` on a real device | 0.5 day |
+| 0 | Spike: abstract socket + peer UID check over `adb forward` on a real device | done |
 | 1 | Protocol module + repository events + server + opt-in/redactor (+ noop) + tests | 2–3 days |
 | 2 | Desktop MVP via `./gradlew :dari-desktop:run`: one device, list/detail/live | 3–4 days |
 | 3 | macOS packaging: `.dmg`, signing, notarization | 1–2 days |
