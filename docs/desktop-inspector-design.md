@@ -72,10 +72,19 @@ covered by `setDesktopInspectorEnabled(false)`.
 
 ### Why not read logcat instead
 
-The desktop app could tail `adb logcat` with no library at all, but it doesn't replace `dari`:
-bridge calls never touch the network or logcat unless the app logs them itself (so app code changes
-anyway), logcat truncates lines around 4 KB and drops chatty output, request/response pairing would
-have to be re-parsed from text, and payloads left in `Log` calls ship in release builds unmasked.
+A dependency-free option was considered: the desktop app detects devices over adb and filters
+`adb logcat` for bridge messages. It doesn't replace the `dari` library:
+
+- **Bridge calls aren't in logcat.** They are in-process calls between JavaScript and the app
+  (`@JavascriptInterface`, `evaluateJavascript`). Nothing reaches logcat unless the app logs each
+  call itself, so app code changes are needed anyway.
+- **Payloads get cut.** logcat truncates lines at about 4 KB and drops chatty output, so large
+  request/response bodies arrive incomplete.
+- **No structure.** Pairing requests with responses, status and duration would have to be
+  re-parsed from free-form text.
+- **Leaks into release builds.** `Log` calls left in the app ship in release builds, unmasked, and
+  any adb client can read them. `dari-noop` contains no capture code, and the desktop channel
+  masks tokens, passwords and cookies before data leaves the device.
 
 ## Transport
 
