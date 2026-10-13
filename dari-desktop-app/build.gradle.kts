@@ -45,6 +45,14 @@ compose.desktop {
                 bundleID = "io.github.easyhooon.dari.desktop"
                 appCategory = "public.app-category.developer-tools"
                 iconFile.set(project.file("icons/dari.icns"))
+                // Compose also re-signs the runtime after jpackage; retain JDK 17's JVM entitlements.
+                entitlementsFile.set(project.file("packaging/macos-entitlements.plist"))
+                runtimeEntitlementsFile.set(project.file("packaging/macos-entitlements.plist"))
+                signing {
+                    sign.set(providers.environmentVariable("DARI_MACOS_SIGN").map { it == "true" }.orElse(false))
+                    identity.set(providers.environmentVariable("MACOS_SIGNING_IDENTITY"))
+                    keychain.set(providers.environmentVariable("MACOS_SIGNING_KEYCHAIN"))
+                }
             }
             windows {
                 iconFile.set(project.file("icons/dari.ico"))

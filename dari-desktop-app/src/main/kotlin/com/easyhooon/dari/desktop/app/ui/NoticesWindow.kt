@@ -27,9 +27,11 @@ fun NoticesWindow(appearance: Appearance, onClose: () -> Unit) {
     }
     Window(
         onCloseRequest = onClose,
+        onPreviewKeyEvent = { handleCloseWindowShortcut(it, onClose = onClose) },
         title = "Third-Party Notices",
         state = rememberWindowState(position = WindowPosition.Aligned(Alignment.Center), width = 560.dp, height = 480.dp),
     ) {
+        CloseWindowMenu(onClose)
         DariTheme(appearance) {
             SelectionContainer {
                 Text(

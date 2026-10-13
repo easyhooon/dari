@@ -8,6 +8,8 @@ on:
       - "dari-desktop-app/**"
       - "dari-inspector-protocol/**"
       - "scripts/*desktop-app.sh"
+      - "scripts/*macos*.sh"
+      - "scripts/test-macos-packaging.py"
       - "gradle/**"
       - "build.gradle.kts"
       - ".github/workflows/desktop-app.yml"
@@ -17,6 +19,8 @@ on:
       - "dari-desktop-app/**"
       - "dari-inspector-protocol/**"
       - "scripts/*desktop-app.sh"
+      - "scripts/*macos*.sh"
+      - "scripts/test-macos-packaging.py"
       - "gradle/**"
       - "build.gradle.kts"
       - ".github/workflows/desktop-app.yml"
@@ -45,6 +49,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Unit tests
         run: ./gradlew -PskipPublicationSigning :dari-inspector-protocol:test :dari-desktop-app:test
+      - name: macOS packaging contract tests
+        if: runner.os == 'macOS'
+        run: python3 scripts/test-macos-packaging.py
       - name: Smoke test
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then

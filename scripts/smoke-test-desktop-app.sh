@@ -7,7 +7,9 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
-./gradlew -PskipPublicationSigning :dari-desktop-app:createDistributable
+if [ "${1:-}" != "--skip-build" ]; then
+  ./gradlew -PskipPublicationSigning :dari-desktop-app:createDistributable
+fi
 app_dir="dari-desktop-app/build/compose/binaries/main/app"
 case "$(uname -s)" in
   Darwin) exe="$app_dir/Dari.app/Contents/MacOS/Dari" ;;

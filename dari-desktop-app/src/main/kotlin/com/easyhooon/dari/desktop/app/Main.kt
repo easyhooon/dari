@@ -27,6 +27,8 @@ import com.easyhooon.dari.desktop.app.ui.NoticesWindow
 import com.easyhooon.dari.desktop.app.ui.SettingsWindow
 import com.easyhooon.dari.desktop.app.ui.appearanceLabel
 import com.easyhooon.dari.desktop.app.ui.chooseExportFile
+import com.easyhooon.dari.desktop.app.ui.handleCloseWindowShortcut
+import com.easyhooon.dari.desktop.app.ui.handleSettingsWindowShortcut
 import com.easyhooon.dari.desktop.app.update.ReleaseSource
 import com.easyhooon.dari.desktop.app.update.Updater
 import kotlinx.coroutines.FlowPreview
@@ -124,6 +126,9 @@ fun main() {
 
         Window(
             onCloseRequest = quit,
+            onPreviewKeyEvent = {
+                handleSettingsWindowShortcut(it, onOpen = { settingsOpen = true }) || handleCloseWindowShortcut(it, onClose = quit)
+            },
             title = "Dari",
             icon = iconPainter,
             state = windowState,
@@ -150,10 +155,8 @@ fun main() {
                         onCheckedChange = settings::updateJsonFolding,
                     )
                     CheckboxItem("Show Tags", checked = settings.showTags, onCheckedChange = settings::updateShowTags)
-                    if (!isMacOs) {
-                        Separator()
-                        Item("Settings…", shortcut = shortcut(Key.Comma), onClick = { settingsOpen = true })
-                    }
+                    Separator()
+                    Item("Settings…", shortcut = shortcut(Key.Comma), onClick = { settingsOpen = true })
                 }
                 Menu("Session") {
                     Item("Reconnect", shortcut = shortcut(Key.R), onClick = controller::connect)
@@ -176,6 +179,8 @@ fun main() {
                     Item("Clear Messages", shortcut = shortcut(Key.K), onClick = controller::clearMessages)
                 }
                 Menu("Window") {
+                    Item("Close Window", shortcut = shortcut(Key.W), onClick = quit)
+                    Separator()
                     Item("Minimize", shortcut = shortcut(Key.M), onClick = { windowState.isMinimized = true })
                     Item("Zoom", onClick = {
                         windowState.placement = if (windowState.placement == WindowPlacement.Maximized) {
