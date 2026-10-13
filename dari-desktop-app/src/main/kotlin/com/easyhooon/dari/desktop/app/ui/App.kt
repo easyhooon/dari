@@ -22,14 +22,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.window.WindowDraggableArea
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,7 +53,7 @@ private val TrafficLightInset = if (isMacOs) 78.dp else 12.dp
 fun WindowScope.App(controller: InspectorController, settings: DesktopSettings) {
     DariTheme(settings.appearance) {
         Column(Modifier.fillMaxSize().background(Dari.colors.background)) {
-            TitleBar(controller, settings)
+            TitleBar(controller)
             Divider()
             if (controller.adbMissing) {
                 EmptyState(
@@ -77,7 +73,7 @@ fun WindowScope.App(controller: InspectorController, settings: DesktopSettings) 
 /** Title bar row: device and app pickers plus the connection state. No sidebar — Dari has one job. */
 @OptIn(ExperimentalFoundationApi::class) // TooltipArea
 @Composable
-private fun WindowScope.TitleBar(controller: InspectorController, settings: DesktopSettings) {
+private fun WindowScope.TitleBar(controller: InspectorController) {
     val state = controller.state
     Row(
         Modifier.fillMaxWidth().height(DariMetrics.toolbarHeight).padding(start = TrafficLightInset, end = 12.dp),
@@ -90,6 +86,7 @@ private fun WindowScope.TitleBar(controller: InspectorController, settings: Desk
             label = device?.title ?: "No device",
             secondary = device?.model?.takeIf { device.name != null },
             options = controller.devices,
+            isSelected = { it.serial == controller.selectedSerial },
             optionLabel = { listOfNotNull(it.name, it.model, it.serial).joinToString("  ·  ") },
             onPick = { controller.selectDevice(it.serial) },
         )
@@ -97,6 +94,7 @@ private fun WindowScope.TitleBar(controller: InspectorController, settings: Desk
         Picker(
             label = controller.applicationId.ifBlank { "Choose app" },
             options = controller.discoveredApps,
+            isSelected = { it == controller.applicationId },
             optionLabel = { it },
             onPick = {
                 controller.applicationId = it
@@ -116,11 +114,11 @@ private fun WindowScope.TitleBar(controller: InspectorController, settings: Desk
         // row would swallow clicks on the pickers and buttons.
         WindowDraggableArea(Modifier.weight(1f).fillMaxHeight()) {}
         val status = statusLine(state)
-        // The line can be cut off on narrow windows; hovering shows all of it.
+        // Short on screen; hovering shows every field with its label.
         TooltipArea(
             tooltip = {
                 Text(
-                    status,
+                    statusDetails(state),
                     style = Dari.type.caption,
                     color = Dari.colors.text,
                     modifier = Modifier.background(Dari.colors.surface, RoundedCornerShape(DariMetrics.radius))
@@ -138,11 +136,10 @@ private fun WindowScope.TitleBar(controller: InspectorController, settings: Desk
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        SettingsMenu(settings)
+        // Connecting is automatic; the button only appears when nothing is connecting yet.
+        // Disconnect and Reconnect live in the Session menu.
         if (state == ConnectionState.Idle) {
             QuietButton("Connect", onClick = controller::connect, enabled = controller.applicationId.isNotBlank())
-        } else {
-            QuietButton("Disconnect", onClick = controller::disconnectByUser)
         }
     }
 }
@@ -164,18 +161,20 @@ private fun FilterBar(controller: InspectorController) {
         Picker(
             label = controller.directionFilter?.let(::directionLabel) ?: "All directions",
             options = listOf(null, "WEB_TO_APP", "APP_TO_WEB"),
+            isSelected = { it == controller.directionFilter },
             optionLabel = { it?.let(::directionLabel) ?: "All directions" },
             onPick = { controller.directionFilter = it },
         )
         Picker(
             label = controller.statusFilter?.lowercase() ?: "All statuses",
             options = listOf(null, "IN_PROGRESS", "SUCCESS", "ERROR"),
+            isSelected = { it == controller.statusFilter },
             optionLabel = { it?.lowercase() ?: "All statuses" },
             onPick = { controller.statusFilter = it },
         )
         Spacer(Modifier.weight(1f))
         Text(
-            if (visible.size == controller.messages.size) "${visible.size}" else "${visible.size} of ${controller.messages.size}",
+            messageCount(visible.size, controller.messages.size),
             style = Dari.type.codeCaption,
             color = Dari.colors.textTertiary,
         )
@@ -243,46 +242,30 @@ private fun Divider() {
 private fun statusLine(state: ConnectionState): String = when (state) {
     ConnectionState.Idle -> "Not connected"
     is ConnectionState.Connecting -> state.reason?.let { "Waiting for app · $it" } ?: "Connecting…"
-    is ConnectionState.Connected -> with(state.app) { "$appName $appVersion · $deviceModel · API $sdkInt · Dari $dariVersion" }
+    is ConnectionState.Connected -> with(state.app) { "App v$appVersion · API $sdkInt · Dari $dariVersion" }
+}
+
+private fun statusDetails(state: ConnectionState): String = when (state) {
+    is ConnectionState.Connected -> with(state.app) {
+        "App: $appName ($applicationId) v$appVersion\nDevice: $deviceModel, Android API $sdkInt\nDari library: $dariVersion"
+    }
+    else -> statusLine(state)
 }
 
 private fun emptyHint(controller: InspectorController): Pair<String, String?> = when {
     controller.devices.isEmpty() -> "No device" to "Connect an Android device with USB debugging on."
-    controller.state == ConnectionState.Idle -> "Not connected" to "Pick an app that uses dari-desktop, then connect."
+    controller.state == ConnectionState.Idle -> "Not connected" to "Pick an app that uses Dari, then connect."
     controller.state is ConnectionState.Connecting -> "Waiting for the app" to "Open the app on the device; Dari reconnects on its own."
     controller.messages.isNotEmpty() -> "No matches" to "Change the filter to see more messages."
     else -> "No messages yet" to "Use a bridge in the connected app and it appears here."
 }
 
-private const val DETAIL_FRACTION = 0.55f
-
-/** ⚙ menu mirroring View in the menu bar, for discoverability on Windows and Linux. */
-@Composable
-private fun SettingsMenu(settings: DesktopSettings) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        QuietButton("⚙", onClick = { expanded = true })
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            Appearance.entries.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(checkLabel(settings.appearance == option, appearanceLabel(option)), style = Dari.type.label) },
-                    onClick = { settings.updateAppearance(option) },
-                )
-            }
-            HorizontalDivider()
-            DropdownMenuItem(
-                text = { Text(checkLabel(settings.jsonFoldingEnabled, "Fold JSON"), style = Dari.type.label) },
-                onClick = { settings.updateJsonFolding(!settings.jsonFoldingEnabled) },
-            )
-            DropdownMenuItem(
-                text = { Text(checkLabel(settings.showTags, "Show tags"), style = Dari.type.label) },
-                onClick = { settings.updateShowTags(!settings.showTags) },
-            )
-        }
-    }
+private fun messageCount(visible: Int, total: Int): String {
+    val noun = if (total == 1) "message" else "messages"
+    return if (visible == total) "$total $noun" else "$visible of $total $noun"
 }
 
-private fun checkLabel(checked: Boolean, label: String) = (if (checked) "✓  " else "    ") + label
+private const val DETAIL_FRACTION = 0.55f
 
 fun appearanceLabel(appearance: Appearance): String = when (appearance) {
     Appearance.SYSTEM -> "Match system"

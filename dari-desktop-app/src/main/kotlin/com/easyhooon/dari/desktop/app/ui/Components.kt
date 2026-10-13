@@ -1,5 +1,6 @@
 package com.easyhooon.dari.desktop.app.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,18 +10,19 @@ import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -155,6 +157,7 @@ fun <T> Picker(
     onPick: (T) -> Unit,
     modifier: Modifier = Modifier,
     secondary: String? = null,
+    isSelected: (T) -> Boolean = { false },
     leading: @Composable (() -> Unit)? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -184,10 +187,11 @@ fun <T> Picker(
             secondary?.let { Text(it, style = Dari.type.caption, color = Dari.colors.textTertiary, maxLines = 1) }
             Text("▾", style = Dari.type.caption, color = Dari.colors.textTertiary)
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DariMenu(expanded = expanded, onDismiss = { expanded = false }) {
             options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(optionLabel(option), style = Dari.type.label) },
+                DariMenuItem(
+                    text = optionLabel(option),
+                    checked = isSelected(option),
                     onClick = {
                         expanded = false
                         onPick(option)
@@ -195,6 +199,42 @@ fun <T> Picker(
                 )
             }
         }
+    }
+}
+
+/** Compact popup menu in Dari's palette instead of Material's tinted default. */
+@Composable
+fun DariMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(MENU_RADIUS),
+        containerColor = Dari.colors.background,
+        tonalElevation = 0.dp,
+        shadowElevation = 8.dp,
+        border = BorderStroke(1.dp, Dari.colors.border),
+        modifier = Modifier.padding(vertical = 4.dp).widthIn(min = 180.dp),
+        content = content,
+    )
+}
+
+/** 28dp row with a check column, so selected and unselected labels line up. */
+@Composable
+fun DariMenuItem(text: String, onClick: () -> Unit, checked: Boolean = false) {
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    Row(
+        Modifier.fillMaxWidth().height(MENU_ROW_HEIGHT).padding(horizontal = 4.dp)
+            .background(if (hovered) Dari.colors.hover else Color.Transparent, RoundedCornerShape(DariMetrics.radius))
+            .hoverable(interaction)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .padding(start = 6.dp, end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.width(18.dp)) {
+            if (checked) Text("✓", style = Dari.type.label, color = Dari.colors.text)
+        }
+        Text(text, style = Dari.type.label, color = Dari.colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -266,3 +306,5 @@ fun EmptyState(title: String, hint: String?, modifier: Modifier = Modifier) {
 }
 
 private const val COPIED_FEEDBACK_MS = 1_400L
+private val MENU_RADIUS = 8.dp
+private val MENU_ROW_HEIGHT = 28.dp
