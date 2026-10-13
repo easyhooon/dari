@@ -2,6 +2,8 @@
 
 Status: draft · Scope: macOS first, then Windows, then Linux.
 
+Questions and the reasoning behind decisions: [desktop-inspector-faq.md](desktop-inspector-faq.md).
+
 ## Goal
 
 Stream Dari bridge messages from a connected Android debug build to a desktop app, live,
