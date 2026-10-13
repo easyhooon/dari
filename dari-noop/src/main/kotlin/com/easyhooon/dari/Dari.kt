@@ -33,5 +33,10 @@ object Dari {
 
     fun showNotification() = Unit
 
+    @Suppress("UNUSED_PARAMETER")
+    fun startDesktopInspector(redactor: DariPayloadRedactor? = null) = Unit
+
+    fun stopDesktopInspector() = Unit
+
     fun clear() = Unit
 }

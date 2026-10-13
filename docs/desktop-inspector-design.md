@@ -34,13 +34,14 @@ Android debug app                         Desktop (Mac/Win/Linux)
 
 ### Modules
 
-- `:dari-inspector-protocol` (new, KMP `jvm` + `android`): wire DTOs, envelope, handshake,
+- `:dari-inspector-protocol` (new, plain Kotlin/JVM, usable from Android): wire DTOs, envelope, handshake,
   length-prefixed framing, kotlinx.serialization. Template: `ExportableMessage`.
 - `:dari` (changed): event stream in `MessageRepository`, `DariInspectorServer`, opt-in config.
 - `:dari-noop` (changed): same new public API, no-op.
 - `:dari-desktop` (new, CMP desktop app, not published to Maven Central).
-- `:dari-core`: **unchanged**. No `@Serializable`, no new deps — it is published, dependency-free,
-  and targets iOS. Keeping the wire format out of it avoids coupling the public model to the protocol.
+- `:dari-core`: only gains `DariPayloadRedactor` (additive). No `@Serializable`, no new deps — it is
+  published, dependency-free, and targets iOS. Keeping the wire format out of it avoids coupling the
+  public model to the protocol.
 
 ## Transport
 
@@ -62,8 +63,10 @@ Reversed roles, as in necto: the app listens, the desktop connects.
 
 - Framing: 4-byte big-endian length + UTF-8 JSON. Max frame 4 MiB (payloads are already
   truncated by `DariConfig.maxContentLength`).
-- Handshake: app sends `hello {protocolVersion, applicationId, appName, appVersion, dariVersion,
-  deviceModel, sdkInt}`; desktop replies `ack {accepted, rejection?}`. Exact version match.
+- Handshake: desktop sends `ClientHello {protocolVersion, clientName, clientVersion}` first (adb opens
+  the app socket only once the client writes); app replies `ServerHello {accepted, protocolVersion,
+  rejection?, app {applicationId, appName, appVersion, dariVersion, deviceModel, sdkInt}}`.
+  Exact version match.
 - Envelope: `{type, payload}` with `invoke {requestId, op, input}`, `result {requestId, output?,
   error?, isFinal}`, `cancel {requestId}`.
 - Operations:
@@ -74,21 +77,22 @@ Reversed roles, as in necto: the app listens, the desktop connects.
 - Error codes: `INVALID_INPUT`, `OPERATION_NOT_FOUND`, `CANCELLED`, `PROVIDER_FAILED`, `TIMEOUT`.
 - Client order: subscribe to `observe` first, then `list`, merge by id (absorbs overlap).
 
-### Stable wire id (settle before coding)
+### Stable wire id
 
 `MessageRepository.addEntry` gives a negative temp id and swaps in the Room id later, so
-upsert-by-id on the desktop would duplicate rows. Proposal: an internal, never-replaced
-`captureId` assigned in `addEntry`, carried only in internal repository events (not in the
-public `MessageEntry`). Wire `id` = `captureId`.
+upsert-by-id on the desktop would duplicate rows. The repository keeps a `DB id → temp id` map and
+exposes entries as `InspectorEntry(wireId, entry)`; the wire `id` is the temp id for entries
+created in this process and the Room id for entries restored from disk. Mutations and their events
+happen under one lock, so events and snapshots agree. Trimmed entries are not sent as removals.
 
 ## `:dari` changes
 
 1. `MessageRepository`: internal `SharedFlow<RepositoryEvent>` (`Added`, `Updated`, `Cleared`)
    alongside the existing `StateFlow`; `list` serves the current snapshot.
 2. `DariInspectorServer`: starts in `Dari.init` only when enabled; one session per client.
-3. `DariConfig`: `desktopInspectorEnabled: Boolean = false` and
-   `payloadRedactor: ((MessageEntry) -> MessageEntry)?` applied before sending.
-   Both mirrored in `:dari-noop`.
+3. `Dari.startDesktopInspector(redactor: DariPayloadRedactor? = null)` / `stopDesktopInspector()`,
+   mirrored in `:dari-noop`. Not in `DariConfig`: it lives in published `dari-core`, and adding a
+   field would break its binary compatibility.
 
 ## Desktop app
 
@@ -104,7 +108,7 @@ public `MessageEntry`). Wire `id` = `captureId`.
 | # | Scope | Estimate |
 | --- | --- | --- |
 | 0 | Spike: abstract socket + peer UID check over `adb forward` on a real device | done |
-| 1 | Protocol module + repository events + server + opt-in/redactor (+ noop) + tests | 2–3 days |
+| 1 | Protocol module + repository events + server + opt-in/redactor (+ noop) + tests | done |
 | 2 | Desktop MVP via `./gradlew :dari-desktop:run`: one device, list/detail/live | 3–4 days |
 | 3 | macOS packaging: `.dmg`, signing, notarization | 1–2 days |
 | 4 | Windows (`.msi`), then Linux (`.deb`/AppImage) | 1–2 days each |

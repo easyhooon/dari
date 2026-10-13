@@ -67,6 +67,10 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Lets the desktop inspector connect via `adb forward`; mask secrets before they leave the device.
+        Dari.startDesktopInspector { entry ->
+            entry.copy(requestData = entry.requestData?.replace(Regex("\"token\":\"[^\"]*\""), "\"token\":\"***\""))
+        }
         enableEdgeToEdge()
 
         webView = WebView(this).apply {

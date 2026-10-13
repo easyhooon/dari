@@ -10,8 +10,15 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.easyhooon.dari.data.DariPreferences
+import com.easyhooon.dari.data.InspectorEntry
 import com.easyhooon.dari.data.MessageRepository
+import com.easyhooon.dari.data.RepositoryEvent
 import com.easyhooon.dari.data.local.DariDatabase
+import com.easyhooon.dari.inspector.DariInspectorServer
+import com.easyhooon.dari.inspector.InspectorDataSource
+import com.easyhooon.dari.inspector.InspectorSession
+import com.easyhooon.dari.inspector.inspectorAppInfo
+import com.easyhooon.dari.inspector.protocol.InspectorProtocol
 import java.io.File
 import com.easyhooon.dari.interceptor.DariInterceptor
 import com.easyhooon.dari.interceptor.DefaultDariInterceptor
@@ -20,6 +27,10 @@ import com.easyhooon.dari.interceptor.ProtobufPayloadDecoder
 import com.easyhooon.dari.notification.DariNotification
 import com.easyhooon.dari.shake.DariShakeManager
 import com.easyhooon.dari.ui.DariActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Singleton entry point for Dari.
@@ -41,6 +52,8 @@ object Dari {
 
     private var notification: DariNotification? = null
     private var shakeManager: DariShakeManager? = null
+    private var inspectorServer: DariInspectorServer? = null
+    private val inspectorScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     internal lateinit var preferences: DariPreferences
         private set
@@ -111,6 +124,31 @@ object Dari {
      */
     fun setShowTagChip(show: Boolean) {
         preferences.setShowTagChip(show)
+    }
+
+    /**
+     * Lets the Dari desktop inspector read messages over `adb forward`. Off by default.
+     * Only adb or root can connect; [redactor] runs on every message before it leaves the device.
+     */
+    @Synchronized
+    fun startDesktopInspector(redactor: DariPayloadRedactor? = null) {
+        stopDesktopInspector()
+        val appInfo = inspectorAppInfo(context)
+        val source = object : InspectorDataSource {
+            override val events: Flow<RepositoryEvent> get() = repository.events
+            override fun snapshot(): List<InspectorEntry> = repository.inspectorSnapshot()
+            override fun clear() = this@Dari.clear()
+        }
+        inspectorServer = DariInspectorServer(InspectorProtocol.socketName(context.packageName)) { input, output ->
+            InspectorSession(input, output, appInfo, source, redactor, inspectorScope).run()
+        }.also { it.start() }
+    }
+
+    /** Stops the desktop inspector and closes open connections. */
+    @Synchronized
+    fun stopDesktopInspector() {
+        inspectorServer?.stop()
+        inspectorServer = null
     }
 
     private fun applyShakeToOpen(enabled: Boolean) {
