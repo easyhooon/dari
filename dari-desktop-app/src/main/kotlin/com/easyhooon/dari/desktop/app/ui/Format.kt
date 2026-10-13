@@ -12,8 +12,9 @@ private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS", Locale.U
 fun formatTime(epochMillis: Long): String = timeFormatter.format(Instant.ofEpochMilli(epochMillis))
 
 fun directionLabel(direction: String): String = when (direction) {
-    "WEB_TO_APP" -> "W→A"
-    "APP_TO_WEB" -> "A→W"
+    // Spaced so the arrow reads as an arrow in the monospace table.
+    "WEB_TO_APP" -> "W → A"
+    "APP_TO_WEB" -> "A → W"
     else -> direction
 }
 

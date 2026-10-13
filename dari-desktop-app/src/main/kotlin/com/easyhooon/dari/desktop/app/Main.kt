@@ -23,6 +23,7 @@ import androidx.compose.ui.window.application
 import com.easyhooon.dari.desktop.app.adb.Adb
 import com.easyhooon.dari.desktop.app.ui.AboutWindow
 import com.easyhooon.dari.desktop.app.ui.App
+import com.easyhooon.dari.desktop.app.ui.NoticesWindow
 import com.easyhooon.dari.desktop.app.ui.SettingsWindow
 import com.easyhooon.dari.desktop.app.ui.appearanceLabel
 import com.easyhooon.dari.desktop.app.ui.chooseExportFile
@@ -39,6 +40,7 @@ import java.awt.datatransfer.StringSelection
 import java.awt.image.BufferedImage
 import java.net.URI
 import javax.imageio.ImageIO
+import javax.swing.JOptionPane
 
 // jpackage sets this in packaged builds; `./gradlew run` has no version.
 private val APP_VERSION: String = System.getProperty("jpackage.app-version") ?: "dev"
@@ -53,6 +55,10 @@ fun main() {
     System.setProperty("apple.laf.useScreenMenuBar", "true")
 
     AppLog.installCrashHandler()
+    if (!SingleInstance.acquire()) {
+        JOptionPane.showMessageDialog(null, "Dari is already running.", "Dari", JOptionPane.INFORMATION_MESSAGE)
+        return
+    }
     AppLog.info("Dari $APP_VERSION started")
     val icon = loadAppIcon()
     // Dock icon while running unpackaged (`./gradlew run`); packaged apps use the bundle icon.
@@ -77,6 +83,7 @@ fun main() {
         val installUpdate = { updater.install(quit) }
         var settingsOpen by remember { mutableStateOf(false) }
         var aboutOpen by remember { mutableStateOf(false) }
+        var noticesOpen by remember { mutableStateOf(false) }
         val windowState = remember { mainWindowState(settings.windowBounds) }
         LaunchedEffect(windowState) {
             // Saved as it changes, so ⌘Q and crashes keep the last bounds too.
@@ -103,6 +110,7 @@ fun main() {
         }
         val iconPainter = remember { icon?.let { BitmapPainter(it.toComposeImageBitmap()) } }
         if (settingsOpen) SettingsWindow(settings, onClose = { settingsOpen = false })
+        if (noticesOpen) NoticesWindow(settings.appearance, onClose = { noticesOpen = false })
         if (aboutOpen) {
             AboutWindow(
                 version = APP_VERSION,
@@ -167,6 +175,16 @@ fun main() {
                     Separator()
                     Item("Clear Messages", shortcut = shortcut(Key.K), onClick = controller::clearMessages)
                 }
+                Menu("Window") {
+                    Item("Minimize", shortcut = shortcut(Key.M), onClick = { windowState.isMinimized = true })
+                    Item("Zoom", onClick = {
+                        windowState.placement = if (windowState.placement == WindowPlacement.Maximized) {
+                            WindowPlacement.Floating
+                        } else {
+                            WindowPlacement.Maximized
+                        }
+                    })
+                }
                 Menu("Help") {
                     Item("Check for Updates…", enabled = updater.enabled, onClick = updater::checkNow)
                     val newer = updater.newerVersion
@@ -182,7 +200,9 @@ fun main() {
                     Separator()
                     Item("Release Notes", onClick = { browse(ReleaseSource.pageUrl) })
                     Item("Report an Issue…", onClick = { browse(IssueReport.newIssueUrl(APP_VERSION)) })
+                    Item("Suggest a Feature…", onClick = { browse(IssueReport.featureRequestUrl()) })
                     Item("Show Log File", onClick = ::showLogFolder)
+                    Item("Third-Party Notices", onClick = { noticesOpen = true })
                     if (!isMacOs) {
                         Separator()
                         Item("About Dari", onClick = { aboutOpen = true })

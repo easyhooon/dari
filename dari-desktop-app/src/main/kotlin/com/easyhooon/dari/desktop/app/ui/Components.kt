@@ -41,6 +41,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -96,7 +99,7 @@ fun Badge(text: String, modifier: Modifier = Modifier) {
 /** 6dp dot: filled when connected, a ring when not. */
 @Composable
 fun ConnectionDot(connected: Boolean) {
-    val modifier = Modifier.size(6.dp)
+    val modifier = Modifier.size(6.dp).semantics { contentDescription = if (connected) "Connected" else "Not connected" }
     Box(
         if (connected) {
             modifier.background(Dari.colors.success, CircleShape)
@@ -108,7 +111,14 @@ fun ConnectionDot(connected: Boolean) {
 
 /** Borderless text button; [danger] turns it red on hover, as for destructive actions. */
 @Composable
-fun QuietButton(text: String, onClick: () -> Unit, enabled: Boolean = true, danger: Boolean = false) {
+fun QuietButton(
+    text: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    danger: Boolean = false,
+    // For symbol-only labels such as "✕", which screen readers would read literally.
+    contentDescription: String? = null,
+) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     val (fg, bg) = when {
@@ -121,7 +131,8 @@ fun QuietButton(text: String, onClick: () -> Unit, enabled: Boolean = true, dang
         Modifier.height(DariMetrics.controlHeight)
             .background(bg, RoundedCornerShape(DariMetrics.radius))
             .hoverable(interaction)
-            .clickable(enabled = enabled, interactionSource = interaction, indication = null, onClick = onClick)
+            .clickable(enabled = enabled, interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription?.let { this.contentDescription = it } }
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -140,7 +151,7 @@ fun AccentButton(text: String, onClick: () -> Unit, showDownloadIcon: Boolean = 
         Modifier.height(DariMetrics.controlHeight)
             .background(Dari.colors.accent.copy(alpha = if (hovered) 0.85f else 1f), RoundedCornerShape(DariMetrics.radius))
             .hoverable(interaction)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
             .pointerHoverIcon(PointerIcon.Hand)
             .padding(horizontal = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -209,7 +220,7 @@ fun <T> Picker(
             Modifier.height(DariMetrics.controlHeight)
                 .background(if (hovered) Dari.colors.hover else Color.Transparent, RoundedCornerShape(DariMetrics.radius))
                 .hoverable(interaction)
-                .clickable(enabled = options.isNotEmpty(), interactionSource = interaction, indication = null) {
+                .clickable(enabled = options.isNotEmpty(), interactionSource = interaction, indication = null, role = Role.DropdownList) {
                     expanded = true
                 }
                 .padding(horizontal = 8.dp),
@@ -268,7 +279,7 @@ fun DariMenuItem(text: String, onClick: () -> Unit, checked: Boolean = false) {
         Modifier.fillMaxWidth().height(MENU_ROW_HEIGHT).padding(horizontal = 4.dp)
             .background(if (hovered) Dari.colors.hover else Color.Transparent, RoundedCornerShape(DariMetrics.radius))
             .hoverable(interaction)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
             .padding(start = 6.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -307,7 +318,7 @@ fun CopyButton(onClick: () -> Unit) {
         Modifier.height(DariMetrics.controlHeight)
             .background(if (hovered) Dari.colors.hover else Color.Transparent, RoundedCornerShape(DariMetrics.radius))
             .hoverable(interaction)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
             .pointerHoverIcon(PointerIcon.Hand)
             .padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(5.dp),

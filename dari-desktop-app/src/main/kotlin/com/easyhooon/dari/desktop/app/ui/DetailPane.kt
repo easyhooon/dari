@@ -83,7 +83,7 @@ fun DetailPane(
                         modifier = Modifier.weight(1f),
                     )
                     ExportMenu(onCopy, onSave)
-                    QuietButton("✕", onClick = onClose)
+                    QuietButton("✕", onClick = onClose, contentDescription = "Close details")
                 }
                 Text(
                     summaryLine(detail),

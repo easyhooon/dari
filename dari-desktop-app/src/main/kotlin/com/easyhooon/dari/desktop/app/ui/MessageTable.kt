@@ -46,8 +46,8 @@ import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
 import com.easyhooon.dari.inspector.protocol.WireMessageSummary
 
-private val StatusWidth = 84.dp
-private val DirectionWidth = 52.dp
+private val StatusWidth = 64.dp
+private val DirectionWidth = 72.dp
 private val TagWidth = 108.dp
 private val TimeWidth = 104.dp
 private val DurationWidth = 72.dp
@@ -122,10 +122,11 @@ private fun HeaderRow(compact: Boolean, tagColumn: Boolean) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         HeaderCell("Status", StatusWidth)
-        HeaderCell("Dir", DirectionWidth)
+        HeaderCell("Direction", DirectionWidth)
         HeaderCell("Handler", null)
         if (tagColumn) HeaderCell("Tag", TagWidth)
-        HeaderCell("Time", TimeWidth, TextAlign.End)
+        // Clock times read left to right; only the measured columns (duration, size) align right.
+        HeaderCell("Time", TimeWidth)
         HeaderCell("Duration", DurationWidth, TextAlign.End)
         if (!compact) HeaderCell("Size", SizeWidth, TextAlign.End)
     }
@@ -195,19 +196,19 @@ private fun MessageRow(
             }
         }
         if (tagColumn) Box(cell(TagWidth)) { message.tag?.let { Badge(it) } }
-        NumericCell(formatTime(message.requestTimestamp), TimeWidth)
+        NumericCell(formatTime(message.requestTimestamp), TimeWidth, TextAlign.Start)
         NumericCell(durationLabel(message), DurationWidth)
         if (!compact) NumericCell(formatBytes(message.requestSizeBytes + message.responseSizeBytes), SizeWidth)
     }
 }
 
 @Composable
-private fun RowScope.NumericCell(text: String, width: Dp) {
+private fun RowScope.NumericCell(text: String, width: Dp, align: TextAlign = TextAlign.End) {
     Text(
         text,
         style = Dari.type.codeCaption,
         color = Dari.colors.textTertiary,
-        textAlign = TextAlign.End,
+        textAlign = align,
         maxLines = 1,
         modifier = cell(width),
     )

@@ -67,6 +67,7 @@ Dari가 기기와 앱을 알아서 찾아 연결합니다. 기기가 여러 대�
 - **직접 허용하지 않는 한 디버그 빌드에서만 동작합니다.** 소켓은 debuggable 빌드, 또는 아래 매니페스트 항목을 넣은 debuggable이 아닌 내부 빌드에서만 열립니다. release 빌드에 들어가는 `dari-noop`에는 캡처 코드가 없습니다.
 - **adb만 접속할 수 있습니다.** adb(shell)와 root만 접속할 수 있어서, 기기의 다른 앱은 메시지를 읽을 수 없습니다.
 - **기본으로 가립니다.** 기기 밖으로 나가기 전에 `token`, `password`, `secret`, `cookie`, `authorization` 같은 키의 값과 `Bearer` 인증 값을 가리고, protobuf 원본 미리보기는 보내지 않습니다.
+- **내 컴퓨터의 정보는 밖으로 나가지 않습니다.** 데스크톱 앱에는 분석이나 텔레메트리가 없습니다. 네트워크 요청은 업데이트 확인뿐입니다. 실행할 때와 6시간마다 `github.com`에 요청하며, 일반 브라우저 접속과 같은 정보 외에는 보내지 않습니다. `dari.log`는 내 컴퓨터에만 남고 오류만 기록합니다.
 
 기본 마스킹 다음에 실행되는 규칙을 직접 추가할 수 있습니다. 규칙에서 예외가 나면 그 메시지는 보내지 않습니다.
 
@@ -99,7 +100,12 @@ Dari.setDesktopInspectorEnabled(false)
 | App is in the background | Android는 백그라운드 앱을 일시 정지합니다. 앱을 화면 맨 앞에 띄우면 Dari가 다시 연결합니다. |
 | Not running Dari | 앱이 `dari` 2.0.0 이상을 쓰는 debuggable 빌드인지 확인합니다. |
 
-문제를 알리려면 **Help → Report an Issue…**를 누릅니다. Dari 버전과 OS가 채워진 버그 양식이 열립니다. **Help → Show Log File**은 `dari.log`가 있는 폴더를 엽니다(macOS `~/Library/Logs/Dari`, Windows `%LOCALAPPDATA%\Dari\logs`). 로그에는 오류만 기록되고 메시지 내용은 남지 않습니다.
+문제를 알리려면 **Help → Report an Issue…**를 누릅니다. Dari 버전과 OS가 채워진 버그 양식이 열립니다. 기능 제안은 **Help → Suggest a Feature…**를 누릅니다. **Help → Show Log File**은 `dari.log`가 있는 폴더를 엽니다(macOS `~/Library/Logs/Dari`, Windows `%LOCALAPPDATA%\Dari\logs`). 로그에는 오류만 기록되고 메시지 내용은 남지 않습니다.
+
+## 제거
+
+- **macOS**: Dari를 종료하고 `/Applications/Dari.app`을 휴지통으로 옮깁니다. 설정과 로그까지 지우려면 `~/Library/Logs/Dari`와 `~/Library/Preferences/io.github.easyhooon.plist`를 삭제합니다.
+- **Windows**: **설정 → 앱 → 설치된 앱 → Dari → 제거**를 누릅니다. 설정은 레지스트리 `HKEY_CURRENT_USER\Software\JavaSoft\Prefs\io\github\easyhooon`에, 로그는 `%LOCALAPPDATA%\Dari`에 있습니다.
 
 ## 소스에서 빌드
 
