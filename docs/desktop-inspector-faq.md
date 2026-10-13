@@ -47,6 +47,34 @@ Two parts are native:
 So the code is written once and packaged per OS: `.dmg` on macOS, `.msi` on Windows, `.deb` on
 Linux.
 
+### How does it compare with Electron, Tauri and native?
+
+| | Native (Swift / WinUI) | Tauri | Compose Multiplatform (Dari) | Electron |
+| --- | --- | --- | --- | --- |
+| What the app bundles | Nothing; uses OS frameworks | A Rust binary; borrows the OS WebView | A Java runtime plus Skia | Chromium plus Node.js |
+| Download | A few MB | A few MB | ~67 MB (Dari 2.0.0 dmg; msi 56 MB) | 100–200 MB |
+| Idle memory (typical) | 30–60 MB | 50–100 MB | 150–300 MB | 150–400 MB |
+| UI language | Swift / C# | HTML/CSS/TS | Kotlin | HTML/CSS/TS |
+| One codebase for macOS, Windows, Linux | No | Yes | Yes | Yes |
+| Shares code with an Android library | No | No | Yes | No |
+
+Sizes for Dari are measured from the 2.0.0 release; the rest are typical ranges, not benchmarks.
+
+"Electron is heavy" and "VS Code is light" don't contradict each other. Every Electron app pays the
+same floor (a Chromium instance); what differs is the work on top. VS Code loads lazily, runs
+extensions in a separate process and tunes its rendering, while less-tuned apps gave the framework
+its reputation. The same applies here: the framework sets the floor, the app decides the rest.
+
+The criteria that picked Compose Multiplatform for Dari:
+
+1. **Reuse Kotlin.** The protocol module and the JSON viewer logic are shared with the Android library.
+2. **One UI for macOS and Windows** (Linux later), maintained by one person.
+3. **Weight barely matters for this app.** It is a debugging tool opened during development, not
+   something that runs all day, so a few hundred MB of memory goes unnoticed.
+
+Native would win if Dari became macOS-only and size or launch time mattered. Tauri would win if the
+UI moved to the web stack. Neither holds today.
+
 ## 2. When a device is connected, who is the server?
 
 There are three hops, and each one has its own server:
