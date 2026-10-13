@@ -94,6 +94,8 @@ elif tool == "security":
         count = int(os.environ.get("IDENTITY_COUNT", "1"))
         for index in range(count):
             print(f' {index + 1}) ' + "A" * 40 + f' "{identity}: Example (TESTTEAM01)"')
+    elif args == ["list-keychains", "-d", "user"]:
+        print('    "/Users/runner/Library/Keychains/login.keychain-db"')
 elif tool == "uuidgen":
     print("dummy-ephemeral-keychain-password")
 elif tool == "smoke-test-desktop-app.sh":
@@ -242,6 +244,8 @@ class MacOSPackagingTest(unittest.TestCase):
             self.assertNotIn(secret, result.stdout + result.stderr + exported)
         self.assertFalse((self.root / "dari-signing.p12").exists())
         self.assertFalse((self.root / "dari-notary-auth.log").exists())
+        self.assertIn(["security", "list-keychains", "-d", "user", "-s", str(self.root / "dari-signing.keychain-db"),
+                       "/Users/runner/Library/Keychains/login.keychain-db"], self.events())
 
     def test_setup_rejects_wrong_or_ambiguous_certificate(self):
         for environment in ({"WRONG_CERTIFICATE": "1"}, {"IDENTITY_COUNT": "2"}):

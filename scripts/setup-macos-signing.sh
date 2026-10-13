@@ -40,6 +40,14 @@ if ! security import "$certificate" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWO
   exit 1
 fi
 security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain" > /dev/null 2>&1
+# codesign --keychain still resolves the identity through the user search list.
+existing_keychains=()
+while IFS= read -r line; do
+  line="${line#"${line%%[![:space:]]*}"}"
+  line="${line//\"/}"
+  [ -n "$line" ] && existing_keychains+=("$line")
+done < <(security list-keychains -d user)
+security list-keychains -d user -s "$keychain" ${existing_keychains[@]+"${existing_keychains[@]}"}
 
 # Select one valid Developer ID Application identity from this keychain and the requested team.
 identity="$(security find-identity -v -p codesigning "$keychain" | python3 -c '
