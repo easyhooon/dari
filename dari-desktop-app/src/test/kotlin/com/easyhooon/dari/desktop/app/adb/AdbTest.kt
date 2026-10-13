@@ -25,7 +25,8 @@ class AdbTest {
     @Test
     fun `locates adb under ANDROID_HOME`() {
         val sdk = Files.createTempDirectory("sdk").toFile()
-        val adb = File(sdk, "platform-tools/adb").apply {
+        val exe = if (System.getProperty("os.name").startsWith("Windows")) "adb.exe" else "adb"
+        val adb = File(sdk, "platform-tools/$exe").apply {
             parentFile.mkdirs()
             writeText("")
             setExecutable(true)

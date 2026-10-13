@@ -48,7 +48,8 @@ jobs:
       - name: Smoke test
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run --auto-servernum scripts/smoke-test-desktop-app.sh
+            # xvfb has no GPU; skip Skiko's OpenGL attempt and its fallback warning.
+            SKIKO_RENDER_API=SOFTWARE xvfb-run --auto-servernum scripts/smoke-test-desktop-app.sh
           else
             scripts/smoke-test-desktop-app.sh
           fi
