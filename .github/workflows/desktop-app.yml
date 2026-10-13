@@ -1,7 +1,7 @@
 name: Desktop App
 
-# Unit tests plus a launch smoke test of the packaged desktop app on each OS. Only macOS ships
-# for now; Windows and Linux run here so they keep working until they are released.
+# Unit tests plus a launch smoke test of the packaged desktop app on each OS. macOS and Windows
+# ship; Linux runs here so it keeps working until it is released.
 on:
   pull_request:
     paths:

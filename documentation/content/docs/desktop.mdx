@@ -3,15 +3,17 @@ title: Desktop App
 description: Inspect bridge messages from your computer over adb
 ---
 
-The Dari desktop app shows the bridge messages of a connected debug build on your computer: a live list, the request and response side by side, and foldable JSON. It needs `dari` 2.0.0 or later and works with real devices and emulators. It runs on macOS; Windows and Linux builds are planned.
+The Dari desktop app shows the bridge messages of a connected debug build on your computer: a live list, the request and response side by side, and foldable JSON. It needs `dari` 2.0.0 or later and works with real devices and emulators. It runs on macOS and, in preview, Windows; a Linux build is planned.
 
 ## Install
+
+### macOS
 
 1. Download `Dari-<version>-arm64.dmg` (Apple Silicon) or `Dari-<version>-x64.dmg` (Intel) from the [releases page](https://github.com/easyhooon/dari/releases).
 2. Open the image and drag **Dari** into **Applications**.
 3. Optionally, compare `shasum -a 256 Dari-<version>-arm64.dmg` with the `.sha256` file from the same release. A match means the download isn't corrupted; it doesn't prove who published it.
 
-### First launch
+#### First launch
 
 The app is ad-hoc signed, without an Apple Developer ID or notarization, so macOS blocks it the first time:
 
@@ -20,6 +22,12 @@ The app is ad-hoc signed, without an Apple Developer ID or notarization, so macO
 3. Confirm. Later launches open normally.
 
 Download Dari only from the repository's releases page.
+
+### Windows (preview)
+
+1. Download `Dari-<version>-x64.msi` from the [releases page](https://github.com/easyhooon/dari/releases) and run it. It installs for the current user only.
+2. The installer isn't code-signed, so SmartScreen may warn on first run. Click **More info → Run anyway**.
+3. Optionally, compare `certutil -hashfile Dari-<version>-x64.msi SHA256` with the `.sha256` file from the same release.
 
 ## Connect
 

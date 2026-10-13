@@ -1,13 +1,13 @@
 name: Desktop App Release
 
-# Builds the macOS desktop app (Apple Silicon, Intel), smoke-tests it, and attaches the DMGs and
-# their SHA-256 files to the release for the given tag. Ad-hoc signed, not notarized.
-# Windows and Linux packaging works (scripts/package-desktop-app.sh) but ships once tested on real machines.
+# Builds the desktop app for macOS (Apple Silicon, Intel) and Windows (x64), smoke-tests each build,
+# and attaches the installers and their SHA-256 files to the release for the given tag.
+# Ad-hoc signed, not notarized, on macOS; unsigned on Windows. Linux ships once tested on a real machine.
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to attach the DMGs to (e.g. 2.0.0)"
+        description: "Release tag to attach the installers to (e.g. 2.0.0)"
         required: true
 
 permissions:
@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-15, macos-15-intel]
+        runner: [macos-15, macos-15-intel, windows-latest]
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
