@@ -264,7 +264,7 @@ macOS has three levels:
 | Level | What it proves | User experience | Cost |
 | --- | --- | --- | --- |
 | Unsigned | Nothing | Won't run on Apple Silicon | — |
-| Ad-hoc (`codesign --sign -`) | The files weren't altered | First launch is blocked; System Settings → Privacy & Security → **Open Anyway**, once | Free |
+| Ad-hoc (`codesign --sign -`) | The files weren't altered | First launch is blocked ("can't check for malicious software"); System Settings → Privacy & Security → **Open Anyway**, once | Free |
 | Developer ID plus notarization | Who published it, and Apple scanned it | Opens normally | Apple Developer Program (yearly fee), signing secrets in CI |
 
 Dari ships ad-hoc signed DMGs, as Necto does. The audience is developers, and allowing an app once is

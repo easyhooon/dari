@@ -28,6 +28,10 @@ export default function DownloadPage() {
           computer.
         </p>
         <p>
+          macOS blocks the first launch because Dari isn&apos;t notarized: click <strong>Open Anyway</strong> in System
+          Settings → Privacy &amp; Security.
+        </p>
+        <p>
           First launch, connecting a device and privacy: see the{' '}
           <Link href="/docs/desktop" className="underline underline-offset-4 hover:text-gray-900 dark:hover:text-gray-100">
             Desktop App guide

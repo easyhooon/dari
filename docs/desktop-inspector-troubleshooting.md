@@ -7,6 +7,23 @@ Related: [design](desktop-inspector-design.md), [FAQ](desktop-inspector-faq.md).
 
 ## Release and packaging
 
+### First launch showed "Dari is damaged and can't be opened"
+
+- **Symptom**: right after 2.0.0, opening Dari once showed the "damaged" dialog (Cancel / Move to
+  Trash only, no Open Anyway).
+- **Investigation**:
+  - The release app's signature verifies, and the download matches its `.sha256`.
+  - Reproducing a browser download of the release DMG (quarantined DMG, app copied out) shows the
+    normal prompt on macOS 27: "Apple can't check Dari for malicious software". System Settings →
+    Privacy & Security → **Open Anyway** opens it. This is the same path Necto, also ad-hoc signed,
+    takes.
+  - The "damaged" dialog is what macOS shows when a bundle no longer matches its signature. At that
+    moment the local `Dari.app` was being deleted and rebuilt, so the likeliest cause is opening a
+    half-written build. Not confirmed.
+- **Docs**: Open Anyway stays the main first-launch step. `xattr -dr com.apple.quarantine
+  /Applications/Dari.app` is the fallback if "damaged" appears.
+- **Lesson**: reproduce with the published artifact before changing user-facing install docs.
+
 ### Intel macOS build fails: "code object is not signed at all"
 
 - **Symptom**: the 2.0.0 `Desktop App Release` run failed on `macos-15-intel`, so no installers were attached.
