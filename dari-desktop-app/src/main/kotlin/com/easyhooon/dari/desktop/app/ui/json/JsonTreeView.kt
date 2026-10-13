@@ -52,11 +52,11 @@ private fun JsonTree(element: JsonElement, foldingEnabled: Boolean, onCopy: () -
     val foldable = foldingEnabled && allPaths.isNotEmpty()
     Box(
         modifier.fillMaxWidth()
-            .background(Dari.colors.surface, RoundedCornerShape(DariMetrics.radius))
+            .background(Dari.colors.codeBackground, RoundedCornerShape(DariMetrics.radius))
             .border(1.dp, Dari.colors.border, RoundedCornerShape(DariMetrics.radius)),
     ) {
         Column {
-            // A toolbar row only when there is folding to control; otherwise Copy floats in the corner.
+            // Folding controls belong to this block only; without them Copy floats in the corner.
             if (foldable) {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
@@ -67,7 +67,7 @@ private fun JsonTree(element: JsonElement, foldingEnabled: Boolean, onCopy: () -
                     CopyButton(onCopy)
                 }
             }
-            Column(Modifier.padding(start = 4.dp, end = if (foldable) 12.dp else 72.dp, top = 8.dp, bottom = 8.dp)) {
+            Column(Modifier.padding(start = 4.dp, end = if (foldable) 12.dp else 72.dp, top = if (foldable) 0.dp else 8.dp, bottom = 8.dp)) {
                 rows.forEach { row ->
                     JsonRow(row) { path ->
                         collapsed = if (path in collapsed) collapsed - path else collapsed + path

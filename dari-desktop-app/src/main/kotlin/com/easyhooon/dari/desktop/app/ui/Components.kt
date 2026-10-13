@@ -284,7 +284,7 @@ fun DariMenuItem(text: String, onClick: () -> Unit, checked: Boolean = false) {
 fun CodeBlock(text: String, onCopy: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier.fillMaxWidth()
-            .background(Dari.colors.surface, RoundedCornerShape(DariMetrics.radius))
+            .background(Dari.colors.codeBackground, RoundedCornerShape(DariMetrics.radius))
             .border(1.dp, Dari.colors.border, RoundedCornerShape(DariMetrics.radius)),
     ) {
         Text(

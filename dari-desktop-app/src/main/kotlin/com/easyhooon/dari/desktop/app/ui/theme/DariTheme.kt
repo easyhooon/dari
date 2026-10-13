@@ -35,6 +35,8 @@ data class DariColors(
     val success: Color,
     val warning: Color,
     val danger: Color,
+    // Code blocks: set apart from the detail pane's surface, which they sit on.
+    val codeBackground: Color,
     // JSON syntax: muted so status colours stay the loudest thing on screen.
     val syntaxString: Color,
     val syntaxNumber: Color,
@@ -55,6 +57,7 @@ val LightColors = DariColors(
     success = Color(0xFF1C7A45),
     warning = Color(0xFF8A5A00),
     danger = Color(0xFFB42318),
+    codeBackground = Color(0xFFEEF2F6),
     syntaxString = Color(0xFF2F6B4F),
     syntaxNumber = Color(0xFF2D5FA8),
     syntaxKeyword = Color(0xFF8A4B9C),
@@ -74,6 +77,7 @@ val DarkColors = DariColors(
     success = Color(0xFF4CC27A),
     warning = Color(0xFFE3A83A),
     danger = Color(0xFFFF6B60),
+    codeBackground = Color(0xFF131619),
     syntaxString = Color(0xFF8CCBA6),
     syntaxNumber = Color(0xFF8FB8F0),
     syntaxKeyword = Color(0xFFC79AD6),

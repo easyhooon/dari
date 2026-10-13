@@ -165,9 +165,10 @@ class InspectorController(
         scope.launch { runCatching { conn.clear() } }
     }
 
-    val canCopy: Boolean get() = connection != null && selectedId != null
+    // Read Compose state (not `connection`) so menu items re-enable when a session starts.
+    val canCopy: Boolean get() = state is ConnectionState.Connected && selectedId != null
 
-    val canExport: Boolean get() = connection != null && messages.isNotEmpty()
+    val canExport: Boolean get() = state is ConnectionState.Connected && messages.isNotEmpty()
 
     /** Copies the selected message as readable text, like the app's "Share as text". */
     fun copySelected() {

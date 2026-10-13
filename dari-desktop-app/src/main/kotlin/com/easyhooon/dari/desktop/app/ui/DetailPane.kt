@@ -2,6 +2,7 @@ package com.easyhooon.dari.desktop.app.ui
 
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -38,6 +40,7 @@ import com.easyhooon.dari.desktop.app.MessageExport
 import com.easyhooon.dari.desktop.app.isMacOs
 import com.easyhooon.dari.desktop.app.ui.json.JsonPayload
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
+import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
 import com.easyhooon.dari.inspector.protocol.WirePayloadMetadata
 import kotlinx.coroutines.launch
@@ -156,6 +159,34 @@ private fun ExportMenu(onCopy: () -> Unit, onSave: (ExportFormat) -> Unit) {
     }
 }
 
+/** Shown instead of the payload when a protobuf body couldn't be decoded, mirroring the app's Raw tab notes. */
+@Composable
+private fun ProtobufNotice(status: String, originalSizeBytes: Int) {
+    val (title, hint) = when (status) {
+        "DECODER_UNAVAILABLE" ->
+            "No protobuf decoder" to
+                "Register a ProtobufPayloadDecoder in the app to see its fields."
+        else -> "Protobuf decoding failed" to "The decoder threw for this payload."
+    }
+    Column(
+        Modifier.fillMaxWidth()
+            .background(Dari.colors.codeBackground, RoundedCornerShape(DariMetrics.radius))
+            .border(1.dp, Dari.colors.border, RoundedCornerShape(DariMetrics.radius))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(title, style = Dari.type.label, color = Dari.colors.warning)
+        Text(hint, style = Dari.type.caption, color = Dari.colors.textSecondary)
+        Text(
+            "Raw bytes (${formatBytes(originalSizeBytes)}) stay on the device: open the in-app viewer's Raw tab for hex and Base64.",
+            style = Dari.type.caption,
+            color = Dari.colors.textTertiary,
+        )
+    }
+}
+
+private const val DECODED = "DECODED"
+
 private fun summaryLine(detail: WireMessageDetail): String {
     val s = detail.summary
     return listOfNotNull(
@@ -200,15 +231,19 @@ private fun PayloadColumn(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(title, style = Dari.type.label, color = Dari.colors.text)
+                metadata?.let { Badge(it.contentType) }
                 val meta = listOfNotNull(
                     formatBytes(metadata?.originalSizeBytes ?: sizeBytes),
-                    metadata?.contentType?.lowercase(),
-                    metadata?.decodeStatus?.lowercase()?.replace('_', ' '),
+                    metadata?.decodeStatus?.takeIf { it == DECODED }?.lowercase(),
                     "truncated".takeIf { truncated },
                 )
                 Text(meta.joinToString(" · "), style = Dari.type.caption, color = Dari.colors.textTertiary)
             }
-            if (data == null) {
+            val undecoded = metadata?.decodeStatus?.takeIf { it != DECODED }
+            if (undecoded != null) {
+                // The decoder's placeholder text says less than this; raw bytes never leave the device.
+                ProtobufNotice(undecoded, metadata.originalSizeBytes)
+            } else if (data == null) {
                 Text("No payload", style = Dari.type.caption, color = Dari.colors.textTertiary)
             } else {
                 SelectionContainer {
