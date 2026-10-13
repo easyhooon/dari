@@ -22,6 +22,16 @@ export default function DownloadPage() {
 
       <DownloadButtons />
 
+      <div className="flex w-full max-w-xl flex-col gap-2 text-left">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Or install on macOS from Terminal</p>
+        <pre className="overflow-x-auto rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs dark:border-gray-800 dark:bg-neutral-900">
+          <code>{'curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install-desktop.sh | bash'}</code>
+        </pre>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Verifies the SHA-256 checksum and opens without the first-launch prompt.
+        </p>
+      </div>
+
       <div className="flex max-w-xl flex-col gap-2 text-sm text-gray-500 dark:text-gray-400">
         <p>
           Requires <code>dari</code> 2.0.0 or later in your app&apos;s debug build, and <code>adb</code> on your

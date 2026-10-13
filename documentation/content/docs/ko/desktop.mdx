@@ -7,7 +7,18 @@ Dari 데스크톱 앱은 연결된 디버그 빌드의 브릿지 메시지를 �
 
 ## 설치
 
-### macOS
+### macOS: 터미널로 설치
+
+가장 빠른 방법입니다. Mac의 칩에 맞는 빌드를 골라 릴리스의 SHA-256 파일로 검증한 뒤,
+`/Applications/Dari.app`에 설치하거나 업데이트합니다.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install-desktop.sh | bash
+```
+
+`curl`로 받은 파일에는 macOS의 다운로드 표시가 붙지 않아서, 아래의 첫 실행 확인 없이 바로 열립니다. 대신 손상된 다운로드는 체크섬으로 걸러내므로, 이 명령은 이 페이지나 저장소에 있는 것만 사용하세요. 특정 버전을 설치하려면 `bash` 앞에 `DARI_VERSION=2.0.0`을 붙입니다.
+
+### macOS: DMG로 설치
 
 1. [다운로드 페이지](/download)나 [릴리스 페이지](https://github.com/easyhooon/dari/releases)에서 `Dari-<version>-arm64.dmg`(Apple Silicon) 또는 `Dari-<version>-x64.dmg`(Intel)를 내려받습니다.
 2. 이미지를 열고 **Dari**를 **응용 프로그램** 폴더로 끌어 놓습니다.
