@@ -65,14 +65,21 @@ internal class DariInspectorServer(
             } catch (_: IOException) {
                 break
             }
-            if (!running || !isTrustedPeer(client)) {
+            if (!isTrustedPeer(client) || !register(client)) {
                 runCatching { client.close() }
                 continue
             }
-            clients += client
-            _connectedClients.value = clients.size
             thread(name = "dari-inspector-session", isDaemon = true) { serve(client) }
         }
+    }
+
+    // Same lock as stop(), so a client accepted while stopping is never added after the clear.
+    @Synchronized
+    private fun register(client: LocalSocket): Boolean {
+        if (!running) return false
+        clients += client
+        _connectedClients.value = clients.size
+        return true
     }
 
     private fun isTrustedPeer(client: LocalSocket): Boolean {
