@@ -7,6 +7,18 @@ Related: [design](desktop-inspector-design.md), [FAQ](desktop-inspector-faq.md).
 
 ## Release and packaging
 
+### Downloaded app: "Dari is damaged and can't be opened"
+
+- **Symptom**: the 2.0.0 DMG from the release opens, but macOS refuses to launch Dari and offers to
+  move it to the Trash. System Settings has no **Open Anyway** button.
+- **Cause**: the app is fine. The signature is valid and the hash matches the `.sha256` file. But it
+  is ad-hoc signed, not notarized, and recent macOS (checked on macOS 27) labels such apps "damaged"
+  when they carry the download quarantine flag. `spctl` rejects any non-notarized app.
+- **Fix (docs)**: after moving Dari to Applications, run
+  `xattr -dr com.apple.quarantine /Applications/Dari.app`. It clears the flag on Dari only, changes no
+  system setting, and was verified to let the app launch. Developer ID signing plus notarization would
+  remove the step entirely.
+
 ### Intel macOS build fails: "code object is not signed at all"
 
 - **Symptom**: the 2.0.0 `Desktop App Release` run failed on `macos-15-intel`, so no installers were attached.
