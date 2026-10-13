@@ -38,6 +38,9 @@ elif tool == "codesign":
     if "--verify" in args and os.environ.get("FAIL_SIGNATURE") == "1":
         sys.exit(1)
     if "--entitlements" in args:
+        assert "--xml" in args
+        if not args[-1].endswith(".app"):
+            sys.exit(0)
         with open("dari-desktop-app/packaging/macos-entitlements.plist", "rb") as expected:
             entitlements = plistlib.load(expected)
         if os.environ.get("MISSING_JIT") == "1":
