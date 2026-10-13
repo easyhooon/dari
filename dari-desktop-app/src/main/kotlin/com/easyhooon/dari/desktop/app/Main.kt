@@ -6,23 +6,35 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyShortcut
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
+import androidx.compose.ui.window.WindowPosition
+import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
-import androidx.compose.ui.window.rememberWindowState
 import com.easyhooon.dari.desktop.app.adb.Adb
+import com.easyhooon.dari.desktop.app.ui.AboutWindow
 import com.easyhooon.dari.desktop.app.ui.App
 import com.easyhooon.dari.desktop.app.ui.SettingsWindow
 import com.easyhooon.dari.desktop.app.ui.appearanceLabel
 import com.easyhooon.dari.desktop.app.update.ReleaseSource
 import com.easyhooon.dari.desktop.app.update.Updater
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 import java.awt.Desktop
+import java.awt.GraphicsEnvironment
+import java.awt.Rectangle
 import java.awt.Taskbar
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 import java.awt.image.BufferedImage
 import java.net.URI
 import javax.imageio.ImageIO
@@ -32,12 +44,15 @@ private val APP_VERSION: String = System.getProperty("jpackage.app-version") ?: 
 
 val isMacOs: Boolean = System.getProperty("os.name").startsWith("Mac")
 
+@OptIn(FlowPreview::class) // debounce
 fun main() {
     // Native menu bar and system appearance on macOS; must be set before any window exists.
     System.setProperty("apple.awt.application.name", "Dari")
     System.setProperty("apple.awt.application.appearance", "system")
     System.setProperty("apple.laf.useScreenMenuBar", "true")
 
+    AppLog.installCrashHandler()
+    AppLog.info("Dari $APP_VERSION started")
     val icon = loadAppIcon()
     // Dock icon while running unpackaged (`./gradlew run`); packaged apps use the bundle icon.
     icon?.let { image ->
@@ -60,6 +75,20 @@ fun main() {
         }
         val installUpdate = { updater.install(quit) }
         var settingsOpen by remember { mutableStateOf(false) }
+        var aboutOpen by remember { mutableStateOf(false) }
+        val windowState = remember { mainWindowState(settings.windowBounds) }
+        LaunchedEffect(windowState) {
+            // Saved as it changes, so ⌘Q and crashes keep the last bounds too.
+            snapshotFlow { windowState.position to windowState.size }
+                .debounce(500)
+                .collect { (position, size) ->
+                    if (windowState.placement == WindowPlacement.Floating && position is WindowPosition.Absolute) {
+                        settings.saveWindowBounds(
+                            WindowBounds(position.x.value.toInt(), position.y.value.toInt(), size.width.value.toInt(), size.height.value.toInt()),
+                        )
+                    }
+                }
+        }
         LaunchedEffect(Unit) {
             controller.start()
             updater.startPeriodicChecks()
@@ -67,14 +96,28 @@ fun main() {
             if (isMacOs && Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_PREFERENCES)) {
                 Desktop.getDesktop().setPreferencesHandler { settingsOpen = true }
             }
+            if (isMacOs && Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_ABOUT)) {
+                Desktop.getDesktop().setAboutHandler { aboutOpen = true }
+            }
         }
+        val iconPainter = remember { icon?.let { BitmapPainter(it.toComposeImageBitmap()) } }
         if (settingsOpen) SettingsWindow(settings, onClose = { settingsOpen = false })
+        if (aboutOpen) {
+            AboutWindow(
+                version = APP_VERSION,
+                icon = iconPainter,
+                appearance = settings.appearance,
+                onCopyInfo = { copyToClipboard(IssueReport.environment(APP_VERSION)) },
+                onOpenLog = ::showLogFolder,
+                onClose = { aboutOpen = false },
+            )
+        }
 
         Window(
             onCloseRequest = quit,
             title = "Dari",
-            icon = icon?.let { BitmapPainter(it.toComposeImageBitmap()) },
-            state = rememberWindowState(width = 1280.dp, height = 820.dp),
+            icon = iconPainter,
+            state = windowState,
         ) {
             if (isMacOs) {
                 // Draw content under a transparent title bar, like native macOS apps.
@@ -123,6 +166,12 @@ fun main() {
                     )
                     Separator()
                     Item("Release Notes", onClick = { browse(ReleaseSource.pageUrl) })
+                    Item("Report an Issue…", onClick = { browse(IssueReport.newIssueUrl(APP_VERSION)) })
+                    Item("Show Log File", onClick = ::showLogFolder)
+                    if (!isMacOs) {
+                        Separator()
+                        Item("About Dari", onClick = { aboutOpen = true })
+                    }
                 }
             }
             App(controller, settings, updater, installUpdate)
@@ -132,6 +181,34 @@ fun main() {
 
 private fun loadAppIcon(): BufferedImage? =
     Thread.currentThread().contextClassLoader.getResourceAsStream("dari-icon.png")?.use(ImageIO::read)
+
+/** Restores the last bounds when they still fall on a connected screen; otherwise centers a default window. */
+private fun mainWindowState(saved: WindowBounds?): WindowState {
+    val visible = saved?.takeIf { bounds ->
+        bounds.width >= MIN_WINDOW_WIDTH && bounds.height >= MIN_WINDOW_HEIGHT &&
+            GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.any { screen ->
+                screen.defaultConfiguration.bounds.intersects(Rectangle(bounds.x, bounds.y, bounds.width, bounds.height))
+            }
+    } ?: return WindowState(position = WindowPosition.Aligned(Alignment.Center), size = DpSize(1280.dp, 820.dp))
+    return WindowState(
+        position = WindowPosition(visible.x.dp, visible.y.dp),
+        size = DpSize(visible.width.dp, visible.height.dp),
+    )
+}
+
+private fun showLogFolder() {
+    AppLog.directory.mkdirs()
+    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+        Desktop.getDesktop().open(AppLog.directory)
+    }
+}
+
+private fun copyToClipboard(text: String) {
+    Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null)
+}
+
+private const val MIN_WINDOW_WIDTH = 640
+private const val MIN_WINDOW_HEIGHT = 400
 
 private fun browse(uri: URI) {
     if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) Desktop.getDesktop().browse(uri)

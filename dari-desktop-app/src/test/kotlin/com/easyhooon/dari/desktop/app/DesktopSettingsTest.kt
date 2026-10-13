@@ -6,6 +6,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DesktopSettingsTest {
@@ -36,5 +37,12 @@ class DesktopSettingsTest {
         assertEquals(Appearance.DARK, reloaded.appearance)
         assertFalse(reloaded.jsonFoldingEnabled)
         assertFalse(reloaded.showTags)
+    }
+
+    @Test
+    fun `window bounds round-trip and start empty`() {
+        assertNull(DesktopSettings(node).windowBounds)
+        DesktopSettings(node).saveWindowBounds(WindowBounds(10, 20, 900, 700))
+        assertEquals(WindowBounds(10, 20, 900, 700), DesktopSettings(node).windowBounds)
     }
 }

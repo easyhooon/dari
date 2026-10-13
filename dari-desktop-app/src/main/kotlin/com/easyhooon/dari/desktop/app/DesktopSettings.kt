@@ -7,6 +7,9 @@ import java.util.prefs.Preferences
 
 enum class Appearance { SYSTEM, LIGHT, DARK }
 
+/** Main window bounds in screen points, restored on the next launch. */
+data class WindowBounds(val x: Int, val y: Int, val width: Int, val height: Int)
+
 /** Desktop counterparts of the in-app Dari settings (shake-to-open is mobile-only). */
 class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().node(NODE)) {
 
@@ -21,6 +24,20 @@ class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().no
 
     var showTags by mutableStateOf(prefs.getBoolean(KEY_SHOW_TAGS, true))
         private set
+
+    val windowBounds: WindowBounds?
+        get() {
+            val values = listOf(KEY_WINDOW_X, KEY_WINDOW_Y, KEY_WINDOW_WIDTH, KEY_WINDOW_HEIGHT)
+                .map { prefs.get(it, null)?.toIntOrNull() ?: return null }
+            return WindowBounds(values[0], values[1], values[2], values[3])
+        }
+
+    fun saveWindowBounds(bounds: WindowBounds) {
+        prefs.putInt(KEY_WINDOW_X, bounds.x)
+        prefs.putInt(KEY_WINDOW_Y, bounds.y)
+        prefs.putInt(KEY_WINDOW_WIDTH, bounds.width)
+        prefs.putInt(KEY_WINDOW_HEIGHT, bounds.height)
+    }
 
     fun updateAppearance(value: Appearance) {
         appearance = value
@@ -42,5 +59,9 @@ class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().no
         const val KEY_APPEARANCE = "appearance"
         const val KEY_JSON_FOLDING = "jsonFolding"
         const val KEY_SHOW_TAGS = "showTags"
+        const val KEY_WINDOW_X = "windowX"
+        const val KEY_WINDOW_Y = "windowY"
+        const val KEY_WINDOW_WIDTH = "windowWidth"
+        const val KEY_WINDOW_HEIGHT = "windowHeight"
     }
 }
