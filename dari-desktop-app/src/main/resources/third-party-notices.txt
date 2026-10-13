@@ -1,0 +1,21 @@
+Dari desktop app
+Copyright 2026 easyhooon. Licensed under the Apache License, Version 2.0.
+
+Dari bundles the following open-source software.
+
+Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+  - Kotlin standard library (JetBrains)
+  - kotlinx.coroutines, kotlinx.serialization, kotlinx-datetime, atomicfu (JetBrains)
+  - Compose Multiplatform: runtime, foundation, UI, Material 3, desktop (JetBrains)
+  - AndroidX Compose runtime, Collection, Annotation, Lifecycle, SavedState (Google)
+  - Skiko (JetBrains)
+  - JetBrains Runtime API, JetBrains Java Annotations (JetBrains)
+  - JSpecify annotations (The JSpecify Authors)
+
+BSD 3-Clause License (https://skia.org/license)
+  - Skia graphics library (Google), embedded in Skiko
+
+GNU General Public License v2 with the Classpath Exception
+  - OpenJDK runtime. Its full license texts ship with the app in
+    Dari.app/Contents/runtime/Contents/Home/legal (macOS) or
+    runtime\legal (Windows).
