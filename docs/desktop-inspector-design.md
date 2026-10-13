@@ -145,14 +145,16 @@ between JavaScript and the app, so only code inside the app can see them.
   the app socket only once the client writes); app replies `ServerHello {accepted, protocolVersion,
   rejection?, app {applicationId, appName, appVersion, dariVersion, deviceModel, sdkInt}}`.
   Exact version match.
-- Envelope: `{type, payload}` with `invoke {requestId, op, input}`, `result {requestId, output?,
-  error?, isFinal}`, `cancel {requestId}`.
+- Frames are flat JSON objects with a `type` discriminator next to their fields (no `payload` wrapper):
+  `{"type":"invoke","requestId","op","input"}`, `{"type":"result","requestId","output"?,"error"?,"isFinal"}`,
+  `{"type":"cancel","requestId"}`. Example: `{"type":"result","requestId":"7","output":1,"isFinal":false}`.
 - Operations:
   - `messages.list {limit}` → summaries (no payload bodies)
   - `messages.detail {id}` → full request/response data + payload metadata
   - `messages.observe` (stream) → `added | updated | cleared` with summaries
   - `messages.clear`
-- Error codes: `INVALID_INPUT`, `OPERATION_NOT_FOUND`, `CANCELLED`, `PROVIDER_FAILED`, `TIMEOUT`.
+- Error codes: `INVALID_INPUT`, `OPERATION_NOT_FOUND`, `NOT_FOUND`, `PROVIDER_FAILED`. Timeouts are
+  client-side; a cancelled stream simply stops sending.
 - Client order: subscribe to `observe` first, then `list`, merge by id (absorbs overlap).
 
 ### Stable wire id
