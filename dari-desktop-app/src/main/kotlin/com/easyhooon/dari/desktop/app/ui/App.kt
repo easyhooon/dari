@@ -91,23 +91,26 @@ private fun WindowScope.TitleBar(controller: InspectorController) {
             onPick = { controller.selectDevice(it.serial) },
         )
         Text("/", style = Dari.type.caption, color = Dari.colors.textTertiary)
-        Picker(
-            label = controller.applicationId.ifBlank { "Choose app" },
-            options = controller.discoveredApps,
-            isSelected = { it == controller.applicationId },
-            optionLabel = { it },
-            onPick = {
-                controller.applicationId = it
-                controller.connect()
-            },
-            leading = { ConnectionDot(state is ConnectionState.Connected) },
-        )
+        // Pick from the apps found on the device; when none are listed, type the applicationId instead.
         if (controller.discoveredApps.isEmpty()) {
+            ConnectionDot(state is ConnectionState.Connected)
             SearchField(
                 value = controller.applicationId,
                 onValueChange = { controller.applicationId = it },
                 placeholder = "applicationId",
-                modifier = Modifier.width(220.dp),
+                modifier = Modifier.width(220.dp).padding(start = 4.dp),
+            )
+        } else {
+            Picker(
+                label = controller.applicationId.ifBlank { "Choose app" },
+                options = controller.discoveredApps,
+                isSelected = { it == controller.applicationId },
+                optionLabel = { it },
+                onPick = {
+                    controller.applicationId = it
+                    controller.connect()
+                },
+                leading = { ConnectionDot(state is ConnectionState.Connected) },
             )
         }
         // The title bar is transparent on macOS; its empty middle moves the window. Wrapping the whole
