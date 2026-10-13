@@ -1,0 +1,87 @@
+---
+title: 데스크톱 앱
+description: adb로 연결해 컴퓨터에서 브릿지 메시지를 확인합니다
+---
+
+Dari 데스크톱 앱은 연결된 디버그 빌드의 브릿지 메시지를 컴퓨터 화면에서 보여 줍니다. 실시간 목록, 요청과 응답을 나란히 놓은 상세 화면, 접고 펼칠 수 있는 JSON을 제공합니다. `dari` 2.0.0 이상이 필요하고, 실기기와 에뮬레이터 모두에서 동작합니다. macOS를 먼저 지원하며, Windows와 Linux 빌드는 이후에 추가됩니다.
+
+## 설치
+
+1. [릴리스 페이지](https://github.com/easyhooon/dari/releases)에서 `Dari-<version>-arm64.dmg`(Apple Silicon) 또는 `Dari-<version>-x64.dmg`(Intel)를 내려받습니다.
+2. 이미지를 열고 **Dari**를 **응용 프로그램** 폴더로 끌어 놓습니다.
+3. 필요하면 `shasum -a 256 Dari-<version>-arm64.dmg` 결과를 같은 릴리스의 `.sha256` 파일과 비교합니다. 값이 같으면 파일이 손상되지 않았다는 뜻이며, 배포자가 누구인지까지 증명하지는 않습니다.
+
+### 처음 실행할 때
+
+이 앱은 Apple Developer ID 서명이나 공증 없이 ad-hoc 서명만 되어 있어서, macOS가 처음 실행을 막습니다.
+
+1. Dari를 한 번 열고 경고 창을 닫습니다.
+2. **시스템 설정 → 개인정보 보호 및 보안**에서 Dari 안내 옆의 **그래도 열기**를 누릅니다.
+3. 확인을 누르면 이후로는 바로 열립니다.
+
+Dari는 저장소의 릴리스 페이지에서만 내려받으세요.
+
+## 연결
+
+1. `adb`를 쓸 수 있게 합니다. `ANDROID_HOME`을 설정하거나 Android Studio를 기본 위치에 설치하면 됩니다.
+2. USB 디버깅을 켠 기기를 연결하거나 에뮬레이터를 실행합니다.
+3. `dari`를 쓰는 앱의 debuggable 빌드를 실행하고 화면 맨 앞에 띄웁니다.
+
+Dari가 기기와 앱을 알아서 찾아 연결합니다. 기기가 여러 대면 타이틀바에서 고르거나, `ANDROID_SERIAL`을 지정하고 Dari를 실행합니다. 기기가 앱 목록을 보여 주지 않으면 applicationId를 직접 입력합니다.
+
+데스크톱 앱이 연결된 동안에는 앱 내 알림과 흔들어서 열기가 잠시 멈추고, 연결이 끊기면 다시 켜집니다.
+
+## 연결 원리
+
+프록시, 인증서, Wi-Fi, 포트 같은 설정이 필요 없습니다.
+
+1. 앱이 기기 안에만 존재하는 이름 있는 소켓 `dari_<applicationId>`를 엽니다.
+2. 데스크톱 앱이 `adb forward tcp:0 localabstract:dari_<applicationId>`를 실행합니다. adb가 컴퓨터의 빈 포트를 하나 골라 열고, USB를 통해 그 소켓으로 이어 줍니다.
+3. 데스크톱 앱이 `127.0.0.1:<port>`로 통신하면 adb가 데이터를 앱으로 전달합니다.
+
+이 터널은 데스크톱 앱의 연결이 끊기거나 앱을 종료하면 정리됩니다. 열려 있는 터널은 `adb forward --list`로 확인할 수 있습니다.
+
+## 개인정보 보호
+
+- **디버그 빌드에서만 동작합니다.** 소켓은 debuggable 빌드에서만 열리고, release 빌드에 들어가는 `dari-noop`에는 캡처 코드가 없습니다.
+- **adb만 접속할 수 있습니다.** adb(shell)와 root만 접속할 수 있어서, 기기의 다른 앱은 메시지를 읽을 수 없습니다.
+- **기본으로 가립니다.** 기기 밖으로 나가기 전에 `token`, `password`, `secret`, `cookie`, `authorization` 같은 키의 값과 `Bearer` 인증 값을 가리고, protobuf 원본 미리보기는 보내지 않습니다.
+
+기본 마스킹 다음에 실행되는 규칙을 직접 추가할 수 있습니다. 규칙에서 예외가 나면 그 메시지는 보내지 않습니다.
+
+```kotlin
+Dari.setPayloadRedactor { entry ->
+    entry.copy(requestData = entry.requestData?.replace(Regex("\"phone\":\"[^\"]*\""), "\"phone\":\"***\""))
+}
+```
+
+소켓을 아예 열지 않으려면:
+
+```kotlin
+Dari.setDesktopInspectorEnabled(false)
+```
+
+스테이징처럼 debuggable이 아닌 내부 빌드는 매니페스트에 다음 항목을 넣으면 사용할 수 있습니다.
+
+```xml
+<meta-data
+    android:name="com.easyhooon.dari.desktop.ALLOW_NON_DEBUGGABLE"
+    android:value="true" />
+```
+
+## 문제 해결
+
+| 상태 | 해결 방법 |
+| --- | --- |
+| adb not found | `ANDROID_HOME`을 설정하거나 `platform-tools`를 `PATH`에 추가한 뒤 Dari를 다시 엽니다. |
+| No device | `adb devices`로 확인하고, 기기에 뜬 USB 디버깅 허용 창을 수락합니다. |
+| App is in the background | Android는 백그라운드 앱을 일시 정지합니다. 앱을 화면 맨 앞에 띄우면 Dari가 다시 연결합니다. |
+| Not running Dari | 앱이 `dari` 2.0.0 이상을 쓰는 debuggable 빌드인지 확인합니다. |
+
+## 소스에서 빌드
+
+```bash
+git clone https://github.com/easyhooon/dari.git
+cd dari
+./gradlew :dari-desktop-app:run
+```
