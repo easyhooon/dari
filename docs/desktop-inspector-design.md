@@ -189,7 +189,7 @@ happen under one lock, so events and snapshots agree. Trimmed entries are not se
 | 1 | Protocol module + repository events + server + opt-in/redactor (+ noop) + tests | done |
 | 2 | Desktop MVP via `./gradlew :dari-desktop-app:run`: one device, list/detail/live | done |
 | 3 | macOS packaging: ad-hoc signed `.dmg` (arm64, x64) + SHA-256, release workflow, install docs | done |
-| 4 | Windows (`.msi`) and Linux (`.deb`, x64 + arm64): CI packaging and smoke tests, preview until checked on real machines | done (preview) |
+| 4 | Windows (`.msi`) and Linux (`.deb`): packaging and CI smoke tests done; released after testing on real machines | in progress |
 | 5 | Optional necto plugin module | separate issue |
 
 ## Open checks
