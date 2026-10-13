@@ -150,30 +150,41 @@ private fun WindowScope.TitleBar(controller: InspectorController, updater: Updat
 }
 
 /** Shown only when there is something to act on: a newer version, progress, or a failure. */
-@OptIn(ExperimentalFoundationApi::class) // TooltipArea
 @Composable
 private fun UpdateStatus(updater: Updater, installUpdate: () -> Unit) {
     when (val phase = updater.phase) {
-        is Updater.Phase.Available -> AccentButton("Update to ${phase.version}", onClick = installUpdate)
-        is Updater.Phase.Manual -> AccentButton("Download ${phase.version}", onClick = updater::openDownloadPage)
+        // The version lives in the tooltip and About; the button only needs to be noticed.
+        is Updater.Phase.Available -> Hint("Dari ${phase.version} is available. Dari restarts to install it.") {
+            AccentButton("Update", onClick = installUpdate, showDownloadIcon = true)
+        }
+        is Updater.Phase.Manual -> Hint("Dari ${phase.version} is available. Opens the download page.") {
+            AccentButton("Update", onClick = updater::openDownloadPage, showDownloadIcon = true)
+        }
         is Updater.Phase.Working -> Text(phase.step, style = Dari.type.caption, color = Dari.colors.textSecondary)
         Updater.Phase.Checking -> Text("Checking for updates…", style = Dari.type.caption, color = Dari.colors.textTertiary)
         Updater.Phase.UpToDate, Updater.Phase.Idle -> Unit
-        is Updater.Phase.Failed -> TooltipArea(
-            tooltip = {
-                Text(
-                    phase.message,
-                    style = Dari.type.caption,
-                    color = Dari.colors.text,
-                    modifier = Modifier.background(Dari.colors.surface, RoundedCornerShape(DariMetrics.radius))
-                        .border(1.dp, Dari.colors.border, RoundedCornerShape(DariMetrics.radius))
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                )
-            },
-        ) {
+        is Updater.Phase.Failed -> Hint(phase.message) {
             Text("Update failed", style = Dari.type.caption, color = Dari.colors.danger)
         }
     }
+}
+
+@OptIn(ExperimentalFoundationApi::class) // TooltipArea
+@Composable
+private fun Hint(text: String, content: @Composable () -> Unit) {
+    TooltipArea(
+        tooltip = {
+            Text(
+                text,
+                style = Dari.type.caption,
+                color = Dari.colors.text,
+                modifier = Modifier.background(Dari.colors.surface, RoundedCornerShape(DariMetrics.radius))
+                    .border(1.dp, Dari.colors.border, RoundedCornerShape(DariMetrics.radius))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            )
+        },
+        content = content,
+    )
 }
 
 @Composable

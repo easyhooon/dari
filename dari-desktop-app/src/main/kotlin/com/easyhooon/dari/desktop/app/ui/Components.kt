@@ -1,6 +1,7 @@
 package com.easyhooon.dari.desktop.app.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,8 +33,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
@@ -124,20 +130,39 @@ fun QuietButton(text: String, onClick: () -> Unit, enabled: Boolean = true, dang
     }
 }
 
-/** Tinted accent button for the one action worth noticing, such as an available update. */
+/** Filled Dari-blue button for the one action worth noticing, such as an available update. */
 @Composable
-fun AccentButton(text: String, onClick: () -> Unit) {
+fun AccentButton(text: String, onClick: () -> Unit, showDownloadIcon: Boolean = false) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    Box(
+    // The background colour reads well on the accent in both themes (white on blue, dark on light blue).
+    val content = Dari.colors.background
+    Row(
         Modifier.height(DariMetrics.controlHeight)
-            .background(Dari.colors.accent.copy(alpha = if (hovered) 0.22f else 0.14f), RoundedCornerShape(DariMetrics.radius))
+            .background(Dari.colors.accent.copy(alpha = if (hovered) 0.85f else 1f), RoundedCornerShape(DariMetrics.radius))
             .hoverable(interaction)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-            .padding(horizontal = 8.dp),
-        contentAlignment = Alignment.Center,
+            .pointerHoverIcon(PointerIcon.Hand)
+            .padding(horizontal = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text, style = Dari.type.label, color = Dari.colors.accent)
+        if (showDownloadIcon) DownloadIcon(content)
+        Text(text, style = Dari.type.label.copy(fontWeight = FontWeight.SemiBold), color = content)
+    }
+}
+
+/** Arrow into a tray, drawn so the app needs no icon font. */
+@Composable
+private fun DownloadIcon(color: Color) {
+    Canvas(Modifier.size(12.dp)) {
+        val stroke = 1.6.dp.toPx()
+        val w = size.width
+        val h = size.height
+        drawLine(color, Offset(w / 2, 0f), Offset(w / 2, h * 0.68f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.22f, h * 0.42f), Offset(w / 2, h * 0.7f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.78f, h * 0.42f), Offset(w / 2, h * 0.7f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(0f, h * 0.95f), Offset(w, h * 0.95f), stroke, StrokeCap.Round)
     }
 }
 
