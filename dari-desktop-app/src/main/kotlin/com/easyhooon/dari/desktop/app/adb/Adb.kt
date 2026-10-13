@@ -5,6 +5,7 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 /** [name] is the device name set in Android settings (e.g. "Jihun's S25"), when there is one. */
 data class AdbDevice(val serial: String, val model: String, val name: String? = null) {
@@ -62,13 +63,20 @@ class Adb(private val executable: String) {
 
     private fun run(vararg args: String): String {
         val process = ProcessBuilder(listOf(executable) + args).redirectErrorStream(true).start()
-        val output = process.inputStream.bufferedReader(Charsets.UTF_8).readText()
+        // Drain output on another thread: reading it here would block until adb exits, so a hung adb
+        // (e.g. an unauthorized device) would never reach the timeout below.
+        val output = StringBuilder()
+        val reader = thread(isDaemon = true) {
+            runCatching { output.append(process.inputStream.bufferedReader(Charsets.UTF_8).readText()) }
+        }
         if (!process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
             process.destroyForcibly()
             throw IOException("adb ${args.joinToString(" ")} timed out")
         }
-        if (process.exitValue() != 0) throw IOException(output.trim().ifEmpty { "adb exited with ${process.exitValue()}" })
-        return output
+        reader.join(TimeUnit.SECONDS.toMillis(TIMEOUT_SECONDS))
+        val text = output.toString()
+        if (process.exitValue() != 0) throw IOException(text.trim().ifEmpty { "adb exited with ${process.exitValue()}" })
+        return text
     }
 
     companion object {
