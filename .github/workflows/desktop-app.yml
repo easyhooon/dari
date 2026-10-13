@@ -1,6 +1,7 @@
 name: Desktop App
 
-# Unit tests plus a launch smoke test of the packaged desktop app on each OS.
+# Unit tests plus a launch smoke test of the packaged desktop app on each OS. Linux .deb files
+# are kept as artifacts so preview builds can be tried (e.g. in an ARM VM) before a release.
 on:
   pull_request:
     paths:
@@ -28,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-15, windows-latest, ubuntu-24.04]
+        runner: [macos-15, windows-latest, ubuntu-24.04, ubuntu-24.04-arm]
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
@@ -51,3 +52,14 @@ jobs:
           else
             scripts/smoke-test-desktop-app.sh
           fi
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y fakeroot
+          scripts/package-desktop-app.sh
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: deb-${{ matrix.runner }}
+          path: dari-desktop-app/build/release/*
+          retention-days: 14
