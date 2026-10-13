@@ -67,6 +67,7 @@ Tunnels are removed when the desktop app disconnects or quits. `adb forward --li
 - **Debug builds only, unless you opt in.** The socket opens only in debuggable builds, or in a non-debuggable internal build that sets the manifest flag below. Release builds use `dari-noop`, which contains no capture code.
 - **adb only.** Only adb (shell) or root can connect, so other apps on the device can't read messages.
 - **Masked by default.** Before anything leaves the device, values under keys such as `token`, `password`, `secret`, `cookie` or `authorization` are masked, as are `Bearer` credentials. Raw protobuf previews aren't sent.
+- **Nothing about you leaves your computer.** The desktop app has no analytics or telemetry. Its only network request is the update check: a request to `github.com` on launch and every six hours, which sends nothing but what any browser visit would. `dari.log` stays local and records failures only.
 
 Add your own masking on top. It runs after the built-in masking, and if it throws, the message isn't sent:
 
@@ -100,6 +101,11 @@ A non-debuggable internal build, such as staging, can opt in with this entry in 
 | Not running Dari | Check that the app is a debuggable build using `dari` 2.0.0 or later. |
 
 To report a problem, use **Help → Report an Issue…**. It opens the bug form with your Dari version and OS filled in. **Help → Show Log File** opens the folder with `dari.log` (`~/Library/Logs/Dari` on macOS, `%LOCALAPPDATA%\Dari\logs` on Windows). The log records failures only, never message contents.
+
+## Uninstall
+
+- **macOS**: quit Dari and move `/Applications/Dari.app` to the Trash. To remove its settings and log too, delete `~/Library/Logs/Dari` and `~/Library/Preferences/io.github.easyhooon.plist`.
+- **Windows**: **Settings → Apps → Installed apps → Dari → Uninstall**. Settings live in the registry under `HKEY_CURRENT_USER\Software\JavaSoft\Prefs\io\github\easyhooon`, and the log in `%LOCALAPPDATA%\Dari`.
 
 ## Build from source
 
