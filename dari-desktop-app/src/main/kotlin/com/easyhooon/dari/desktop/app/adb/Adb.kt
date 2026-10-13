@@ -3,9 +3,14 @@ package com.easyhooon.dari.desktop.app.adb
 import com.easyhooon.dari.inspector.protocol.InspectorProtocol
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
-data class AdbDevice(val serial: String, val model: String)
+/** [name] is the device name set in Android settings (e.g. "Jihun's S25"), when there is one. */
+data class AdbDevice(val serial: String, val model: String, val name: String? = null) {
+    val title: String get() = name ?: model
+}
 
 /** Thin wrapper around the `adb` binary; every call blocks, so run it off the UI thread. */
 class Adb(private val executable: String) {
@@ -16,9 +21,22 @@ class Adb(private val executable: String) {
         .filter { it.size >= 2 && it[1] == "device" }
         .map { parts ->
             val model = parts.firstOrNull { it.startsWith("model:") }?.removePrefix("model:")?.replace('_', ' ')
-            AdbDevice(serial = parts[0], model = model ?: parts[0])
+            val details = details.getOrPut(parts[0]) { readDetails(parts[0]) }
+            AdbDevice(serial = parts[0], model = details.model ?: model ?: parts[0], name = details.name)
         }
         .toList()
+
+    // Read once per device: name and model don't change while it stays attached.
+    private val details = ConcurrentHashMap<String, DeviceDetails>()
+
+    private data class DeviceDetails(val name: String?, val model: String?)
+
+    private fun readDetails(serial: String): DeviceDetails {
+        fun read(command: String) = runCatching { run("-s", serial, "shell", command).trim() }.getOrNull()
+            ?.takeIf { it.isNotEmpty() && it != "null" }
+        val model = read("getprop ro.product.model")
+        return DeviceDetails(name = read("settings get global device_name")?.takeIf { it != model }, model = model)
+    }
 
     /** Application ids with a listening Dari socket. Empty when the device hides `/proc/net/unix`. */
     fun dariApps(serial: String): List<String> = runCatching { run("-s", serial, "shell", "cat /proc/net/unix") }
@@ -45,13 +63,20 @@ class Adb(private val executable: String) {
 
     private fun run(vararg args: String): String {
         val process = ProcessBuilder(listOf(executable) + args).redirectErrorStream(true).start()
-        val output = process.inputStream.bufferedReader().readText()
+        // Drain output on another thread: reading it here would block until adb exits, so a hung adb
+        // (e.g. an unauthorized device) would never reach the timeout below.
+        val output = StringBuilder()
+        val reader = thread(isDaemon = true) {
+            runCatching { output.append(process.inputStream.bufferedReader(Charsets.UTF_8).readText()) }
+        }
         if (!process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
             process.destroyForcibly()
             throw IOException("adb ${args.joinToString(" ")} timed out")
         }
-        if (process.exitValue() != 0) throw IOException(output.trim().ifEmpty { "adb exited with ${process.exitValue()}" })
-        return output
+        reader.join(TimeUnit.SECONDS.toMillis(TIMEOUT_SECONDS))
+        val text = output.toString()
+        if (process.exitValue() != 0) throw IOException(text.trim().ifEmpty { "adb exited with ${process.exitValue()}" })
+        return text
     }
 
     companion object {

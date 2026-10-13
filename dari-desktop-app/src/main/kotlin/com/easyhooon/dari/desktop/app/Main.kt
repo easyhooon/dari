@@ -1,8 +1,11 @@
 package com.easyhooon.dari.desktop.app
 
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.Key
@@ -14,7 +17,9 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.easyhooon.dari.desktop.app.adb.Adb
 import com.easyhooon.dari.desktop.app.ui.App
+import com.easyhooon.dari.desktop.app.ui.SettingsWindow
 import com.easyhooon.dari.desktop.app.ui.appearanceLabel
+import java.awt.Desktop
 import java.awt.Taskbar
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
@@ -45,7 +50,15 @@ fun main() {
             InspectorController(scope, Adb.locate()?.let(::Adb), APP_VERSION, System.getenv("ANDROID_SERIAL"))
         }
         val settings = remember { DesktopSettings() }
-        LaunchedEffect(Unit) { controller.start() }
+        var settingsOpen by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            controller.start()
+            // macOS keeps settings under the app menu: Dari → Settings… (⌘,).
+            if (isMacOs && Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_PREFERENCES)) {
+                Desktop.getDesktop().setPreferencesHandler { settingsOpen = true }
+            }
+        }
+        if (settingsOpen) SettingsWindow(settings, onClose = { settingsOpen = false })
 
         Window(
             onCloseRequest = {
@@ -78,6 +91,10 @@ fun main() {
                         onCheckedChange = settings::updateJsonFolding,
                     )
                     CheckboxItem("Show Tags", checked = settings.showTags, onCheckedChange = settings::updateShowTags)
+                    if (!isMacOs) {
+                        Separator()
+                        Item("Settings…", shortcut = shortcut(Key.Comma), onClick = { settingsOpen = true })
+                    }
                 }
                 Menu("Session") {
                     Item("Reconnect", shortcut = shortcut(Key.R), onClick = controller::connect)

@@ -51,7 +51,7 @@ Tunnels are removed when the desktop app disconnects or quits. `adb forward --li
 
 ## Privacy
 
-- **Debug builds only.** The socket opens only in debuggable builds, and release builds use `dari-noop`, which contains no capture code.
+- **Debug builds only, unless you opt in.** The socket opens only in debuggable builds, or in a non-debuggable internal build that sets the manifest flag below. Release builds use `dari-noop`, which contains no capture code.
 - **adb only.** Only adb (shell) or root can connect, so other apps on the device can't read messages.
 - **Masked by default.** Before anything leaves the device, values under keys such as `token`, `password`, `secret`, `cookie` or `authorization` are masked, as are `Bearer` credentials. Raw protobuf previews aren't sent.
 

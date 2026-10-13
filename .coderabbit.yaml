@@ -1,0 +1,6 @@
+# Review each PR once when it opens; later pushes don't trigger another review.
+# Comment `@coderabbitai review` on a PR to ask for one, so the free OSS review limit lasts.
+reviews:
+  auto_review:
+    enabled: true
+    auto_incremental_review: false
