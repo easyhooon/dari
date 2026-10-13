@@ -13,10 +13,12 @@ import com.easyhooon.dari.inspector.protocol.WireMessageSummary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerializationException
 import java.io.IOException
 
 sealed interface ConnectionState {
@@ -100,6 +102,11 @@ class InspectorController(
                     runSession(conn)
                 } catch (e: IOException) {
                     state = ConnectionState.Connecting(e.message)
+                } catch (_: TimeoutCancellationException) {
+                    // A request timeout, not this job's cancellation: keep retrying.
+                    state = ConnectionState.Connecting("the app did not respond in time")
+                } catch (e: SerializationException) {
+                    state = ConnectionState.Connecting("unexpected data from the app: ${e.message}")
                 } finally {
                     connection?.let { conn -> withContext(Dispatchers.IO) { conn.close() } }
                     connection = null
