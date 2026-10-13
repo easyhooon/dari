@@ -97,9 +97,13 @@ private fun JsonTreeViewer(
     val horizontalScrollState = rememberScrollState()
     val shape = RoundedCornerShape(8.dp)
 
+    // The block wraps its rows (up to the space available), so collapsing shrinks it instead of
+    // leaving an empty grey area the size of the expanded tree.
+    Column(modifier = modifier) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
+            .weight(1f, fill = false)
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
@@ -115,20 +119,15 @@ private fun JsonTreeViewer(
                 ) { Text("Expand all", style = MaterialTheme.typography.labelMedium) }
                 TextButton(
                     onClick = { allPaths.forEach { path -> collapsedPaths[path] = Unit } },
-                    enabled = collapsedPaths.keys != allPaths,
+                    enabled = !collapsedPaths.keys.containsAll(allPaths),
                 ) { Text("Collapse all", style = MaterialTheme.typography.labelMedium) }
             }
         }
         BoxWithConstraints(modifier = Modifier.fillMaxWidth().weight(1f, fill = false)) {
             val viewportWidth = maxWidth
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .horizontalScroll(horizontalScrollState),
-            ) {
+            Row(modifier = Modifier.horizontalScroll(horizontalScrollState)) {
                 LazyColumn(
                     modifier = Modifier
-                        .fillMaxHeight()
                         .widthIn(min = viewportWidth)
                         .padding(vertical = 8.dp),
                 ) {
@@ -152,6 +151,7 @@ private fun JsonTreeViewer(
                 }
             }
         }
+    }
     }
 }
 
