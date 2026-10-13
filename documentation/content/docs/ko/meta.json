@@ -1,4 +1,4 @@
 {
   "title": "Dari",
-  "pages": ["index", "setup", "configuration", "interceptor", "protobuf", "modules"]
+  "pages": ["index", "setup", "configuration", "interceptor", "protobuf", "desktop", "modules"]
 }

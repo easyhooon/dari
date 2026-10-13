@@ -1,0 +1,55 @@
+name: Desktop App
+
+# Unit tests plus a launch smoke test of the packaged desktop app on each OS. macOS and Windows
+# ship; Linux runs here so it keeps working until it is released.
+on:
+  pull_request:
+    paths:
+      - "dari-desktop-app/**"
+      - "dari-inspector-protocol/**"
+      - "scripts/*desktop-app.sh"
+      - "gradle/**"
+      - "build.gradle.kts"
+      - ".github/workflows/desktop-app.yml"
+  push:
+    branches: [main]
+    paths:
+      - "dari-desktop-app/**"
+      - "dari-inspector-protocol/**"
+      - "scripts/*desktop-app.sh"
+      - "gradle/**"
+      - "build.gradle.kts"
+      - ".github/workflows/desktop-app.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, windows-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Unit tests
+        run: ./gradlew -PskipPublicationSigning :dari-inspector-protocol:test :dari-desktop-app:test
+      - name: Smoke test
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            # xvfb has no GPU; skip Skiko's OpenGL attempt and its fallback warning.
+            SKIKO_RENDER_API=SOFTWARE xvfb-run --auto-servernum scripts/smoke-test-desktop-app.sh
+          else
+            scripts/smoke-test-desktop-app.sh
+          fi

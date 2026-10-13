@@ -8,7 +8,9 @@ plugins {
     alias(libs.plugins.android.kotlin.multiplatform.library) apply false
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.compose) apply false
+    alias(libs.plugins.compose.multiplatform) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.vanniktech.maven.publish) apply false
@@ -20,6 +22,12 @@ tasks.register<Copy>("installGitHooks") {
     from("scripts/pre-commit")
     into(".git/hooks")
     filePermissions { unix("rwxr-xr-x") }
+}
+
+tasks.register<Exec>("checkDariApiParity") {
+    description = "Checks that dari and dari-noop expose the same Dari API."
+    dependsOn(":dari:compileDebugKotlin", ":dari-noop:compileDebugKotlin")
+    commandLine("bash", "scripts/check-dari-api-parity.sh")
 }
 
 tasks.matching { it.name == "preBuild" }.configureEach {

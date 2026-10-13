@@ -11,15 +11,31 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.easyhooon.dari.data.DariPreferences
 import com.easyhooon.dari.data.MessageRepository
-import com.easyhooon.dari.data.local.DariDatabase
+import kotlinx.coroutines.flow.Flow
+import com.easyhooon.dari.inspector.protocol.InspectorProtocol
+import com.easyhooon.dari.inspector.inspectorAppInfo
+import com.easyhooon.dari.inspector.InspectorSession
+import com.easyhooon.dari.inspector.InspectorDataSource
+import com.easyhooon.dari.inspector.DesktopPayloadMasker
+import com.easyhooon.dari.inspector.DesktopInspectorGate
+import com.easyhooon.dari.inspector.DariInspectorServer
+import com.easyhooon.dari.data.InspectorEntry
+import com.easyhooon.dari.data.RepositoryEvent
 import java.io.File
 import com.easyhooon.dari.interceptor.DariInterceptor
 import com.easyhooon.dari.interceptor.DefaultDariInterceptor
 import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
 import com.easyhooon.dari.interceptor.ProtobufPayloadDecoder
 import com.easyhooon.dari.notification.DariNotification
+import com.easyhooon.dari.runtime.DariRuntime
 import com.easyhooon.dari.shake.DariShakeManager
 import com.easyhooon.dari.ui.DariActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * Singleton entry point for Dari.
@@ -31,16 +47,28 @@ object Dari {
     internal lateinit var context: Context
         private set
 
-    internal var config = DariConfig()
-        private set
+    internal val config: DariConfig
+        get() = DariRuntime.config
 
-    private var database: DariDatabase? = null
+    internal val repository: MessageRepository
+        get() = DariRuntime.repository
 
-    internal lateinit var repository: MessageRepository
-        private set
+    private var notificationJob: Job? = null
+
+    @Volatile
+    private var payloadRedactor: DariPayloadRedactor? = null
+
+    private var inspectorServer: DariInspectorServer? = null
+    private var inspectorJob: Job? = null
+    private var desktopInspectorEnabled = true
+
+    // While a desktop is connected the in-app notification and shake stay quiet.
+    @Volatile
+    private var desktopConnected = false
 
     private var notification: DariNotification? = null
     private var shakeManager: DariShakeManager? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     internal lateinit var preferences: DariPreferences
         private set
@@ -51,16 +79,7 @@ object Dari {
      */
     fun init(context: Context, config: DariConfig = DariConfig()) {
         this.context = context.applicationContext
-        this.config = config
-
-        if (database == null) {
-            database = DariDatabase.create(this.context)
-            repository = MessageRepository(
-                database = database!!,
-                maxEntries = config.maxEntries,
-                retentionPeriodMs = config.retentionPeriod?.inWholeMilliseconds,
-            )
-        }
+        DariRuntime.init(this.context, config)
 
         // Guard re-initialization: DataStore throws IllegalStateException if a
         // second instance is created for the same file, which would happen on
@@ -75,10 +94,13 @@ object Dari {
         if (config.showNotification) {
             notification = DariNotification(this.context)
         }
+        observeNewMessages()
 
         applyShakeToOpen(preferences.shakeToOpen)
 
         addDynamicShortcut()
+
+        if (desktopInspectorEnabled) startDesktopInspector()
     }
 
     /**
@@ -87,6 +109,17 @@ object Dari {
     fun setShakeToOpenEnabled(enabled: Boolean) {
         preferences.setShakeToOpen(enabled)
         applyShakeToOpen(enabled)
+    }
+
+    /**
+     * Lets the Dari desktop app connect over `adb` (on by default in debuggable builds).
+     * Only adb or root can connect, and payloads are masked before they leave the device.
+     */
+    @Synchronized
+    fun setDesktopInspectorEnabled(enabled: Boolean) {
+        desktopInspectorEnabled = enabled
+        if (!::context.isInitialized) return
+        if (enabled) startDesktopInspector() else stopDesktopInspector()
     }
 
     /**
@@ -113,9 +146,57 @@ object Dari {
         preferences.setShowTagChip(show)
     }
 
+    /**
+     * Runs after the built-in masking (tokens, passwords, cookies, auth headers; raw previews are
+     * dropped) on every message sent to the desktop app. Throwing hides the message.
+     */
+    fun setPayloadRedactor(redactor: DariPayloadRedactor?) {
+        payloadRedactor = redactor
+    }
+
+    @Synchronized
+    private fun startDesktopInspector() {
+        if (inspectorServer != null || !DesktopInspectorGate.isAllowed(context)) return
+        val repository = repository
+        val source = object : InspectorDataSource {
+            override val events: Flow<RepositoryEvent> get() = repository.events
+            override fun snapshot(): List<InspectorEntry> = repository.inspectorSnapshot()
+            override fun clear() = this@Dari.clear()
+        }
+        val redactor = DariPayloadRedactor { entry ->
+            val masked = DesktopPayloadMasker.mask(entry)
+            payloadRedactor?.redact(masked) ?: masked
+        }
+        val appInfo = inspectorAppInfo(context)
+        val server = DariInspectorServer(InspectorProtocol.socketName(context.packageName)) { input, output ->
+            InspectorSession(input, output, appInfo, source, redactor, scope).run()
+        }
+        inspectorServer = server.also { it.start() }
+        // Shake registration touches the process lifecycle, which only allows the main thread.
+        inspectorJob = scope.launch(Dispatchers.Main) {
+            server.connectedClients.collect { count -> onDesktopConnectionChanged(count > 0) }
+        }
+    }
+
+    @Synchronized
+    private fun stopDesktopInspector() {
+        inspectorJob?.cancel()
+        inspectorJob = null
+        inspectorServer?.stop()
+        inspectorServer = null
+        scope.launch(Dispatchers.Main) { onDesktopConnectionChanged(false) }
+    }
+
+    private fun onDesktopConnectionChanged(connected: Boolean) {
+        if (connected == desktopConnected) return
+        desktopConnected = connected
+        if (connected) notification?.dismissAll()
+        applyShakeToOpen(preferences.shakeToOpen)
+    }
+
     private fun applyShakeToOpen(enabled: Boolean) {
         shakeManager?.unregister()
-        shakeManager = if (enabled) {
+        shakeManager = if (enabled && !desktopConnected) {
             DariShakeManager(context).also { it.register() }
         } else {
             null
@@ -146,22 +227,24 @@ object Dari {
         protobufDecoder: ProtobufPayloadDecoder,
     ): ProtobufDariInterceptor? = DefaultDariInterceptor(tag, protobufDecoder)
 
-    /**
-     * Adds a new message to the notification.
-     */
-    internal fun postMessageNotification(
-        handlerName: String,
-        displayName: String?,
-        direction: MessageDirection,
-        tag: String? = null,
-    ) {
-        notification?.postMessage(handlerName, displayName, direction, tag)
+    // UNDISPATCHED subscribes before init returns, so the first captured message is not missed.
+    private fun observeNewMessages() {
+        if (notificationJob != null) return
+        notificationJob = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            repository.events.collect { event ->
+                if (event is RepositoryEvent.Added && !desktopConnected) {
+                    val entry = event.item.entry
+                    notification?.postMessage(entry.handlerName, entry.displayName, entry.direction, entry.tag)
+                }
+            }
+        }
     }
 
     /**
      * Shows the notification (called after permission is granted).
      */
     fun showNotification() {
+        if (desktopConnected) return
         if (notification == null && config.showNotification) {
             notification = DariNotification(context)
         }

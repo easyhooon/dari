@@ -67,6 +67,10 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Extra masking for the desktop app on top of the built-in one; a no-op in dari-noop.
+        Dari.setPayloadRedactor { entry ->
+            entry.copy(requestData = entry.requestData?.replace(Regex("\"userId\":\"[^\"]*\""), "\"userId\":\"***\""))
+        }
         enableEdgeToEdge()
 
         webView = WebView(this).apply {

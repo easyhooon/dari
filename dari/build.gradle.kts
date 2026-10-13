@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.vanniktech.maven.publish)
 }
@@ -30,13 +29,20 @@ android {
 // Treat dari-core's pure-data models as stable for Compose recomposition
 // skipping. See stability_config.conf at the repo root for the class list
 // and rationale.
+kotlin {
+    compilerOptions {
+        optIn.add("com.easyhooon.dari.runtime.InternalDariApi")
+    }
+}
+
 composeCompiler {
     stabilityConfigurationFile =
         rootProject.layout.projectDirectory.file("stability_config.conf")
 }
 
 dependencies {
-    api(project(":dari-core"))
+    api(project(":dari-runtime"))
+    implementation(project(":dari-inspector-protocol"))
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))
@@ -61,17 +67,10 @@ dependencies {
     // Serialization (JSON parsing)
     implementation(libs.kotlinx.serialization.json)
 
-    // Room
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
-
     // Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.room.testing)
-    androidTestImplementation(libs.kotlinx.coroutines.test)
 }
 
 mavenPublishing {

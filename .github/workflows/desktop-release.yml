@@ -1,0 +1,64 @@
+name: Desktop App Release
+
+# Builds the desktop app for macOS (Apple Silicon, Intel) and Windows (x64), smoke-tests each build,
+# and attaches the installers and their SHA-256 files to the release for the given tag.
+# Ad-hoc signed, not notarized, on macOS; unsigned on Windows. Linux ships once tested on a real machine.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to attach the installers to (e.g. 2.0.0)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel, windows-latest]
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Smoke test
+        run: scripts/smoke-test-desktop-app.sh
+      - name: Package
+        run: scripts/package-desktop-app.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.runner }}
+          path: dari-desktop-app/build/release/*
+          if-no-files-found: error
+
+  publish:
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --title "$TAG" --notes ""
+          fi
+          gh release upload "$TAG" release/* --repo "$GITHUB_REPOSITORY" --clobber

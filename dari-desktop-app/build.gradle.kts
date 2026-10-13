@@ -1,0 +1,58 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+
+plugins {
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.compose.multiplatform)
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+dependencies {
+    implementation(project(":dari-inspector-protocol"))
+    implementation(compose.desktop.currentOs)
+    implementation(compose.material3)
+    implementation(libs.kotlinx.coroutines.swing)
+
+    testImplementation(kotlin("test"))
+    testImplementation(libs.junit)
+}
+
+compose.desktop {
+    application {
+        mainClass = "com.easyhooon.dari.desktop.app.MainKt"
+        // Package with the toolchain JDK; Compose rejects Homebrew JDKs for jpackage.
+        javaHome = javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(17)) }
+            .get().metadata.installationPath.asFile.absolutePath
+        // Dock name for `run`; packaged apps take it from packageName. The flag exists only on macOS JVMs.
+        if (System.getProperty("os.name").startsWith("Mac")) jvmArgs += "-Xdock:name=Dari"
+
+        nativeDistributions {
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            packageName = "Dari"
+            packageVersion = libs.versions.dari.get()
+            description = "Desktop inspector for Dari WebView bridge messages"
+            vendor = "easyhooon"
+
+            macOS {
+                bundleID = "io.github.easyhooon.dari.desktop"
+                iconFile.set(project.file("icons/dari.icns"))
+            }
+            windows {
+                iconFile.set(project.file("icons/dari.ico"))
+                menuGroup = "Dari"
+                // Must never change: Windows uses it to upgrade an installed Dari in place.
+                upgradeUuid = "94cfb91e-3282-4beb-a9a1-af3b4a2c6ca5"
+                perUserInstall = true
+            }
+            linux {
+                iconFile.set(project.file("icons/dari.png"))
+                packageName = "dari"
+                debMaintainer = "mraz3068@gmail.com"
+                menuGroup = "Development"
+            }
+        }
+    }
+}

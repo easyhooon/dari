@@ -1,0 +1,95 @@
+---
+title: Desktop App
+description: Inspect bridge messages from your computer over adb
+---
+
+The Dari desktop app shows the bridge messages of a connected debug build on your computer: a live list, the request and response side by side, and foldable JSON. It needs `dari` 2.0.0 or later and works with real devices and emulators. It runs on macOS and, in preview, Windows; a Linux build is planned.
+
+## Install
+
+### macOS
+
+1. Download `Dari-<version>-arm64.dmg` (Apple Silicon) or `Dari-<version>-x64.dmg` (Intel) from the [releases page](https://github.com/easyhooon/dari/releases).
+2. Open the image and drag **Dari** into **Applications**.
+3. Optionally, compare `shasum -a 256 Dari-<version>-arm64.dmg` with the `.sha256` file from the same release. A match means the download isn't corrupted; it doesn't prove who published it.
+
+#### First launch
+
+The app is ad-hoc signed, without an Apple Developer ID or notarization, so macOS blocks it the first time:
+
+1. Open Dari once and dismiss the warning.
+2. Go to **System Settings → Privacy & Security** and click **Open Anyway** next to the Dari message.
+3. Confirm. Later launches open normally.
+
+Download Dari only from the repository's releases page.
+
+### Windows (preview)
+
+1. Download `Dari-<version>-x64.msi` from the [releases page](https://github.com/easyhooon/dari/releases) and run it. It installs for the current user only.
+2. The installer isn't code-signed, so SmartScreen may warn on first run. Click **More info → Run anyway**.
+3. Optionally, compare `certutil -hashfile Dari-<version>-x64.msi SHA256` with the `.sha256` file from the same release.
+
+## Connect
+
+1. Keep `adb` available: set `ANDROID_HOME`, or install Android Studio in its default location.
+2. Connect a device with USB debugging on, or start an emulator.
+3. Run a debuggable build of your app that uses `dari` and bring it to the foreground.
+
+Dari finds the device and the app on its own and connects. With several devices, pick one from the title bar, or start Dari with `ANDROID_SERIAL` set. If the device hides its app list, type the applicationId instead.
+
+While the desktop app is connected, the in-app notification and shake-to-open pause; they come back when it disconnects.
+
+## How it connects
+
+There is nothing to configure: no proxy, certificate, Wi-Fi or port.
+
+1. Your app opens a named socket, `dari_<applicationId>`, that only exists inside the device.
+2. The desktop app runs `adb forward tcp:0 localabstract:dari_<applicationId>`. This opens a free port on your computer, chosen by adb, and tunnels it over USB to that socket.
+3. The desktop app talks to `127.0.0.1:<port>`, and adb carries the data to your app.
+
+Tunnels are removed when the desktop app disconnects or quits. `adb forward --list` shows any open ones.
+
+## Privacy
+
+- **Debug builds only.** The socket opens only in debuggable builds, and release builds use `dari-noop`, which contains no capture code.
+- **adb only.** Only adb (shell) or root can connect, so other apps on the device can't read messages.
+- **Masked by default.** Before anything leaves the device, values under keys such as `token`, `password`, `secret`, `cookie` or `authorization` are masked, as are `Bearer` credentials. Raw protobuf previews aren't sent.
+
+Add your own masking on top. It runs after the built-in masking, and if it throws, the message isn't sent:
+
+```kotlin
+Dari.setPayloadRedactor { entry ->
+    entry.copy(requestData = entry.requestData?.replace(Regex("\"phone\":\"[^\"]*\""), "\"phone\":\"***\""))
+}
+```
+
+To keep the socket closed entirely:
+
+```kotlin
+Dari.setDesktopInspectorEnabled(false)
+```
+
+A non-debuggable internal build, such as staging, can opt in with this entry in its manifest:
+
+```xml
+<meta-data
+    android:name="com.easyhooon.dari.desktop.ALLOW_NON_DEBUGGABLE"
+    android:value="true" />
+```
+
+## Troubleshooting
+
+| Status | What to do |
+| --- | --- |
+| adb not found | Set `ANDROID_HOME`, or add `platform-tools` to `PATH`, then reopen Dari. |
+| No device | Check `adb devices`. Accept the USB debugging prompt on the device. |
+| App is in the background | Android pauses background apps. Bring the app to the foreground and Dari reconnects. |
+| Not running Dari | Check that the app is a debuggable build using `dari` 2.0.0 or later. |
+
+## Build from source
+
+```bash
+git clone https://github.com/easyhooon/dari.git
+cd dari
+./gradlew :dari-desktop-app:run
+```

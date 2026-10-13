@@ -29,9 +29,18 @@ object Dari {
     fun setDarkMode(value: Boolean?) = Unit
 
     @Suppress("UNUSED_PARAMETER")
+    fun setJsonFoldingEnabled(enabled: Boolean) = Unit
+
+    @Suppress("UNUSED_PARAMETER")
     fun setShowTagChip(show: Boolean) = Unit
 
     fun showNotification() = Unit
+
+    @Suppress("UNUSED_PARAMETER")
+    fun setPayloadRedactor(redactor: DariPayloadRedactor?) = Unit
+
+    @Suppress("UNUSED_PARAMETER")
+    fun setDesktopInspectorEnabled(enabled: Boolean) = Unit
 
     fun clear() = Unit
 }
