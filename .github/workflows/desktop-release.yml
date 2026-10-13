@@ -34,6 +34,16 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+      - name: Check the tag matches the app version
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          # Installers are named after the catalog version, so a mismatch would mislabel them.
+          version="$(sed -n 's/^dari = "\(.*\)"/\1/p' gradle/libs.versions.toml)"
+          if [ "$TAG" != "$version" ]; then
+            echo "Tag $TAG does not match the version $version in gradle/libs.versions.toml" >&2
+            exit 1
+          fi
       - name: Smoke test
         run: scripts/smoke-test-desktop-app.sh
       - name: Package
