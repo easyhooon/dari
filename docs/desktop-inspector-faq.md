@@ -84,6 +84,84 @@ Dari therefore works the same way as the Android Studio debugger: the app listen
 reaches it through an adb tunnel. That is also why the app sees its peer as uid 2000 (adb shell): the
 process that actually opens the connection on the phone is `adbd`.
 
+### How the Dari desktop app works, end to end
+
+```mermaid
+flowchart LR
+    subgraph phone["Phone or emulator — debuggable app"]
+        direction TB
+        js["JavaScript in WebView"] <-->|"bridge call"| bridge["App bridge code"]
+        bridge -->|"onWebToAppRequest / ..."| icpt["DariInterceptor"]
+        icpt --> repo["MessageRepository<br/>(memory + Room)"]
+        repo -->|"added / updated / cleared"| sess["InspectorSession<br/>masking + redactor"]
+        sess --> srv["DariInspectorServer<br/>@dari_&lt;applicationId&gt;<br/>adb (uid 2000) only"]
+        adbd["adbd"]
+    end
+    subgraph computer["Computer"]
+        direction TB
+        adbsrv["adb server :5037"]
+        port["127.0.0.1:&lt;free port&gt;<br/>adb forward"]
+        app["Dari desktop app<br/>list · detail · JSON tree"]
+    end
+    srv <-->|"local socket"| adbd
+    adbd <==>|"USB (device)<br/>or TCP (emulator)"| adbsrv
+    adbsrv --- port
+    port <-->|"TCP: hello, then list / detail / observe"| app
+```
+
+1. A bridge call goes through `DariInterceptor`, and `MessageRepository` stores it and emits an event.
+2. `InspectorSession` masks the message and writes it to the `dari_<applicationId>` socket.
+3. adb carries the bytes to the forwarded port on the computer.
+4. The desktop app shows the message. It first subscribes to `observe`, then asks for the backlog with
+   `list`, then fetches bodies with `detail` when a message is selected.
+
+### How Android Studio talks to a phone or emulator
+
+```mermaid
+flowchart LR
+    subgraph computer["Computer"]
+        direction TB
+        studio["Android Studio<br/>debugger · Logcat · installer"]
+        adbsrv["adb server :5037"]
+    end
+    subgraph phone["Phone — USB"]
+        direction TB
+        adbd["adbd"]
+        jdwp["App's JDWP endpoint<br/>(debuggable builds)"]
+        logd["logd (Logcat)"]
+        pm["Package manager<br/>(install)"]
+    end
+    subgraph emu["Emulator — on the same computer"]
+        direction TB
+        eadbd["adbd in the emulator"]
+        ejdwp["App's JDWP endpoint"]
+    end
+    studio <--> adbsrv
+    adbsrv <==>|"USB"| adbd
+    adbsrv <-->|"local TCP 5555"| eadbd
+    adbd --> jdwp
+    adbd --> logd
+    adbd --> pm
+    eadbd --> ejdwp
+```
+
+A real phone is reached over USB. An emulator runs `adbd` inside it and registers with the adb server
+over local TCP (port 5555 for the first emulator), so to every adb client it looks like a USB device.
+That is why the Dari desktop app needs no special case for emulators.
+
+### Side by side
+
+| | Android Studio | Dari desktop app |
+| --- | --- | --- |
+| Client on the computer | Android Studio (and the `adb` CLI) | Dari desktop app |
+| Path to the device | adb server → USB or local TCP → `adbd` | The same adb server and `adbd` |
+| Endpoint inside the app | JDWP, opened by ART in debuggable builds | `dari_<applicationId>`, opened by the `dari` library in debuggable builds |
+| Tunnel | `adb forward tcp:<port> jdwp:<pid>` | `adb forward tcp:0 localabstract:dari_<applicationId>` |
+| What flows | Breakpoints, stepping and variables; Logcat lines; APK installs | Bridge messages: summaries, bodies and live events, masked before they leave |
+| Who may connect | Anyone with adb access to the device | Only adb (uid 2000) or root, checked by the app |
+| Release builds | Not debuggable, so no JDWP | `dari-noop`, so no socket and no capture code |
+| Setup on the device | USB debugging | USB debugging; the `dari` debug dependency in the app |
+
 ## 3. What is `adb forward`, and why are there no ports to set?
 
 `adb forward` is a USB tunnel. It opens a port on the computer and pipes it to a socket inside the
