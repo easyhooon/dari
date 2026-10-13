@@ -3,6 +3,7 @@ package com.easyhooon.dari.desktop.app.update
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.easyhooon.dari.desktop.app.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -86,6 +87,7 @@ class Updater(
             }
         } catch (e: Exception) {
             // A failed background check shouldn't put an error in the title bar.
+            AppLog.error("Update check failed", e)
             if (quiet) phase else Phase.Failed(e.message ?: "The update check failed.")
         }
     }
@@ -146,6 +148,7 @@ class Updater(
                 }
                 quit()
             } catch (e: Exception) {
+                AppLog.error("Update to $version failed", e)
                 withContext(Dispatchers.IO) {
                     if (mounted) runCatching { Processes.run("/usr/bin/hdiutil", "detach", "-force", mountPoint.toString()) }
                     runCatching { workspace.toFile().deleteRecursively() }
