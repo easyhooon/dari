@@ -12,9 +12,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -45,6 +49,18 @@ class MessageRepository internal constructor(
     private val _entries = MutableStateFlow<List<MessageEntry>>(emptyList())
     val entries: StateFlow<List<MessageEntry>> = _entries.asStateFlow()
 
+    // Guards entry mutations together with their events so the inspector sees them in order.
+    private val lock = Any()
+
+    // DB id -> temp id for entries created in this process, so inspector ids never change.
+    private val wireIds = HashMap<Long, Long>()
+
+    private val _events = MutableSharedFlow<RepositoryEvent>(
+        extraBufferCapacity = EVENT_BUFFER_CAPACITY,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    internal val events: SharedFlow<RepositoryEvent> = _events.asSharedFlow()
+
     /**
      * Derived projection of [entries]. Always in sync by construction — we
      * never mutate a parallel count field, so TTL pruning and `maxEntries`
@@ -69,7 +85,7 @@ class MessageRepository internal constructor(
                 dao.deleteOlderThan(cutoff)
             }
             val persisted = dao.getAll().map { it.toMessageEntry() }
-            _entries.value = persisted
+            synchronized(lock) { _entries.value = persisted }
             initialized.complete(Unit)
         }
     }
@@ -82,19 +98,26 @@ class MessageRepository internal constructor(
         val entryWithTempId = entry.copy(id = tempId)
 
         // Add to memory first for immediate UI update (applying TTL filter on the fly).
-        _entries.update { current ->
-            val pruned = RetentionPolicy.prune(current, retentionCutoff())
-            val updated = pruned + entryWithTempId
-            if (updated.size > maxEntries) updated.drop(updated.size - maxEntries) else updated
+        synchronized(lock) {
+            _entries.update { current ->
+                val pruned = RetentionPolicy.prune(current, retentionCutoff())
+                val updated = pruned + entryWithTempId
+                if (updated.size > maxEntries) updated.drop(updated.size - maxEntries) else updated
+            }
+            _events.tryEmit(RepositoryEvent.Added(InspectorEntry(tempId, entryWithTempId)))
         }
 
         // Insert to DB asynchronously and update with actual id
         scope.launch {
             val actualId = dao.insert(entry.toEntity())
-            _entries.update { current ->
-                current.map { e ->
-                    if (e.id == tempId) e.copy(id = actualId) else e
+            synchronized(lock) {
+                _entries.update { current ->
+                    current.map { e ->
+                        if (e.id == tempId) e.copy(id = actualId) else e
+                    }
                 }
+                wireIds[actualId] = tempId
+                pruneWireIds()
             }
             dao.trimOldEntries(maxEntries)
             retentionCutoff()?.let { dao.deleteOlderThan(it) }
@@ -103,14 +126,17 @@ class MessageRepository internal constructor(
 
     fun updateEntry(requestId: String, tag: String? = null, transform: (MessageEntry) -> MessageEntry) {
         var updatedEntry: MessageEntry? = null
-        _entries.update { current ->
-            current.map { entry ->
-                if (entry.requestId == requestId && entry.tag == tag) {
-                    transform(entry).also { updatedEntry = it }
-                } else {
-                    entry
+        synchronized(lock) {
+            _entries.update { current ->
+                current.map { entry ->
+                    if (entry.requestId == requestId && entry.tag == tag) {
+                        transform(entry).also { updatedEntry = it }
+                    } else {
+                        entry
+                    }
                 }
             }
+            updatedEntry?.let { _events.tryEmit(RepositoryEvent.Updated(InspectorEntry(wireIdOf(it.id), it))) }
         }
         updatedEntry?.let { entry ->
             scope.launch {
@@ -133,12 +159,34 @@ class MessageRepository internal constructor(
     }
 
     fun clear() {
-        _entries.value = emptyList()
+        synchronized(lock) {
+            _entries.value = emptyList()
+            wireIds.clear()
+            _events.tryEmit(RepositoryEvent.Cleared)
+        }
         scope.launch { dao.clear() }
+    }
+
+    /** Current entries with their stable inspector ids, consistent with [events]. */
+    internal fun inspectorSnapshot(): List<InspectorEntry> = synchronized(lock) {
+        _entries.value.map { InspectorEntry(wireIdOf(it.id), it) }
+    }
+
+    private fun wireIdOf(id: Long): Long = wireIds[id] ?: id
+
+    // Drop mappings for entries already trimmed from memory; called with lock held.
+    private fun pruneWireIds() {
+        if (wireIds.size <= maxEntries * 2) return
+        val liveIds = _entries.value.mapTo(HashSet()) { it.id }
+        wireIds.keys.retainAll(liveIds)
     }
 
     @VisibleForTesting
     internal fun close() {
         scope.cancel()
+    }
+
+    private companion object {
+        const val EVENT_BUFFER_CAPACITY = 256
     }
 }
