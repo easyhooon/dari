@@ -40,8 +40,18 @@ compose.desktop {
                 bundleID = "io.github.easyhooon.dari.desktop"
                 iconFile.set(project.file("icons/dari.icns"))
             }
+            windows {
+                iconFile.set(project.file("icons/dari.ico"))
+                menuGroup = "Dari"
+                // Must never change: Windows uses it to upgrade an installed Dari in place.
+                upgradeUuid = "94cfb91e-3282-4beb-a9a1-af3b4a2c6ca5"
+                perUserInstall = true
+            }
             linux {
                 iconFile.set(project.file("icons/dari.png"))
+                packageName = "dari"
+                debMaintainer = "mraz3068@gmail.com"
+                menuGroup = "Development"
             }
         }
     }

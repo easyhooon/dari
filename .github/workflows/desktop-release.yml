@@ -1,12 +1,13 @@
 name: Desktop App Release
 
-# Builds the macOS desktop app (Apple Silicon and Intel) and attaches the DMGs and their
-# SHA-256 files to the GitHub release for the given tag. Ad-hoc signed, not notarized.
+# Builds the desktop app for macOS (Apple Silicon, Intel), Windows (x64) and Linux (x64, arm64),
+# smoke-tests each build, and attaches the installers and their SHA-256 files to the release for
+# the given tag. Unsigned on Windows; ad-hoc signed, not notarized, on macOS.
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to attach the DMGs to (e.g. 2.0.0)"
+        description: "Release tag to attach the installers to (e.g. 2.0.0)"
         required: true
 
 permissions:
@@ -15,9 +16,13 @@ permissions:
 jobs:
   package:
     strategy:
+      fail-fast: false
       matrix:
-        runner: [macos-15, macos-15-intel]
+        runner: [macos-15, macos-15-intel, windows-latest, ubuntu-24.04, ubuntu-24.04-arm]
     runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,11 +33,21 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
-      - name: Package DMG
-        run: scripts/package-desktop-app.sh
+      - name: Smoke test
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run --auto-servernum scripts/smoke-test-desktop-app.sh
+          else
+            scripts/smoke-test-desktop-app.sh
+          fi
+      - name: Package
+        run: |
+          # jpackage needs fakeroot to build .deb files.
+          if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get install -y fakeroot; fi
+          scripts/package-desktop-app.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: dmg-${{ matrix.runner }}
+          name: installer-${{ matrix.runner }}
           path: dari-desktop-app/build/release/*
           if-no-files-found: error
 
