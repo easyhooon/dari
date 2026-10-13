@@ -26,17 +26,19 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
@@ -44,9 +46,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
-import kotlinx.coroutines.delay
-import java.awt.Toolkit
-import java.awt.datatransfer.StringSelection
 
 enum class StatusKind { PENDING, SUCCESS, ERROR }
 
@@ -282,39 +281,52 @@ fun DariMenuItem(text: String, onClick: () -> Unit, checked: Boolean = false) {
 
 /** Code block with a copy button that appears on hover. */
 @Composable
-fun CodeBlock(text: String, modifier: Modifier = Modifier) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    var copied by remember { mutableStateOf(false) }
-    LaunchedEffect(copied) {
-        if (copied) {
-            delay(COPIED_FEEDBACK_MS)
-            copied = false
-        }
-    }
+fun CodeBlock(text: String, onCopy: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier.fillMaxWidth()
             .background(Dari.colors.surface, RoundedCornerShape(DariMetrics.radius))
-            .border(1.dp, Dari.colors.border, RoundedCornerShape(DariMetrics.radius))
-            .hoverable(interaction),
+            .border(1.dp, Dari.colors.border, RoundedCornerShape(DariMetrics.radius)),
     ) {
         Text(
             text,
             style = Dari.type.code,
             color = Dari.colors.text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.padding(start = 12.dp, end = 72.dp, top = 8.dp, bottom = 8.dp),
         )
-        if (hovered || copied) {
-            Box(Modifier.align(Alignment.TopEnd).padding(4.dp)) {
-                QuietButton(
-                    text = if (copied) "copied" else "copy",
-                    onClick = {
-                        Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null)
-                        copied = true
-                    },
-                )
-            }
-        }
+        Box(Modifier.align(Alignment.TopEnd).padding(4.dp)) { CopyButton(onCopy) }
+    }
+}
+
+/** Code-block copy control: the two-sheets icon plus a label, as on GitHub and in docs sites. */
+@Composable
+fun CopyButton(onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    val color = if (hovered) Dari.colors.text else Dari.colors.textSecondary
+    Row(
+        Modifier.height(DariMetrics.controlHeight)
+            .background(if (hovered) Dari.colors.hover else Color.Transparent, RoundedCornerShape(DariMetrics.radius))
+            .hoverable(interaction)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .padding(horizontal = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CopyIcon(color)
+        Text("Copy", style = Dari.type.label, color = color)
+    }
+}
+
+@Composable
+private fun CopyIcon(color: Color) {
+    Canvas(Modifier.size(12.dp)) {
+        val stroke = Stroke(1.3.dp.toPx())
+        val corner = CornerRadius(2.dp.toPx())
+        val sheet = Size(size.width * 0.68f, size.height * 0.68f)
+        // Back sheet, top-left; front sheet, bottom-right.
+        drawRoundRect(color, Offset.Zero, sheet, corner, stroke)
+        drawRoundRect(color, Offset(size.width - sheet.width, size.height - sheet.height), sheet, corner, stroke)
     }
 }
 
@@ -347,6 +359,5 @@ fun EmptyState(title: String, hint: String?, modifier: Modifier = Modifier) {
     }
 }
 
-private const val COPIED_FEEDBACK_MS = 1_400L
 private val MENU_RADIUS = 8.dp
 private val MENU_ROW_HEIGHT = 28.dp

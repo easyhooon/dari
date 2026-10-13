@@ -216,6 +216,7 @@ private fun FilterBar(controller: InspectorController) {
             onPick = { controller.statusFilter = it },
         )
         Spacer(Modifier.weight(1f))
+        controller.notice?.let { Text(it, style = Dari.type.caption, color = Dari.colors.accent) }
         Text(
             messageCount(visible.size, controller.messages.size),
             style = Dari.type.codeCaption,
@@ -269,6 +270,11 @@ private fun Workspace(controller: InspectorController, settings: DesktopSettings
             DetailPane(
                 detail = controller.detail,
                 jsonFoldingEnabled = settings.jsonFoldingEnabled,
+                onCopy = controller::copySelected,
+                onCopyPayload = controller::copy,
+                onSave = { format ->
+                    chooseExportFile(null, format)?.let { controller.export(it, format, all = false) }
+                },
                 onClose = controller::closeDetail,
                 modifier = Modifier.width(with(density) { detailWidth.coerceIn(minDetail, maxDetail).toDp() })
                     .fillMaxHeight(),
@@ -285,7 +291,8 @@ private fun Divider() {
 private fun statusLine(state: ConnectionState): String = when (state) {
     ConnectionState.Idle -> "Not connected"
     is ConnectionState.Connecting -> state.reason?.let { "Waiting for app · $it" } ?: "Connecting…"
-    is ConnectionState.Connected -> with(state.app) { "App v$appVersion · API $sdkInt · Dari $dariVersion" }
+    // The library version stays in the tooltip; the desktop version is in About.
+    is ConnectionState.Connected -> with(state.app) { "App v$appVersion · API $sdkInt" }
 }
 
 private fun statusDetails(state: ConnectionState): String = when (state) {

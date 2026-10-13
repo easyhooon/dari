@@ -25,6 +25,7 @@ import com.easyhooon.dari.desktop.app.ui.AboutWindow
 import com.easyhooon.dari.desktop.app.ui.App
 import com.easyhooon.dari.desktop.app.ui.SettingsWindow
 import com.easyhooon.dari.desktop.app.ui.appearanceLabel
+import com.easyhooon.dari.desktop.app.ui.chooseExportFile
 import com.easyhooon.dari.desktop.app.update.ReleaseSource
 import com.easyhooon.dari.desktop.app.update.Updater
 import kotlinx.coroutines.FlowPreview
@@ -150,6 +151,20 @@ fun main() {
                     Item("Reconnect", shortcut = shortcut(Key.R), onClick = controller::connect)
                     Item("Disconnect", shortcut = shortcut(Key.D), onClick = controller::disconnectByUser)
                     Separator()
+                    Item(
+                        "Copy Message as Text",
+                        shortcut = shortcut(Key.C, shift = true),
+                        enabled = controller.canCopy,
+                        onClick = controller::copySelected,
+                    )
+                    ExportFormat.entries.forEach { format ->
+                        Item(
+                            if (format == ExportFormat.TEXT) "Export Messages as Text…" else "Export Messages as JSON…",
+                            enabled = controller.canExport,
+                            onClick = { chooseExportFile(window, format)?.let { controller.export(it, format, all = true) } },
+                        )
+                    }
+                    Separator()
                     Item("Clear Messages", shortcut = shortcut(Key.K), onClick = controller::clearMessages)
                 }
                 Menu("Help") {
@@ -214,4 +229,5 @@ private fun browse(uri: URI) {
     if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) Desktop.getDesktop().browse(uri)
 }
 
-private fun shortcut(key: Key) = if (isMacOs) KeyShortcut(key, meta = true) else KeyShortcut(key, ctrl = true)
+private fun shortcut(key: Key, shift: Boolean = false) =
+    if (isMacOs) KeyShortcut(key, meta = true, shift = shift) else KeyShortcut(key, ctrl = true, shift = shift)

@@ -1,6 +1,8 @@
 package com.easyhooon.dari.desktop.app.ui
 
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -13,18 +15,32 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.easyhooon.dari.desktop.app.ExportFormat
+import com.easyhooon.dari.desktop.app.MessageExport
+import com.easyhooon.dari.desktop.app.isMacOs
 import com.easyhooon.dari.desktop.app.ui.json.JsonPayload
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
 import com.easyhooon.dari.inspector.protocol.WirePayloadMetadata
+import kotlinx.coroutines.launch
 
 /**
  * Everything for one message on a single screen: a one-line summary, then the request and
@@ -34,6 +50,9 @@ import com.easyhooon.dari.inspector.protocol.WirePayloadMetadata
 fun DetailPane(
     detail: WireMessageDetail?,
     jsonFoldingEnabled: Boolean,
+    onCopy: () -> Unit,
+    onCopyPayload: (text: String, what: String) -> Unit,
+    onSave: (ExportFormat) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -60,6 +79,7 @@ fun DetailPane(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
+                    ExportMenu(onCopy, onSave)
                     QuietButton("✕", onClick = onClose)
                 }
                 Text(
@@ -80,6 +100,7 @@ fun DetailPane(
                     detail.requestDataTruncated,
                     detail.requestPayloadMetadata,
                     jsonFoldingEnabled,
+                    onCopyPayload,
                     it,
                 )
             }
@@ -91,6 +112,7 @@ fun DetailPane(
                     detail.responseDataTruncated,
                     detail.responsePayloadMetadata,
                     jsonFoldingEnabled,
+                    onCopyPayload,
                     it,
                 )
             }
@@ -111,6 +133,29 @@ fun DetailPane(
     }
 }
 
+/** The in-app detail screen's share and save actions, desktop style. */
+@Composable
+private fun ExportMenu(onCopy: () -> Unit, onSave: (ExportFormat) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        QuietButton("Export ▾", onClick = { open = true })
+        DariMenu(expanded = open, onDismiss = { open = false }) {
+            DariMenuItem("Copy as Text", onClick = {
+                open = false
+                onCopy()
+            })
+            DariMenuItem("Save as Text…", onClick = {
+                open = false
+                onSave(ExportFormat.TEXT)
+            })
+            DariMenuItem("Save as JSON…", onClick = {
+                open = false
+                onSave(ExportFormat.JSON)
+            })
+        }
+    }
+}
+
 private fun summaryLine(detail: WireMessageDetail): String {
     val s = detail.summary
     return listOfNotNull(
@@ -122,6 +167,7 @@ private fun summaryLine(detail: WireMessageDetail): String {
     ).joinToString("  ·  ")
 }
 
+@OptIn(ExperimentalComposeUiApi::class) // onPointerEvent
 @Composable
 private fun PayloadColumn(
     title: String,
@@ -130,10 +176,24 @@ private fun PayloadColumn(
     truncated: Boolean,
     metadata: WirePayloadMetadata?,
     jsonFoldingEnabled: Boolean,
+    onCopy: (text: String, what: String) -> Unit,
     modifier: Modifier,
 ) {
-    SelectionContainer(modifier) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
+    // Compose Desktop's verticalScroll takes mouse drags as scroll gestures, which blocked drag-selecting
+    // payload text. Drag is left to selection; the wheel, trackpad and scrollbar scroll instead.
+    val scroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val wheelStep = with(LocalDensity.current) { (if (isMacOs) 10.dp else 48.dp).toPx() }
+    Box(modifier) {
+        Column(
+            Modifier.fillMaxSize()
+                .onPointerEvent(PointerEventType.Scroll) { event ->
+                    val delta = event.changes.first().scrollDelta.y * wheelStep
+                    scope.launch { scroll.scrollBy(delta) }
+                }
+                .verticalScroll(scroll, enabled = false)
+                .padding(12.dp),
+        ) {
             Row(
                 Modifier.fillMaxWidth().padding(bottom = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -151,9 +211,12 @@ private fun PayloadColumn(
             if (data == null) {
                 Text("No payload", style = Dari.type.caption, color = Dari.colors.textTertiary)
             } else {
-                JsonPayload(data, jsonFoldingEnabled)
+                SelectionContainer {
+                    JsonPayload(data, jsonFoldingEnabled, onCopy = { onCopy(MessageExport.payload(data), title.lowercase()) })
+                }
             }
         }
+        VerticalScrollbar(rememberScrollbarAdapter(scroll), Modifier.align(Alignment.CenterEnd).fillMaxHeight())
     }
 }
 

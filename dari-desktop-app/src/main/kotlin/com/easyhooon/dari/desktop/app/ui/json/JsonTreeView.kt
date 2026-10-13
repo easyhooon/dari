@@ -26,54 +26,56 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.desktop.app.ui.CodeBlock
+import com.easyhooon.dari.desktop.app.ui.CopyButton
 import com.easyhooon.dari.desktop.app.ui.QuietButton
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariColors
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
-import java.awt.Toolkit
-import java.awt.datatransfer.StringSelection
 
 /** JSON shows as a foldable tree; anything else falls back to a plain code block. */
 @Composable
-fun JsonPayload(text: String, foldingEnabled: Boolean, modifier: Modifier = Modifier) {
+fun JsonPayload(text: String, foldingEnabled: Boolean, onCopy: () -> Unit, modifier: Modifier = Modifier) {
     when (val content = remember(text) { parseJsonViewerContent(text) }) {
-        is JsonViewerContent.Structured -> JsonTree(content.element, foldingEnabled, modifier)
-        is JsonViewerContent.PlainText -> CodeBlock(content.text, modifier)
+        is JsonViewerContent.Structured -> JsonTree(content.element, foldingEnabled, onCopy, modifier)
+        is JsonViewerContent.PlainText -> CodeBlock(content.text, onCopy, modifier)
     }
 }
 
 @Composable
-private fun JsonTree(element: JsonElement, foldingEnabled: Boolean, modifier: Modifier) {
+private fun JsonTree(element: JsonElement, foldingEnabled: Boolean, onCopy: () -> Unit, modifier: Modifier) {
     // Nodes deeper than two levels start folded, as in the in-app viewer.
     var collapsed by remember(element) { mutableStateOf(defaultCollapsedPaths(element)) }
     val rows = remember(element, collapsed, foldingEnabled) { buildJsonTreeRows(element, collapsed, foldingEnabled) }
     val allPaths = remember(element) { allCollapsiblePaths(element) }
-    val pretty = remember(element) { prettyJson.encodeToString(JsonElement.serializer(), element) }
-    Column(
+    val foldable = foldingEnabled && allPaths.isNotEmpty()
+    Box(
         modifier.fillMaxWidth()
             .background(Dari.colors.surface, RoundedCornerShape(DariMetrics.radius))
             .border(1.dp, Dari.colors.border, RoundedCornerShape(DariMetrics.radius)),
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            if (foldingEnabled && allPaths.isNotEmpty()) {
-                QuietButton("Expand all", onClick = { collapsed = emptySet() }, enabled = collapsed.isNotEmpty())
-                QuietButton("Collapse all", onClick = { collapsed = allPaths }, enabled = collapsed != allPaths)
+        Column {
+            // A toolbar row only when there is folding to control; otherwise Copy floats in the corner.
+            if (foldable) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    QuietButton("Expand all", onClick = { collapsed = emptySet() }, enabled = collapsed.isNotEmpty())
+                    QuietButton("Collapse all", onClick = { collapsed = allPaths }, enabled = collapsed != allPaths)
+                    CopyButton(onCopy)
+                }
             }
-            QuietButton("Copy", onClick = { copyToClipboard(pretty) })
-        }
-        Column(Modifier.padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 8.dp)) {
-            rows.forEach { row ->
-                JsonRow(row) { path ->
-                    collapsed = if (path in collapsed) collapsed - path else collapsed + path
+            Column(Modifier.padding(start = 4.dp, end = if (foldable) 12.dp else 72.dp, top = 8.dp, bottom = 8.dp)) {
+                rows.forEach { row ->
+                    JsonRow(row) { path ->
+                        collapsed = if (path in collapsed) collapsed - path else collapsed + path
+                    }
                 }
             }
         }
+        if (!foldable) Box(Modifier.align(Alignment.TopEnd).padding(4.dp)) { CopyButton(onCopy) }
     }
 }
 
@@ -124,11 +126,5 @@ private fun JsonTokenType.color(colors: DariColors, collapsed: Boolean): Color =
 /** Every foldable path, for "Collapse all": the container rows of the fully expanded tree. */
 internal fun allCollapsiblePaths(element: JsonElement): Set<String> =
     buildJsonTreeRows(element, emptySet()).mapNotNullTo(mutableSetOf()) { it.containerPath }
-
-private fun copyToClipboard(text: String) {
-    Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null)
-}
-
-private val prettyJson = Json { prettyPrint = true }
 
 private const val INDENT_DP = 16
