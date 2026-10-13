@@ -28,6 +28,7 @@ import kotlinx.serialization.json.JsonObject
 import java.io.Closeable
 import java.io.IOException
 import java.net.Socket
+import java.net.SocketTimeoutException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.thread
@@ -152,8 +153,12 @@ class InspectorConnection private constructor(
                     ClientHello(InspectorProtocol.VERSION, "dari-desktop", clientVersion),
                 )
                 // adb accepts locally even when nothing listens on the device, then closes: no app.
-                val hello = FrameReader(socket.getInputStream()).read(ServerHello.serializer())
-                    ?: throw IOException("$applicationId is not running Dari desktop on this device")
+                val hello = try {
+                    FrameReader(socket.getInputStream()).read(ServerHello.serializer())
+                } catch (_: SocketTimeoutException) {
+                    // Android freezes cached apps: the socket accepts but nothing answers.
+                    throw IOException("$applicationId did not answer; bring it to the foreground")
+                } ?: throw IOException("$applicationId is not running Dari desktop on this device")
                 if (!hello.accepted) throw IOException("App rejected the connection: ${hello.rejection}")
                 socket.soTimeout = 0
                 return InspectorConnection(socket, adb, serial, port, requireNotNull(hello.app))

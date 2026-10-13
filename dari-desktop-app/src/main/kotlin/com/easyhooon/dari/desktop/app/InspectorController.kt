@@ -30,10 +30,11 @@ class InspectorController(
     private val scope: CoroutineScope,
     private val adb: Adb?,
     private val clientVersion: String,
+    preferredSerial: String? = null,
 ) {
     var devices by mutableStateOf<List<AdbDevice>>(emptyList())
         private set
-    var selectedSerial by mutableStateOf<String?>(null)
+    var selectedSerial by mutableStateOf(preferredSerial)
         private set
     var discoveredApps by mutableStateOf<List<String>>(emptyList())
         private set
@@ -53,6 +54,9 @@ class InspectorController(
     var statusFilter by mutableStateOf<String?>(null)
 
     private var connection: InspectorConnection? = null
+
+    // Connects on its own when exactly one Dari app is found, until the user disconnects.
+    private var autoConnect = true
     private var connectJob: Job? = null
 
     val adbMissing: Boolean get() = adb == null
@@ -70,6 +74,7 @@ class InspectorController(
     fun selectDevice(serial: String) {
         if (serial == selectedSerial) return
         disconnect()
+        autoConnect = true
         selectedSerial = serial
         discoveredApps = emptyList()
     }
@@ -96,6 +101,12 @@ class InspectorController(
                 delay(POLL_INTERVAL_MS)
             }
         }
+    }
+
+    /** User-initiated: also stops auto-connect. */
+    fun disconnectByUser() {
+        autoConnect = false
+        disconnect()
     }
 
     fun disconnect() {
@@ -151,12 +162,16 @@ class InspectorController(
         merge(backlog)
         state = ConnectionState.Connected(conn.app)
         selectedId?.let { if (it in messages) loadDetail(it) }
+        selectNewestIfNone()
         for (event in events) apply(event)
     }
 
     private fun apply(event: ObserveEvent) {
         when (event) {
-            is ObserveEvent.Added -> merge(listOf(event.message))
+            is ObserveEvent.Added -> {
+                merge(listOf(event.message))
+                selectNewestIfNone()
+            }
             is ObserveEvent.Updated -> {
                 merge(listOf(event.message))
                 if (event.message.id == selectedId) loadDetail(event.message.id)
@@ -167,6 +182,11 @@ class InspectorController(
                 detail = null
             }
         }
+    }
+
+    // Keeps the detail pane filled so the latest payloads are visible without a click.
+    private fun selectNewestIfNone() {
+        if (selectedId == null) messages.values.lastOrNull()?.let { select(it.id) }
     }
 
     private fun merge(items: List<WireMessageSummary>) {
@@ -195,6 +215,7 @@ class InspectorController(
         val apps = withContext(Dispatchers.IO) { adb.dariApps(serial) }
         discoveredApps = apps
         if (applicationId.isBlank() && apps.size == 1) applicationId = apps.single()
+        if (autoConnect && state == ConnectionState.Idle && apps.size == 1 && applicationId == apps.single()) connect()
     }
 
     private fun ConnectionState.reasonOrNull(): String? = (this as? ConnectionState.Connecting)?.reason

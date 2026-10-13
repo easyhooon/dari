@@ -110,7 +110,7 @@ private fun TitleBar(controller: InspectorController) {
         if (state == ConnectionState.Idle) {
             QuietButton("Connect", onClick = controller::connect, enabled = controller.applicationId.isNotBlank())
         } else {
-            QuietButton("Disconnect", onClick = controller::disconnect)
+            QuietButton("Disconnect", onClick = controller::disconnectByUser)
         }
     }
 }
@@ -176,27 +176,25 @@ private fun Workspace(controller: InspectorController) {
                 emptyHint = emptyHint(controller),
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             )
-            if (controller.selectedId != null) {
-                Box(
-                    Modifier.width(5.dp).fillMaxHeight()
-                        .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
-                        .draggable(
-                            orientation = Orientation.Horizontal,
-                            state = rememberDraggableState { delta ->
-                                detailWidth = (detailWidth - delta).coerceIn(minDetail, maxDetail)
-                            },
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(Modifier.width(1.dp).fillMaxHeight().background(Dari.colors.border))
-                }
-                DetailPane(
-                    detail = controller.detail,
-                    onClose = controller::closeDetail,
-                    modifier = Modifier.width(with(density) { detailWidth.coerceIn(minDetail, maxDetail).toDp() })
-                        .fillMaxHeight(),
-                )
+            Box(
+                Modifier.width(5.dp).fillMaxHeight()
+                    .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state = rememberDraggableState { delta ->
+                            detailWidth = (detailWidth - delta).coerceIn(minDetail, maxDetail)
+                        },
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(Modifier.width(1.dp).fillMaxHeight().background(Dari.colors.border))
             }
+            DetailPane(
+                detail = controller.detail,
+                onClose = controller::closeDetail,
+                modifier = Modifier.width(with(density) { detailWidth.coerceIn(minDetail, maxDetail).toDp() })
+                    .fillMaxHeight(),
+            )
         }
     }
 }
@@ -220,4 +218,4 @@ private fun emptyHint(controller: InspectorController): Pair<String, String?> = 
     else -> "No messages yet" to "Use a bridge in the connected app and it appears here."
 }
 
-private const val DETAIL_FRACTION = 0.45f
+private const val DETAIL_FRACTION = 0.55f

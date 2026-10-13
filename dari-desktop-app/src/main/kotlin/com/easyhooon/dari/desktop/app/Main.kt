@@ -3,6 +3,8 @@ package com.easyhooon.dari.desktop.app
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyShortcut
 import androidx.compose.ui.unit.dp
@@ -12,6 +14,9 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.easyhooon.dari.desktop.app.adb.Adb
 import com.easyhooon.dari.desktop.app.ui.App
+import java.awt.Taskbar
+import java.awt.image.BufferedImage
+import javax.imageio.ImageIO
 
 private const val APP_VERSION = "0.1.0"
 
@@ -22,9 +27,20 @@ fun main() {
     System.setProperty("apple.awt.application.name", "Dari")
     System.setProperty("apple.awt.application.appearance", "system")
 
+    val icon = loadAppIcon()
+    // Dock icon while running unpackaged (`./gradlew run`); packaged apps use the bundle icon.
+    icon?.let { image ->
+        if (Taskbar.isTaskbarSupported() && Taskbar.getTaskbar().isSupported(Taskbar.Feature.ICON_IMAGE)) {
+            Taskbar.getTaskbar().iconImage = image
+        }
+    }
+
     application {
         val scope = rememberCoroutineScope()
-        val controller = remember { InspectorController(scope, Adb.locate()?.let(::Adb), APP_VERSION) }
+        val controller = remember {
+            // ANDROID_SERIAL picks the device first, as it does for adb itself.
+            InspectorController(scope, Adb.locate()?.let(::Adb), APP_VERSION, System.getenv("ANDROID_SERIAL"))
+        }
         LaunchedEffect(Unit) { controller.start() }
 
         Window(
@@ -33,6 +49,7 @@ fun main() {
                 exitApplication()
             },
             title = "Dari",
+            icon = icon?.let { BitmapPainter(it.toComposeImageBitmap()) },
             state = rememberWindowState(width = 1280.dp, height = 820.dp),
         ) {
             if (isMacOs) {
@@ -44,7 +61,7 @@ fun main() {
             MenuBar {
                 Menu("Session") {
                     Item("Reconnect", shortcut = shortcut(Key.R), onClick = controller::connect)
-                    Item("Disconnect", shortcut = shortcut(Key.D), onClick = controller::disconnect)
+                    Item("Disconnect", shortcut = shortcut(Key.D), onClick = controller::disconnectByUser)
                     Separator()
                     Item("Clear Messages", shortcut = shortcut(Key.K), onClick = controller::clearMessages)
                 }
@@ -53,5 +70,8 @@ fun main() {
         }
     }
 }
+
+private fun loadAppIcon(): BufferedImage? =
+    Thread.currentThread().contextClassLoader.getResourceAsStream("dari-icon.png")?.use(ImageIO::read)
 
 private fun shortcut(key: Key) = if (isMacOs) KeyShortcut(key, meta = true) else KeyShortcut(key, ctrl = true)

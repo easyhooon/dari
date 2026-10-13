@@ -196,36 +196,6 @@ fun <T> Picker(
     }
 }
 
-/** Text-only tabs; the selected one gets the text colour and a 1dp accent underline. */
-@Composable
-fun Tabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        tabs.forEachIndexed { index, title ->
-            val active = index == selected
-            Column(
-                Modifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) { onSelect(index) },
-            ) {
-                Text(
-                    title,
-                    style = Dari.type.label,
-                    color = if (active) Dari.colors.text else Dari.colors.textSecondary,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-                Box(
-                    Modifier.fillMaxWidth().height(1.dp)
-                        .background(if (active) Dari.colors.accent else Color.Transparent),
-                )
-            }
-        }
-    }
-}
-
 /** Code block with a copy button that appears on hover. */
 @Composable
 fun CodeBlock(text: String, modifier: Modifier = Modifier) {

@@ -23,6 +23,8 @@ dependencies {
 compose.desktop {
     application {
         mainClass = "com.easyhooon.dari.desktop.app.MainKt"
+        // Dock name for `run`; packaged apps take it from packageName. The flag exists only on macOS JVMs.
+        if (System.getProperty("os.name").startsWith("Mac")) jvmArgs += "-Xdock:name=Dari"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
@@ -30,6 +32,14 @@ compose.desktop {
             packageVersion = libs.versions.dari.get()
             description = "Desktop inspector for Dari WebView bridge messages"
             vendor = "easyhooon"
+
+            macOS {
+                bundleID = "io.github.easyhooon.dari.desktop"
+                iconFile.set(project.file("icons/dari.icns"))
+            }
+            linux {
+                iconFile.set(project.file("icons/dari.png"))
+            }
         }
     }
 }

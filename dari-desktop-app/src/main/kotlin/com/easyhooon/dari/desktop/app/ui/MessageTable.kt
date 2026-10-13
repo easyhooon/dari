@@ -8,6 +8,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -51,6 +52,7 @@ private val TagWidth = 108.dp
 private val TimeWidth = 104.dp
 private val DurationWidth = 72.dp
 private val SizeWidth = 72.dp
+private val COMPACT_WIDTH = 640.dp
 
 /** Newest-first table. ↑/↓ moves the selection, Esc closes the detail. */
 @Composable
@@ -64,47 +66,52 @@ fun MessageTable(
     modifier: Modifier = Modifier,
 ) {
     val focus = remember { FocusRequester() }
-    Column(
-        modifier.focusRequester(focus).focusable().onPreviewKeyEvent { event ->
-            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-            when (event.key) {
-                Key.DirectionDown -> onMove(1).let { true }
-                Key.DirectionUp -> onMove(-1).let { true }
-                Key.Escape -> onClose().let { true }
-                else -> false
+    BoxWithConstraints(modifier) {
+        // Narrow table: drop Tag and Size so the handler name keeps its room.
+        val compact = maxWidth < COMPACT_WIDTH
+        Column(
+            Modifier.fillMaxSize().focusRequester(focus).focusable().onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                when (event.key) {
+                    Key.DirectionDown -> onMove(1).let { true }
+                    Key.DirectionUp -> onMove(-1).let { true }
+                    Key.Escape -> onClose().let { true }
+                    else -> false
+                }
+            },
+        ) {
+            HeaderRow(compact)
+            if (messages.isEmpty()) {
+                EmptyState(emptyHint.first, emptyHint.second, Modifier.fillMaxSize())
+                return@Column
             }
-        },
-    ) {
-        HeaderRow()
-        if (messages.isEmpty()) {
-            EmptyState(emptyHint.first, emptyHint.second, Modifier.fillMaxSize())
-            return@Column
-        }
-        val listState = rememberLazyListState()
-        val selectedIndex = messages.indexOfFirst { it.id == selectedId }
-        LaunchedEffect(selectedIndex) {
-            if (selectedIndex >= 0) {
-                val visible = listState.layoutInfo.visibleItemsInfo.map { it.index }
-                if (selectedIndex !in visible) listState.animateScrollToItem(selectedIndex)
+            val listState = rememberLazyListState()
+            val selectedIndex = messages.indexOfFirst { it.id == selectedId }
+            LaunchedEffect(selectedIndex) {
+                if (selectedIndex >= 0) {
+                    val visible = listState.layoutInfo.visibleItemsInfo.map { it.index }
+                    if (selectedIndex !in visible) listState.animateScrollToItem(selectedIndex)
+                }
             }
-        }
-        LazyColumn(Modifier.fillMaxSize(), state = listState) {
-            items(messages, key = { it.id }) { message ->
-                MessageRow(
-                    message = message,
-                    selected = message.id == selectedId,
-                    onClick = {
-                        focus.requestFocus()
-                        onSelect(message.id)
-                    },
-                )
+            LazyColumn(Modifier.fillMaxSize(), state = listState) {
+                items(messages, key = { it.id }) { message ->
+                    MessageRow(
+                        message = message,
+                        compact = compact,
+                        selected = message.id == selectedId,
+                        onClick = {
+                            focus.requestFocus()
+                            onSelect(message.id)
+                        },
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun HeaderRow() {
+private fun HeaderRow(compact: Boolean) {
     val border = Dari.colors.border
     Row(
         Modifier.fillMaxWidth().height(DariMetrics.rowHeight)
@@ -114,10 +121,10 @@ private fun HeaderRow() {
         HeaderCell("Status", StatusWidth)
         HeaderCell("Dir", DirectionWidth)
         HeaderCell("Handler", null)
-        HeaderCell("Tag", TagWidth)
+        if (!compact) HeaderCell("Tag", TagWidth)
         HeaderCell("Time", TimeWidth, TextAlign.End)
         HeaderCell("Duration", DurationWidth, TextAlign.End)
-        HeaderCell("Size", SizeWidth, TextAlign.End)
+        if (!compact) HeaderCell("Size", SizeWidth, TextAlign.End)
     }
 }
 
@@ -133,7 +140,7 @@ private fun RowScope.HeaderCell(text: String, width: Dp?, align: TextAlign = Tex
 }
 
 @Composable
-private fun MessageRow(message: WireMessageSummary, selected: Boolean, onClick: () -> Unit) {
+private fun MessageRow(message: WireMessageSummary, compact: Boolean, selected: Boolean, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     val fill = when {
@@ -178,10 +185,10 @@ private fun MessageRow(message: WireMessageSummary, selected: Boolean, onClick: 
                 )
             }
         }
-        Box(cell(TagWidth)) { message.tag?.let { Badge(it) } }
+        if (!compact) Box(cell(TagWidth)) { message.tag?.let { Badge(it) } }
         NumericCell(formatTime(message.requestTimestamp), TimeWidth)
         NumericCell(durationLabel(message), DurationWidth)
-        NumericCell(formatBytes(message.requestSizeBytes + message.responseSizeBytes), SizeWidth)
+        if (!compact) NumericCell(formatBytes(message.requestSizeBytes + message.responseSizeBytes), SizeWidth)
     }
 }
 
