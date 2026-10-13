@@ -2,93 +2,104 @@ package com.easyhooon.dari.desktop.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.easyhooon.dari.desktop.app.ui.theme.Dari
+import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
 import com.easyhooon.dari.inspector.protocol.WirePayloadMetadata
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
+
+private val Tabs = listOf("Summary", "Request", "Response")
 
 @Composable
-fun DetailPane(detail: WireMessageDetail?, hasSelection: Boolean, modifier: Modifier = Modifier) {
-    if (detail == null) {
-        CenteredHint(if (hasSelection) "Loading…" else "Select a message", modifier)
-        return
-    }
-    val summary = detail.summary
-    SelectionContainer(modifier) {
-        Column(
-            Modifier.verticalScroll(rememberScrollState()).padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+fun DetailPane(detail: WireMessageDetail?, onClose: () -> Unit, modifier: Modifier = Modifier) {
+    var tab by rememberSaveable { mutableIntStateOf(0) }
+    Column(modifier.background(Dari.colors.surface)) {
+        if (detail == null) {
+            EmptyState("Loading…", null, Modifier.fillMaxWidth().weight(1f))
+            return@Column
+        }
+        val summary = detail.summary
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = DariMetrics.toolbarHeight).padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(summary.displayName ?: summary.handlerName, style = MaterialTheme.typography.titleLarge)
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Field("Handler", summary.handlerName)
-                Field("Direction", directionLabel(summary.direction))
-                Field("Status", summary.status)
-                summary.tag?.let { Field("Tag", it) }
-                summary.requestId?.let { Field("Request ID", it) }
-                Field("Requested", formatTime(summary.requestTimestamp))
-                Field("Duration", durationLabel(summary))
+            StatusMark(summary.status)
+            Text(directionLabel(summary.direction), style = Dari.type.codeCaption, color = Dari.colors.textSecondary)
+            Text(
+                summary.displayName ?: summary.handlerName,
+                style = Dari.type.title,
+                color = Dari.colors.text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            QuietButton("✕", onClick = onClose)
+        }
+        Tabs(Tabs, tab) { tab = it }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Dari.colors.border))
+        SelectionContainer(Modifier.weight(1f)) {
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
+                when (tab) {
+                    0 -> Pairs(summaryPairs(detail))
+                    1 -> PayloadSection(detail.requestData, detail.requestDataTruncated, detail.requestPayloadMetadata)
+                    else -> PayloadSection(detail.responseData, detail.responseDataTruncated, detail.responsePayloadMetadata)
+                }
             }
-            Payload("Request", detail.requestData, detail.requestDataTruncated, detail.requestPayloadMetadata)
-            Payload("Response", detail.responseData, detail.responseDataTruncated, detail.responsePayloadMetadata)
         }
     }
 }
 
-@Composable
-private fun Field(label: String, value: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(end = 4.dp),
-        )
-        Text(value, style = MaterialTheme.typography.bodySmall)
-    }
+private fun summaryPairs(detail: WireMessageDetail): List<Pair<String, String>> {
+    val s = detail.summary
+    return listOfNotNull(
+        "Handler" to s.handlerName,
+        s.displayName?.let { "Display name" to it },
+        "Direction" to directionLabel(s.direction),
+        "Status" to s.status.lowercase(),
+        s.tag?.let { "Tag" to it },
+        s.requestId?.let { "Request ID" to it },
+        "Requested" to formatTime(s.requestTimestamp),
+        s.responseTimestamp?.let { "Responded" to formatTime(it) },
+        "Duration" to durationLabel(s),
+        "Request size" to formatBytes(s.requestSizeBytes),
+        "Response size" to formatBytes(s.responseSizeBytes),
+    )
 }
 
 @Composable
-private fun Payload(title: String, data: String?, truncated: Boolean, metadata: WirePayloadMetadata?) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        val notes = listOfNotNull(
-            metadata?.let { "${it.contentType.lowercase()} · ${it.decodeStatus.lowercase()} · ${it.originalSizeBytes} B" },
+private fun PayloadSection(data: String?, truncated: Boolean, metadata: WirePayloadMetadata?) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val meta = listOfNotNull(
+            metadata?.let { formatBytes(it.originalSizeBytes) },
+            metadata?.contentType?.lowercase() ?: data?.let { "text" },
+            metadata?.decodeStatus?.lowercase()?.replace('_', ' '),
             "truncated".takeIf { truncated },
         )
-        Text(
-            (listOf(title) + notes).joinToString("  ·  "),
-            style = MaterialTheme.typography.titleSmall,
-        )
-        Text(
-            data?.let(::prettyJsonOrRaw) ?: "(empty)",
-            fontFamily = FontFamily.Monospace,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
-                .padding(12.dp),
-        )
+        if (meta.isNotEmpty()) Text(meta.joinToString(" · "), style = Dari.type.caption, color = Dari.colors.textTertiary)
+        if (data == null) {
+            Text("No payload", style = Dari.type.body, color = Dari.colors.textTertiary)
+        } else {
+            CodeBlock(prettyJsonOrRaw(data))
+        }
     }
-}
-
-private val prettyJson = Json { prettyPrint = true }
-
-internal fun prettyJsonOrRaw(text: String): String = try {
-    prettyJson.encodeToString(JsonElement.serializer(), prettyJson.parseToJsonElement(text))
-} catch (_: SerializationException) {
-    text
 }

@@ -49,6 +49,8 @@ class InspectorController(
     var detail by mutableStateOf<WireMessageDetail?>(null)
         private set
     var filter by mutableStateOf("")
+    var directionFilter by mutableStateOf<String?>(null)
+    var statusFilter by mutableStateOf<String?>(null)
 
     private var connection: InspectorConnection? = null
     private var connectJob: Job? = null
@@ -109,18 +111,35 @@ class InspectorController(
         loadDetail(id)
     }
 
+    fun closeDetail() {
+        selectedId = null
+        detail = null
+    }
+
+    /** Moves the selection within [visible] by [delta] rows (keyboard ↑/↓). */
+    fun moveSelection(visible: List<WireMessageSummary>, delta: Int) {
+        if (visible.isEmpty()) return
+        val current = visible.indexOfFirst { it.id == selectedId }
+        val next = if (current < 0) 0 else (current + delta).coerceIn(0, visible.lastIndex)
+        select(visible[next].id)
+    }
+
     fun clearMessages() {
         val conn = connection ?: return
         scope.launch { runCatching { conn.clear() } }
     }
 
+    /** Newest first, after the search, direction and status facets. */
     fun visibleMessages(): List<WireMessageSummary> {
         val query = filter.trim()
-        val all = messages.values.toList()
-        if (query.isEmpty()) return all
-        return all.filter { message ->
-            listOfNotNull(message.handlerName, message.displayName, message.tag, message.status)
-                .any { it.contains(query, ignoreCase = true) }
+        return messages.values.reversed().filter { message ->
+            (directionFilter == null || message.direction == directionFilter) &&
+                (statusFilter == null || message.status == statusFilter) &&
+                (
+                    query.isEmpty() ||
+                        listOfNotNull(message.handlerName, message.displayName, message.tag, message.requestId)
+                            .any { it.contains(query, ignoreCase = true) }
+                    )
         }
     }
 
