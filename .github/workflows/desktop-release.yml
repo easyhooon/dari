@@ -64,6 +64,9 @@ jobs:
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: scripts/package-desktop-app.sh
+      - name: Show Compose signing logs
+        if: failure() && runner.os == 'macOS'
+        run: tail -n 50 dari-desktop-app/build/compose/logs/createDistributable/*.txt || true
       - name: Remove temporary macOS credentials
         if: always() && runner.os == 'macOS'
         run: |
