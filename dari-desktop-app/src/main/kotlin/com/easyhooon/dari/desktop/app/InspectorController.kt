@@ -57,6 +57,9 @@ class InspectorController(
 
     private var connection: InspectorConnection? = null
 
+    // ANDROID_SERIAL or a pick in the device menu; automatic picks may be revised later.
+    private var deviceChosenByUser = preferredSerial != null
+
     // Set when the user closes the detail pane; new messages then stop reopening it.
     private var detailDismissed = false
 
@@ -80,6 +83,7 @@ class InspectorController(
     }
 
     fun selectDevice(serial: String) {
+        deviceChosenByUser = true
         if (serial == selectedSerial) return
         disconnect()
         autoConnect = true
@@ -230,12 +234,23 @@ class InspectorController(
     private suspend fun refreshDevices(adb: Adb) {
         val found = withContext(Dispatchers.IO) { runCatching { adb.devices() }.getOrDefault(emptyList()) }
         devices = found
-        // With nothing chosen yet, prefer a device that is actually running a Dari app.
-        val serial = selectedSerial ?: withContext(Dispatchers.IO) {
-            found.firstOrNull { adb.dariApps(it.serial).isNotEmpty() } ?: found.firstOrNull()
-        }?.serial?.also { selectedSerial = it } ?: return
-        if (found.none { it.serial == serial }) return
-        val apps = withContext(Dispatchers.IO) { adb.dariApps(serial) }
+        // Until the user picks a device, prefer one that is actually running a Dari app, and switch
+        // to it if it shows up after another device was picked automatically.
+        val current = selectedSerial?.takeIf { serial -> found.any { it.serial == serial } }
+        val currentApps = current?.let { withContext(Dispatchers.IO) { adb.dariApps(it) } }.orEmpty()
+        if (!deviceChosenByUser && state == ConnectionState.Idle && currentApps.isEmpty()) {
+            val better = withContext(Dispatchers.IO) {
+                found.firstOrNull { it.serial != current && adb.dariApps(it.serial).isNotEmpty() }
+            }?.serial ?: current ?: found.firstOrNull()?.serial
+            if (better != selectedSerial) {
+                selectedSerial = better
+                applicationId = ""
+                discoveredApps = emptyList()
+                return
+            }
+        }
+        val serial = current ?: return
+        val apps = currentApps
         discoveredApps = apps
         if (applicationId.isBlank() && apps.size == 1) applicationId = apps.single()
         if (autoConnect && state == ConnectionState.Idle && apps.size == 1 && applicationId == apps.single()) connect()
