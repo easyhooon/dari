@@ -6,6 +6,10 @@ export const baseOptions: BaseLayoutProps = {
   },
   links: [
     {
+      text: 'Download',
+      url: '/download',
+    },
+    {
       text: 'GitHub',
       url: 'https://github.com/easyhooon/dari',
       external: true,

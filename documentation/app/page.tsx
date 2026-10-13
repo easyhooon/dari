@@ -17,6 +17,12 @@ export default function HomePage() {
           Get Started
         </Link>
         <Link
+          href="/download"
+          className="rounded-xl border border-gray-300 px-10 py-4 text-base font-semibold transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+        >
+          Download
+        </Link>
+        <Link
           href="https://github.com/easyhooon/dari"
           className="rounded-xl border border-gray-300 px-10 py-4 text-base font-semibold transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
           target="_blank"
