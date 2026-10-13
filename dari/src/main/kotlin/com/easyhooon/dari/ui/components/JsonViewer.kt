@@ -1,6 +1,9 @@
 package com.easyhooon.dari.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
@@ -90,46 +93,65 @@ private fun JsonTreeViewer(
         collapsedPaths = collapsedPaths.keys,
         foldingEnabled = foldingEnabled,
     )
+    val allPaths = remember(element) { allCollapsiblePaths(element) }
     val horizontalScrollState = rememberScrollState()
     val shape = RoundedCornerShape(8.dp)
 
-    BoxWithConstraints(
-        modifier = modifier
+    // The block wraps its rows (up to the space available), so collapsing shrinks it instead of
+    // leaving an empty grey area the size of the expanded tree.
+    Column(modifier = modifier) {
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
+            .weight(1f, fill = false)
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        val viewportWidth = maxWidth
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .horizontalScroll(horizontalScrollState),
-        ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .widthIn(min = viewportWidth)
-                    .padding(vertical = 8.dp),
+        // Opening deep payloads one node at a time is tedious; these act on this block only.
+        if (foldingEnabled && allPaths.isNotEmpty()) {
+            Row(
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
             ) {
-                items(
-                    items = rows,
-                    key = JsonTreeRow::id,
-                    contentType = { if (it.containerPath != null) "container" else "value" },
-                ) { row ->
-                    JsonTreeLine(
-                        row = row,
-                        showDisclosureGutter = foldingEnabled,
-                        onToggle = { path, expanded ->
-                            if (expanded) {
-                                collapsedPaths[path] = Unit
-                            } else {
-                                collapsedPaths.remove(path)
-                            }
-                        },
-                    )
+                TextButton(
+                    onClick = { collapsedPaths.clear() },
+                    enabled = collapsedPaths.isNotEmpty(),
+                ) { Text("Expand all", style = MaterialTheme.typography.labelMedium) }
+                TextButton(
+                    onClick = { allPaths.forEach { path -> collapsedPaths[path] = Unit } },
+                    enabled = !collapsedPaths.keys.containsAll(allPaths),
+                ) { Text("Collapse all", style = MaterialTheme.typography.labelMedium) }
+            }
+        }
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth().weight(1f, fill = false)) {
+            val viewportWidth = maxWidth
+            Row(modifier = Modifier.horizontalScroll(horizontalScrollState)) {
+                LazyColumn(
+                    modifier = Modifier
+                        .widthIn(min = viewportWidth)
+                        .padding(vertical = 8.dp),
+                ) {
+                    items(
+                        items = rows,
+                        key = JsonTreeRow::id,
+                        contentType = { if (it.containerPath != null) "container" else "value" },
+                    ) { row ->
+                        JsonTreeLine(
+                            row = row,
+                            showDisclosureGutter = foldingEnabled,
+                            onToggle = { path, expanded ->
+                                if (expanded) {
+                                    collapsedPaths[path] = Unit
+                                } else {
+                                    collapsedPaths.remove(path)
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }
+    }
     }
 }
 

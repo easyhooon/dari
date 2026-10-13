@@ -64,6 +64,10 @@ internal fun buildJsonTreeRows(
     )
 }
 
+/** Every foldable path, for "Collapse all": the container rows of the fully expanded tree. */
+internal fun allCollapsiblePaths(element: JsonElement): Set<String> =
+    buildJsonTreeRows(element, emptySet()).mapNotNullTo(mutableSetOf()) { it.containerPath }
+
 internal fun defaultCollapsedPaths(element: JsonElement): Set<String> = buildSet {
     collectCollapsiblePaths(
         element = element,

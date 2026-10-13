@@ -7,7 +7,20 @@ The Dari desktop app shows the bridge messages of a connected debug build on you
 
 ## Install
 
-### macOS
+### macOS from Terminal
+
+The quickest way. It picks the build for your Mac's chip, checks it against the release's SHA-256
+file, and installs or updates `/Applications/Dari.app`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install-desktop.sh | bash
+```
+
+Files downloaded with `curl` don't get macOS's download flag, so Dari opens right away without the
+first-launch prompt below. The checksum is what catches a bad download, so run the command only from
+this page or the repository. To pin a version, put `DARI_VERSION=2.0.0` before `bash`.
+
+### macOS from the DMG
 
 1. Download `Dari-<version>-arm64.dmg` (Apple Silicon) or `Dari-<version>-x64.dmg` (Intel) from the [download page](/download) or the [releases page](https://github.com/easyhooon/dari/releases).
 2. Open the image and drag **Dari** into **Applications**.

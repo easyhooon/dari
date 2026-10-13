@@ -159,4 +159,19 @@ class JsonViewerModelTest {
         assertTrue("Expected ${T::class.simpleName}, but was ${value?.let { it::class.simpleName }}", value is T)
         return value as T
     }
+
+    @Test
+    fun `collapse all folds every foldable node`() {
+        val root = assertType<JsonViewerContent.Structured>(
+            parseJsonViewerContent("""{"a":{"b":[1,{"c":2}]},"d":3}"""),
+        ).element
+
+        val paths = allCollapsiblePaths(root)
+        val fullyCollapsed = buildJsonTreeRows(root, paths)
+
+        assertTrue(paths.isNotEmpty())
+        assertTrue(fullyCollapsed.none { it.expanded == true })
+        assertTrue(fullyCollapsed.size < buildJsonTreeRows(root, emptySet()).size)
+    }
+
 }
