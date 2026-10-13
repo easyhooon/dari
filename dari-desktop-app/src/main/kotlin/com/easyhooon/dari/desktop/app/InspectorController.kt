@@ -63,7 +63,10 @@ class InspectorController(
 
     fun start() {
         if (adb == null) return
+        // Forwards outlive the process when it is killed; clear them now and on JVM exit.
+        Runtime.getRuntime().addShutdownHook(Thread { adb.removeDariForwards() })
         scope.launch {
+            withContext(Dispatchers.IO) { adb.removeDariForwards() }
             while (isActive) {
                 refreshDevices(adb)
                 delay(POLL_INTERVAL_MS)

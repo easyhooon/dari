@@ -35,6 +35,14 @@ class Adb(private val executable: String) {
         runCatching { run("-s", serial, "forward", "--remove", "tcp:$port") }
     }
 
+    /** Drops every forward to a Dari socket, e.g. ones left behind when the app was killed. */
+    fun removeDariForwards() {
+        val forwards = runCatching { run("forward", "--list") }.getOrDefault("")
+        parseDariForwards(forwards).forEach { (serial, local) ->
+            runCatching { run("-s", serial, "forward", "--remove", local) }
+        }
+    }
+
     private fun run(vararg args: String): String {
         val process = ProcessBuilder(listOf(executable) + args).redirectErrorStream(true).start()
         val output = process.inputStream.bufferedReader().readText()
@@ -64,6 +72,13 @@ class Adb(private val executable: String) {
                 env["PATH"].orEmpty().split(File.pathSeparator).filter { it.isNotBlank() }.map { File(it, exe) }
             return candidates.firstOrNull { it.canExecute() }?.absolutePath
         }
+
+        // `adb forward --list` lines: `<serial> tcp:<port> localabstract:dari_<applicationId>`.
+        fun parseDariForwards(list: String): List<Pair<String, String>> = list.lineSequence()
+            .map { it.trim().split(Regex("\\s+")) }
+            .filter { it.size == 3 && it[2].startsWith("localabstract:" + InspectorProtocol.SOCKET_NAME_PREFIX) }
+            .map { it[0] to it[1] }
+            .toList()
 
         // Abstract sockets appear as `@dari_<applicationId>` in the last column.
         fun parseDariSockets(procNetUnix: String): List<String> = procNetUnix.lineSequence()

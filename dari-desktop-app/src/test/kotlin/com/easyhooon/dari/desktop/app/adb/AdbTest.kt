@@ -48,3 +48,19 @@ class AdbTest {
         empty.deleteRecursively()
     }
 }
+
+class AdbForwardListTest {
+    @Test
+    fun `picks only forwards to dari sockets`() {
+        val list = """
+            R3CY70P3F4H tcp:56778 localabstract:dari_com.example.app
+            R3CY70P3F4H tcp:8081 tcp:8081
+            emulator-5554 tcp:61157 localabstract:dari_com.other
+        """.trimIndent()
+
+        assertEquals(
+            listOf("R3CY70P3F4H" to "tcp:56778", "emulator-5554" to "tcp:61157"),
+            Adb.parseDariForwards(list),
+        )
+    }
+}
