@@ -32,6 +32,9 @@ elif tool == "plutil":
     print(os.environ.get("TEST_APP_VERSION", "2.1.1") if "CFBundleShortVersionString" in args
           else "io.github.easyhooon.dari.desktop")
 elif tool == "codesign":
+    if "--test-requirement" in args:
+        # A requirement without "=" is read as a file path by codesign.
+        assert args[args.index("--test-requirement") + 1].startswith("=")
     if "--verify" in args and os.environ.get("FAIL_SIGNATURE") == "1":
         sys.exit(1)
     if "--entitlements" in args:
