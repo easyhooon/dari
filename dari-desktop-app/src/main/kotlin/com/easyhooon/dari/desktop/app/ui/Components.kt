@@ -154,6 +154,7 @@ fun <T> Picker(
     optionLabel: (T) -> String,
     onPick: (T) -> Unit,
     modifier: Modifier = Modifier,
+    secondary: String? = null,
     leading: @Composable (() -> Unit)? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -180,6 +181,7 @@ fun <T> Picker(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.widthIn(max = 260.dp),
             )
+            secondary?.let { Text(it, style = Dari.type.caption, color = Dari.colors.textTertiary, maxLines = 1) }
             Text("▾", style = Dari.type.caption, color = Dari.colors.textTertiary)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {

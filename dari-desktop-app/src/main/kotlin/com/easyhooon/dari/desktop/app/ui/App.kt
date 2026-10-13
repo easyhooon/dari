@@ -86,10 +86,12 @@ private fun TitleBar(controller: InspectorController, settings: DesktopSettings)
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("Dari", style = Dari.type.label, color = Dari.colors.text, modifier = Modifier.padding(end = 8.dp))
+        val device = controller.devices.firstOrNull { it.serial == controller.selectedSerial }
         Picker(
-            label = controller.devices.firstOrNull { it.serial == controller.selectedSerial }?.model ?: "No device",
+            label = device?.title ?: "No device",
+            secondary = device?.model?.takeIf { device.name != null },
             options = controller.devices,
-            optionLabel = { "${it.model}  ·  ${it.serial}" },
+            optionLabel = { listOfNotNull(it.name, it.model, it.serial).joinToString("  ·  ") },
             onPick = { controller.selectDevice(it.serial) },
         )
         Text("/", style = Dari.type.caption, color = Dari.colors.textTertiary)
