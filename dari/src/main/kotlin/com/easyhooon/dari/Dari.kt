@@ -13,7 +13,6 @@ import com.easyhooon.dari.data.DariPreferences
 import com.easyhooon.dari.data.InspectorEntry
 import com.easyhooon.dari.data.MessageRepository
 import com.easyhooon.dari.data.RepositoryEvent
-import com.easyhooon.dari.data.local.DariDatabase
 import com.easyhooon.dari.inspector.DariInspectorServer
 import com.easyhooon.dari.inspector.InspectorDataSource
 import com.easyhooon.dari.inspector.InspectorSession
@@ -25,12 +24,16 @@ import com.easyhooon.dari.interceptor.DefaultDariInterceptor
 import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
 import com.easyhooon.dari.interceptor.ProtobufPayloadDecoder
 import com.easyhooon.dari.notification.DariNotification
+import com.easyhooon.dari.runtime.DariRuntime
 import com.easyhooon.dari.shake.DariShakeManager
 import com.easyhooon.dari.ui.DariActivity
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 /**
  * Singleton entry point for Dari.
@@ -42,18 +45,18 @@ object Dari {
     internal lateinit var context: Context
         private set
 
-    internal var config = DariConfig()
-        private set
+    internal val config: DariConfig
+        get() = DariRuntime.config
 
-    private var database: DariDatabase? = null
+    internal val repository: MessageRepository
+        get() = DariRuntime.repository
 
-    internal lateinit var repository: MessageRepository
-        private set
+    private var notificationJob: Job? = null
 
     private var notification: DariNotification? = null
     private var shakeManager: DariShakeManager? = null
     private var inspectorServer: DariInspectorServer? = null
-    private val inspectorScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     internal lateinit var preferences: DariPreferences
         private set
@@ -64,16 +67,7 @@ object Dari {
      */
     fun init(context: Context, config: DariConfig = DariConfig()) {
         this.context = context.applicationContext
-        this.config = config
-
-        if (database == null) {
-            database = DariDatabase.create(this.context)
-            repository = MessageRepository(
-                database = database!!,
-                maxEntries = config.maxEntries,
-                retentionPeriodMs = config.retentionPeriod?.inWholeMilliseconds,
-            )
-        }
+        DariRuntime.init(this.context, config)
 
         // Guard re-initialization: DataStore throws IllegalStateException if a
         // second instance is created for the same file, which would happen on
@@ -88,6 +82,7 @@ object Dari {
         if (config.showNotification) {
             notification = DariNotification(this.context)
         }
+        observeNewMessages()
 
         applyShakeToOpen(preferences.shakeToOpen)
 
@@ -140,7 +135,7 @@ object Dari {
             override fun clear() = this@Dari.clear()
         }
         inspectorServer = DariInspectorServer(InspectorProtocol.socketName(context.packageName)) { input, output ->
-            InspectorSession(input, output, appInfo, source, redactor, inspectorScope).run()
+            InspectorSession(input, output, appInfo, source, redactor, scope).run()
         }.also { it.start() }
     }
 
@@ -184,16 +179,17 @@ object Dari {
         protobufDecoder: ProtobufPayloadDecoder,
     ): ProtobufDariInterceptor? = DefaultDariInterceptor(tag, protobufDecoder)
 
-    /**
-     * Adds a new message to the notification.
-     */
-    internal fun postMessageNotification(
-        handlerName: String,
-        displayName: String?,
-        direction: MessageDirection,
-        tag: String? = null,
-    ) {
-        notification?.postMessage(handlerName, displayName, direction, tag)
+    // UNDISPATCHED subscribes before init returns, so the first captured message is not missed.
+    private fun observeNewMessages() {
+        if (notificationJob != null) return
+        notificationJob = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            repository.events.collect { event ->
+                if (event is RepositoryEvent.Added) {
+                    val entry = event.item.entry
+                    notification?.postMessage(entry.handlerName, entry.displayName, entry.direction, entry.tag)
+                }
+            }
+        }
     }
 
     /**

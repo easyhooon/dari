@@ -1,13 +1,13 @@
 package com.easyhooon.dari.interceptor
 
-import com.easyhooon.dari.Dari
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessageStatus
+import com.easyhooon.dari.runtime.DariRuntime
 
 /**
  * Default implementation of [DariInterceptor].
- * Stores intercepted messages in [Dari]'s repository and posts notifications.
+ * Stores intercepted messages in the shared Dari repository.
  *
  * When requestId is null, the entry is treated as a standalone (fire-and-forget) message
  * that doesn't require request-response pairing.
@@ -21,7 +21,7 @@ class DefaultDariInterceptor(
     constructor(tag: String?) : this(tag, null)
 
     private val maxContentLength: Int
-        get() = Dari.config.maxContentLength
+        get() = DariRuntime.config.maxContentLength
 
     override fun onWebToAppRequest(
         handlerName: String,
@@ -38,7 +38,7 @@ class DefaultDariInterceptor(
         fireAndForget: Boolean?,
     ) {
         val (truncatedData, wasTruncated) = MessageEntry.truncateIfNeeded(requestData, maxContentLength)
-        val resolvedAsSuccess = fireAndForget ?: Dari.config.fireAndForget
+        val resolvedAsSuccess = fireAndForget ?: DariRuntime.config.fireAndForget
         val entry = MessageEntry(
             requestId = requestId,
             handlerName = handlerName,
@@ -49,8 +49,7 @@ class DefaultDariInterceptor(
             status = if (resolvedAsSuccess) MessageStatus.SUCCESS else MessageStatus.IN_PROGRESS,
             displayName = displayName.normalized(),
         )
-        Dari.repository.addEntry(entry)
-        Dari.postMessageNotification(handlerName, entry.displayName, MessageDirection.WEB_TO_APP, tag)
+        DariRuntime.repository.addEntry(entry)
     }
 
     override fun onWebToAppResponse(
@@ -63,7 +62,7 @@ class DefaultDariInterceptor(
         if (requestId == null) return
 
         val (truncatedData, wasTruncated) = MessageEntry.truncateIfNeeded(responseData, maxContentLength)
-        Dari.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
+        DariRuntime.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
             entry.copy(
                 responseData = truncatedData,
                 responseDataTruncated = wasTruncated,
@@ -88,7 +87,7 @@ class DefaultDariInterceptor(
         fireAndForget: Boolean?,
     ) {
         val (truncatedData, wasTruncated) = MessageEntry.truncateIfNeeded(data, maxContentLength)
-        val resolvedAsSuccess = fireAndForget ?: Dari.config.fireAndForget
+        val resolvedAsSuccess = fireAndForget ?: DariRuntime.config.fireAndForget
         val entry = MessageEntry(
             requestId = requestId,
             handlerName = handlerName,
@@ -99,8 +98,7 @@ class DefaultDariInterceptor(
             status = if (resolvedAsSuccess) MessageStatus.SUCCESS else MessageStatus.IN_PROGRESS,
             displayName = displayName.normalized(),
         )
-        Dari.repository.addEntry(entry)
-        Dari.postMessageNotification(handlerName, entry.displayName, MessageDirection.APP_TO_WEB, tag)
+        DariRuntime.repository.addEntry(entry)
     }
 
     override fun onAppToWebResponse(requestId: String?, isSuccess: Boolean, responseData: String?) {
@@ -108,7 +106,7 @@ class DefaultDariInterceptor(
         if (requestId == null) return
 
         val (truncatedData, wasTruncated) = MessageEntry.truncateIfNeeded(responseData, maxContentLength)
-        Dari.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
+        DariRuntime.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
             entry.copy(
                 responseData = truncatedData,
                 responseDataTruncated = wasTruncated,
@@ -138,7 +136,7 @@ class DefaultDariInterceptor(
             direction = MessageDirection.WEB_TO_APP,
             part = PayloadPart.REQUEST,
         )
-        val resolvedAsSuccess = fireAndForget ?: Dari.config.fireAndForget
+        val resolvedAsSuccess = fireAndForget ?: DariRuntime.config.fireAndForget
         val entry = MessageEntry(
             requestId = requestId,
             handlerName = handlerName,
@@ -150,8 +148,7 @@ class DefaultDariInterceptor(
             status = if (resolvedAsSuccess) MessageStatus.SUCCESS else MessageStatus.IN_PROGRESS,
             displayName = displayName.normalized(),
         )
-        Dari.repository.addEntry(entry)
-        Dari.postMessageNotification(handlerName, entry.displayName, MessageDirection.WEB_TO_APP, tag)
+        DariRuntime.repository.addEntry(entry)
     }
 
     override fun onWebToAppProtobufResponse(
@@ -168,7 +165,7 @@ class DefaultDariInterceptor(
             direction = MessageDirection.WEB_TO_APP,
             part = PayloadPart.RESPONSE,
         )
-        Dari.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
+        DariRuntime.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
             entry.copy(
                 responseData = rendered.data,
                 responseDataTruncated = rendered.wasTruncated,
@@ -199,7 +196,7 @@ class DefaultDariInterceptor(
             direction = MessageDirection.APP_TO_WEB,
             part = PayloadPart.REQUEST,
         )
-        val resolvedAsSuccess = fireAndForget ?: Dari.config.fireAndForget
+        val resolvedAsSuccess = fireAndForget ?: DariRuntime.config.fireAndForget
         val entry = MessageEntry(
             requestId = requestId,
             handlerName = handlerName,
@@ -211,8 +208,7 @@ class DefaultDariInterceptor(
             status = if (resolvedAsSuccess) MessageStatus.SUCCESS else MessageStatus.IN_PROGRESS,
             displayName = displayName.normalized(),
         )
-        Dari.repository.addEntry(entry)
-        Dari.postMessageNotification(handlerName, entry.displayName, MessageDirection.APP_TO_WEB, tag)
+        DariRuntime.repository.addEntry(entry)
     }
 
     override fun onAppToWebProtobufResponse(
@@ -222,7 +218,7 @@ class DefaultDariInterceptor(
     ) {
         if (requestId == null) return
 
-        Dari.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
+        DariRuntime.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
             val rendered = renderProtobuf(
                 payload = responseData,
                 handlerName = entry.handlerName,

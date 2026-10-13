@@ -23,5 +23,6 @@ rootProject.name = "dari"
 include(":sample")
 include(":dari-core")
 include(":dari-inspector-protocol")
+include(":dari-runtime")
 include(":dari")
 include(":dari-noop")

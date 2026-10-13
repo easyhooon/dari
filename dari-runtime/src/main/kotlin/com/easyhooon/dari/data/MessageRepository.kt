@@ -5,6 +5,7 @@ import com.easyhooon.dari.data.local.DariDatabase
 import com.easyhooon.dari.data.local.MessageDao
 import com.easyhooon.dari.data.local.toEntity
 import com.easyhooon.dari.data.local.toMessageEntry
+import com.easyhooon.dari.runtime.InternalDariApi
 import androidx.annotation.VisibleForTesting
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CompletableDeferred
@@ -59,7 +60,8 @@ class MessageRepository internal constructor(
         extraBufferCapacity = EVENT_BUFFER_CAPACITY,
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
-    internal val events: SharedFlow<RepositoryEvent> = _events.asSharedFlow()
+    @InternalDariApi
+    val events: SharedFlow<RepositoryEvent> = _events.asSharedFlow()
 
     /**
      * Derived projection of [entries]. Always in sync by construction — we
@@ -168,7 +170,8 @@ class MessageRepository internal constructor(
     }
 
     /** Current entries with their stable inspector ids, consistent with [events]. */
-    internal fun inspectorSnapshot(): List<InspectorEntry> = synchronized(lock) {
+    @InternalDariApi
+    fun inspectorSnapshot(): List<InspectorEntry> = synchronized(lock) {
         _entries.value.map { InspectorEntry(wireIdOf(it.id), it) }
     }
 
