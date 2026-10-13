@@ -38,12 +38,7 @@ android {
 }
 
 dependencies {
-    // `./gradlew :sample:installDebug -Pdari.mode=desktop` swaps the in-app inspector for the desktop one.
-    if (providers.gradleProperty("dari.mode").orNull == "desktop") {
-        debugImplementation(project(":dari-desktop"))
-    } else {
-        debugImplementation(project(":dari"))
-    }
+    debugImplementation(project(":dari"))
     releaseImplementation(project(":dari-noop"))
 
     implementation(libs.androidx.core.ktx)

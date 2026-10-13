@@ -5,7 +5,7 @@ import com.easyhooon.dari.DariConfig
 import com.easyhooon.dari.data.MessageRepository
 import com.easyhooon.dari.data.local.DariDatabase
 
-/** Capture and storage shared by the in-app (`dari`) and desktop (`dari-desktop`) artifacts. */
+/** Capture and storage behind the `Dari` facade, kept free of UI so it can be reused. */
 @InternalDariApi
 object DariRuntime {
 

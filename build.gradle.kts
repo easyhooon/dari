@@ -25,8 +25,8 @@ tasks.register<Copy>("installGitHooks") {
 }
 
 tasks.register<Exec>("checkDariApiParity") {
-    description = "Checks that dari, dari-desktop and dari-noop expose the same Dari API."
-    dependsOn(":dari:compileDebugKotlin", ":dari-desktop:compileDebugKotlin", ":dari-noop:compileDebugKotlin")
+    description = "Checks that dari and dari-noop expose the same Dari API."
+    dependsOn(":dari:compileDebugKotlin", ":dari-noop:compileDebugKotlin")
     commandLine("bash", "scripts/check-dari-api-parity.sh")
 }
 

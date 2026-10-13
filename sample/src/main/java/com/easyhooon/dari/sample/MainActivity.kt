@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // With dari-desktop, extra masking on top of the built-in one; a no-op for dari and dari-noop.
+        // Extra masking for the desktop app on top of the built-in one; a no-op in dari-noop.
         Dari.setPayloadRedactor { entry ->
             entry.copy(requestData = entry.requestData?.replace(Regex("\"userId\":\"[^\"]*\""), "\"userId\":\"***\""))
         }

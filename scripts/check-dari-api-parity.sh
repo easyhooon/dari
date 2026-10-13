@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fails if the public `Dari` API differs between dari, dari-desktop and dari-noop,
+# Fails if the public `Dari` API differs between dari and dari-noop,
 # so swapping the dependency never breaks app code. Run via `./gradlew checkDariApiParity`.
 set -euo pipefail
 
@@ -16,12 +16,12 @@ public_api() {
 
 expected="$(public_api dari)"
 status=0
-for module in dari-desktop dari-noop; do
+for module in dari-noop; do
   if ! diff <(echo "$expected") <(public_api "$module") > /dev/null; then
     echo "Dari API in :$module differs from :dari (< dari, > $module):"
     diff <(echo "$expected") <(public_api "$module") || true
     status=1
   fi
 done
-[ "$status" -eq 0 ] && echo "Dari API matches across dari, dari-desktop and dari-noop."
+[ "$status" -eq 0 ] && echo "Dari API matches across dari and dari-noop."
 exit "$status"

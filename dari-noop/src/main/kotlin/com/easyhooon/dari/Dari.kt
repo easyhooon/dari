@@ -39,5 +39,8 @@ object Dari {
     @Suppress("UNUSED_PARAMETER")
     fun setPayloadRedactor(redactor: DariPayloadRedactor?) = Unit
 
+    @Suppress("UNUSED_PARAMETER")
+    fun setDesktopInspectorEnabled(enabled: Boolean) = Unit
+
     fun clear() = Unit
 }

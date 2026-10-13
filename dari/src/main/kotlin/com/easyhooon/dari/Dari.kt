@@ -11,6 +11,15 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.easyhooon.dari.data.DariPreferences
 import com.easyhooon.dari.data.MessageRepository
+import kotlinx.coroutines.flow.Flow
+import com.easyhooon.dari.inspector.protocol.InspectorProtocol
+import com.easyhooon.dari.inspector.inspectorAppInfo
+import com.easyhooon.dari.inspector.InspectorSession
+import com.easyhooon.dari.inspector.InspectorDataSource
+import com.easyhooon.dari.inspector.DesktopPayloadMasker
+import com.easyhooon.dari.inspector.DesktopInspectorGate
+import com.easyhooon.dari.inspector.DariInspectorServer
+import com.easyhooon.dari.data.InspectorEntry
 import com.easyhooon.dari.data.RepositoryEvent
 import java.io.File
 import com.easyhooon.dari.interceptor.DariInterceptor
@@ -47,8 +56,15 @@ object Dari {
     private var notificationJob: Job? = null
 
     @Volatile
-    internal var payloadRedactor: DariPayloadRedactor? = null
-        private set
+    private var payloadRedactor: DariPayloadRedactor? = null
+
+    private var inspectorServer: DariInspectorServer? = null
+    private var inspectorJob: Job? = null
+    private var desktopInspectorEnabled = true
+
+    // While a desktop is connected the in-app notification and shake stay quiet.
+    @Volatile
+    private var desktopConnected = false
 
     private var notification: DariNotification? = null
     private var shakeManager: DariShakeManager? = null
@@ -83,6 +99,8 @@ object Dari {
         applyShakeToOpen(preferences.shakeToOpen)
 
         addDynamicShortcut()
+
+        if (desktopInspectorEnabled) startDesktopInspector()
     }
 
     /**
@@ -91,6 +109,17 @@ object Dari {
     fun setShakeToOpenEnabled(enabled: Boolean) {
         preferences.setShakeToOpen(enabled)
         applyShakeToOpen(enabled)
+    }
+
+    /**
+     * Lets the Dari desktop app connect over `adb` (on by default in debuggable builds).
+     * Only adb or root can connect, and payloads are masked before they leave the device.
+     */
+    @Synchronized
+    fun setDesktopInspectorEnabled(enabled: Boolean) {
+        desktopInspectorEnabled = enabled
+        if (!::context.isInitialized) return
+        if (enabled) startDesktopInspector() else stopDesktopInspector()
     }
 
     /**
@@ -118,16 +147,56 @@ object Dari {
     }
 
     /**
-     * Rewrites messages before they leave the device. With `dari` (in-app) nothing is sent off the
-     * device, so this is stored only for API parity with `dari-desktop`.
+     * Runs after the built-in masking (tokens, passwords, cookies, auth headers; raw previews are
+     * dropped) on every message sent to the desktop app. Throwing hides the message.
      */
     fun setPayloadRedactor(redactor: DariPayloadRedactor?) {
         payloadRedactor = redactor
     }
 
+    @Synchronized
+    private fun startDesktopInspector() {
+        if (inspectorServer != null || !DesktopInspectorGate.isAllowed(context)) return
+        val repository = repository
+        val source = object : InspectorDataSource {
+            override val events: Flow<RepositoryEvent> get() = repository.events
+            override fun snapshot(): List<InspectorEntry> = repository.inspectorSnapshot()
+            override fun clear() = this@Dari.clear()
+        }
+        val redactor = DariPayloadRedactor { entry ->
+            val masked = DesktopPayloadMasker.mask(entry)
+            payloadRedactor?.redact(masked) ?: masked
+        }
+        val appInfo = inspectorAppInfo(context)
+        val server = DariInspectorServer(InspectorProtocol.socketName(context.packageName)) { input, output ->
+            InspectorSession(input, output, appInfo, source, redactor, scope).run()
+        }
+        inspectorServer = server.also { it.start() }
+        // Shake registration touches the process lifecycle, which only allows the main thread.
+        inspectorJob = scope.launch(Dispatchers.Main) {
+            server.connectedClients.collect { count -> onDesktopConnectionChanged(count > 0) }
+        }
+    }
+
+    @Synchronized
+    private fun stopDesktopInspector() {
+        inspectorJob?.cancel()
+        inspectorJob = null
+        inspectorServer?.stop()
+        inspectorServer = null
+        scope.launch(Dispatchers.Main) { onDesktopConnectionChanged(false) }
+    }
+
+    private fun onDesktopConnectionChanged(connected: Boolean) {
+        if (connected == desktopConnected) return
+        desktopConnected = connected
+        if (connected) notification?.dismissAll()
+        applyShakeToOpen(preferences.shakeToOpen)
+    }
+
     private fun applyShakeToOpen(enabled: Boolean) {
         shakeManager?.unregister()
-        shakeManager = if (enabled) {
+        shakeManager = if (enabled && !desktopConnected) {
             DariShakeManager(context).also { it.register() }
         } else {
             null
@@ -163,7 +232,7 @@ object Dari {
         if (notificationJob != null) return
         notificationJob = scope.launch(start = CoroutineStart.UNDISPATCHED) {
             repository.events.collect { event ->
-                if (event is RepositoryEvent.Added) {
+                if (event is RepositoryEvent.Added && !desktopConnected) {
                     val entry = event.item.entry
                     notification?.postMessage(entry.handlerName, entry.displayName, entry.direction, entry.tag)
                 }
@@ -175,6 +244,7 @@ object Dari {
      * Shows the notification (called after permission is granted).
      */
     fun showNotification() {
+        if (desktopConnected) return
         if (notification == null && config.showNotification) {
             notification = DariNotification(context)
         }

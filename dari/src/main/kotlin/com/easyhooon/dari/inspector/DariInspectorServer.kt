@@ -9,6 +9,9 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.CopyOnWriteArraySet
 import kotlin.concurrent.thread
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Listens on an abstract-namespace socket reached via `adb forward`.
@@ -22,6 +25,11 @@ internal class DariInspectorServer(
     private var running = false
     private var server: LocalServerSocket? = null
     private val clients = CopyOnWriteArraySet<LocalSocket>()
+
+    private val _connectedClients = MutableStateFlow(0)
+
+    /** Desktops currently connected; the in-app UI goes quiet while this is above zero. */
+    val connectedClients: StateFlow<Int> = _connectedClients.asStateFlow()
 
     @Synchronized
     fun start() {
@@ -46,6 +54,8 @@ internal class DariInspectorServer(
         runCatching { server?.close() }
         server = null
         clients.forEach { runCatching { it.close() } }
+        clients.clear()
+        _connectedClients.value = 0
     }
 
     private fun acceptLoop(serverSocket: LocalServerSocket) {
@@ -60,6 +70,7 @@ internal class DariInspectorServer(
                 continue
             }
             clients += client
+            _connectedClients.value = clients.size
             thread(name = "dari-inspector-session", isDaemon = true) { serve(client) }
         }
     }
@@ -79,6 +90,7 @@ internal class DariInspectorServer(
             Log.d(TAG, "Desktop inspector session ended", e)
         } finally {
             clients -= client
+            _connectedClients.value = clients.size
             runCatching { client.close() }
         }
     }

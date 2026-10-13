@@ -34,38 +34,48 @@ Android debug app                         Desktop (Mac/Win/Linux)
 
 ### Modules
 
-The viewing surface is chosen by dependency, so in-app and desktop never run at the same time:
+Planned for 2.0.0. Apps keep a single debug dependency; upgrading `dari` is all it takes:
 
 ```kotlin
-debugImplementation("io.github.easyhooon:dari:x.y.z")          // view in the app
-debugImplementation("io.github.easyhooon:dari-desktop:x.y.z")  // view on the desktop
-releaseImplementation("io.github.easyhooon:dari-noop:x.y.z")
+debugImplementation("io.github.easyhooon:dari:2.0.0")
+releaseImplementation("io.github.easyhooon:dari-noop:2.0.0")
 ```
 
 - `:dari-runtime` (new): capture, Room storage, `DefaultDariInterceptor`. Shared code is public but
   gated by `@InternalDariApi` (opt-in required), since Kotlin `internal` doesn't cross modules.
-- `:dari`: runtime + in-app UI, notifications (driven by repository events), shake, export.
-- `:dari-desktop` (new): runtime + socket server + default masking. No UI, no notifications.
+- `:dari`: runtime + in-app UI, notifications, shake, export, and the desktop socket server.
+  While a desktop is connected, the in-app notification and shake stay quiet; they resume on
+  disconnect. `Dari.setDesktopInspectorEnabled(false)` turns the socket off.
 - `:dari-noop`: release builds. Depends only on `dari-core`.
 - `:dari-inspector-protocol` (new, plain Kotlin/JVM): wire DTOs, envelope, framing.
-- `:dari-desktop-app` (later, CMP desktop app, not published to Maven Central).
+- `:dari-desktop-app` (new, Compose Desktop app; shipped as `.dmg`/`.msi`/`.deb`, not to Maven Central).
 - `:dari-core`: only gains `DariPayloadRedactor` (additive).
 
-All three `Dari` objects expose the same API (`./gradlew checkDariApiParity`). `Dari` and
-`DariInitializer` share FQNs, so adding both `dari` and `dari-desktop` fails with a duplicate class.
+`dari` and `dari-noop` expose the same `Dari` API (`./gradlew checkDariApiParity`).
+
+A separate `dari-desktop` artifact was tried and dropped: existing users would have had to swap
+dependencies to try the desktop app, and the only thing it bought (no socket in debug builds) is
+covered by `setDesktopInspectorEnabled(false)`.
 
 ### Release and data protection
 
 - Release uses `dari-noop`: verified the sample release APK contains no Room, `LocalServerSocket`,
   inspector or runtime classes, and no `dari_` socket name.
-- `dari-desktop` stays off (no capture, no server, `createInterceptor` returns null) unless the app
-  is debuggable, or opts in with manifest meta-data `com.easyhooon.dari.desktop.ALLOW_NON_DEBUGGABLE`.
+- The socket opens only in debuggable builds, or when a non-debuggable internal build opts in with
+  manifest meta-data `com.easyhooon.dari.desktop.ALLOW_NON_DEBUGGABLE`. In-app capture is unaffected.
 - Only adb (uid 2000) or root may connect; no INTERNET permission.
 - Built-in masking before anything leaves the device: sensitive JSON keys at any depth (including
   stringified JSON), `key: value` / `key=value` text (decoded protobuf, query strings), `Bearer`/`Basic`
   credentials. Raw protobuf previews are dropped. Masking fails closed. `Dari.setPayloadRedactor`
   runs after it; if it throws, the message is not sent.
 - Nothing logs payloads; the server logs only rejected peer UIDs.
+
+### Why not read logcat instead
+
+The desktop app could tail `adb logcat` with no library at all, but it doesn't replace `dari`:
+bridge calls never touch the network or logcat unless the app logs them itself (so app code changes
+anyway), logcat truncates lines around 4 KB and drops chatty output, request/response pairing would
+have to be re-parsed from text, and payloads left in `Log` calls ship in release builds unmasked.
 
 ## Transport
 
@@ -114,8 +124,8 @@ happen under one lock, so events and snapshots agree. Trimmed entries are not se
 1. `MessageRepository`: internal `SharedFlow<RepositoryEvent>` (`Added`, `Updated`, `Cleared`)
    alongside the existing `StateFlow`; `list` serves the current snapshot.
 2. `DariInspectorServer`: starts in `Dari.init` only when enabled; one session per client.
-3. The server starts from `Dari.init` in `dari-desktop`; `Dari.setPayloadRedactor` adds custom
-   masking. Not in `DariConfig`: it lives in published `dari-core`, and adding a field would break
+3. The server starts from `Dari.init` in `dari`; `Dari.setPayloadRedactor` adds custom masking and
+   `Dari.setDesktopInspectorEnabled` turns the socket on or off. Not in `DariConfig`: it lives in published `dari-core`, and adding a field would break
    its binary compatibility.
 
 ## Desktop app

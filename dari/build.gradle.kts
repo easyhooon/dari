@@ -42,6 +42,7 @@ composeCompiler {
 
 dependencies {
     api(project(":dari-runtime"))
+    implementation(project(":dari-inspector-protocol"))
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))
