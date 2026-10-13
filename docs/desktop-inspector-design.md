@@ -84,14 +84,49 @@ Reversed roles, as in necto: the app listens, the desktop connects.
 - App: `LocalServerSocket` in the abstract namespace, name `dari_<applicationId>`.
   No INTERNET permission needed (`:dari` has none today), never reachable over Wi-Fi.
 - Desktop: `adb forward tcp:0 localabstract:dari_<applicationId>`, then TCP to `127.0.0.1:<port>`.
-- Discovery: `adb track-devices` for attach/detach; per device, list `dari_*` sockets from
-  `/proc/net/unix` via `adb shell` to find debuggable apps; retry connect every 2 s.
+- Discovery: poll `adb devices -l` every 2 s; per device, list `dari_*` sockets from
+  `/proc/net/unix` via `adb shell` to find apps running Dari (an applicationId can also be typed in).
+  When exactly one is found the desktop connects on its own, and reconnects every 2 s after a drop.
 - Access control: on accept, `LocalSocket.getPeerCredentials()` and allow only UID 2000 (shell)
   or 0 (root). Blocks other apps on the device from connecting.
   Verified on Galaxy S25+ (Android 17): an `adb forward` connection reports `uid=2000`
   (the adbd process), and no SELinux denial occurs. adb connects to the app socket lazily,
   so the desktop must send data (the handshake) before the app sees the connection.
 - adb: shell out to the `adb` binary (`ANDROID_HOME`/`ANDROID_SDK_ROOT`/`PATH`, user-overridable).
+  `ANDROID_SERIAL` picks the device first, as it does for adb.
+
+### How the connection works (`adb forward`)
+
+`adb forward` is a USB tunnel: it opens a port on the computer and pipes it to a socket inside the
+device. Dari's app socket has no port at all, only a name, so it can't be reached any other way.
+
+```
+Desktop app ──TCP──► 127.0.0.1:56778 ══ adb over USB ══► @dari_com.example.app (inside the app)
+                     (picked by adb)                       (abstract socket, no port)
+```
+
+1. The app opens the abstract socket `dari_<applicationId>` and waits.
+2. The desktop runs `adb forward tcp:0 localabstract:dari_<applicationId>`. `tcp:0` lets the OS pick
+   a free local port, and adb prints it.
+3. The desktop connects to `127.0.0.1:<that port>`; adb carries the bytes to the app socket.
+4. On disconnect the desktop runs `adb forward --remove tcp:<port>`.
+
+`adb forward --list` shows the open tunnels. If the desktop app is killed before step 4, its
+tunnels stay behind (harmless, just clutter), so it also removes every `localabstract:dari_*`
+forward when it starts and when the JVM exits. Emulators are adb devices too, so they work the same.
+
+**Nothing to configure.** Compared with an HTTP proxy such as Charles:
+
+| | Charles | Dari |
+| --- | --- | --- |
+| What it intercepts | Network traffic, by sitting between the device and the internet | In-process WebView bridge calls, which never touch the network |
+| Device setup | Wi-Fi proxy host and port, user CA certificate | None |
+| App setup | `network_security_config` trusting user CAs (for HTTPS) | The `dari` debug dependency |
+| Same Wi-Fi needed | Yes | No, USB or any adb connection |
+| Ports to match | Proxy port on device and computer | None; adb picks one |
+
+Charles needs no library because it intercepts the network; bridge calls are plain function calls
+between JavaScript and the app, so only code inside the app can see them.
 
 ## Protocol (v1)
 
