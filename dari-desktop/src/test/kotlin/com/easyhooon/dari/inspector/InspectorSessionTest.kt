@@ -139,7 +139,7 @@ class InspectorSessionTest {
         assertTrue(cleared)
     }
 
-    private fun connect(redactor: DariPayloadRedactor? = null): TestClient {
+    private fun connect(redactor: DariPayloadRedactor = DariPayloadRedactor { it }): TestClient {
         val toSession = PipedOutputStream()
         val sessionInput = PipedInputStream(toSession, PIPE_SIZE)
         val fromSession = PipedInputStream(PIPE_SIZE)

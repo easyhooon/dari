@@ -67,9 +67,9 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Lets the desktop inspector connect via `adb forward`; mask secrets before they leave the device.
-        Dari.startDesktopInspector { entry ->
-            entry.copy(requestData = entry.requestData?.replace(Regex("\"token\":\"[^\"]*\""), "\"token\":\"***\""))
+        // With dari-desktop, extra masking on top of the built-in one; a no-op for dari and dari-noop.
+        Dari.setPayloadRedactor { entry ->
+            entry.copy(requestData = entry.requestData?.replace(Regex("\"userId\":\"[^\"]*\""), "\"userId\":\"***\""))
         }
         enableEdgeToEdge()
 

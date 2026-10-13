@@ -2,7 +2,7 @@ package com.easyhooon.dari.inspector
 
 import android.content.Context
 import android.os.Build
-import com.easyhooon.dari.BuildConfig
+import com.easyhooon.dari.desktop.BuildConfig
 import com.easyhooon.dari.inspector.protocol.AppInfo
 
 internal fun inspectorAppInfo(context: Context): AppInfo {

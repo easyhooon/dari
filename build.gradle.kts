@@ -23,6 +23,12 @@ tasks.register<Copy>("installGitHooks") {
     filePermissions { unix("rwxr-xr-x") }
 }
 
+tasks.register<Exec>("checkDariApiParity") {
+    description = "Checks that dari, dari-desktop and dari-noop expose the same Dari API."
+    dependsOn(":dari:compileDebugKotlin", ":dari-desktop:compileDebugKotlin", ":dari-noop:compileDebugKotlin")
+    commandLine("bash", "scripts/check-dari-api-parity.sh")
+}
+
 tasks.matching { it.name == "preBuild" }.configureEach {
     dependsOn("installGitHooks")
 }

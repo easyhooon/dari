@@ -22,7 +22,7 @@ protobuf metadata).
 ```
 Android debug app                         Desktop (Mac/Win/Linux)
 ┌──────────────────────────┐              ┌──────────────────────────┐
-│ :dari                    │              │ :dari-desktop (CMP)      │
+│ :dari-desktop            │              │ :dari-desktop-app (CMP)  │
 │  MessageRepository       │              │  AdbDeviceTracker        │
 │   └ events (SharedFlow)  │              │  InspectorClient         │
 │  DariInspectorServer ◄───┼── adb fwd ───┼─►  list / observe        │
@@ -34,14 +34,38 @@ Android debug app                         Desktop (Mac/Win/Linux)
 
 ### Modules
 
-- `:dari-inspector-protocol` (new, plain Kotlin/JVM, usable from Android): wire DTOs, envelope, handshake,
-  length-prefixed framing, kotlinx.serialization. Template: `ExportableMessage`.
-- `:dari` (changed): event stream in `MessageRepository`, `DariInspectorServer`, opt-in config.
-- `:dari-noop` (changed): same new public API, no-op.
-- `:dari-desktop` (new, CMP desktop app, not published to Maven Central).
-- `:dari-core`: only gains `DariPayloadRedactor` (additive). No `@Serializable`, no new deps — it is
-  published, dependency-free, and targets iOS. Keeping the wire format out of it avoids coupling the
-  public model to the protocol.
+The viewing surface is chosen by dependency, so in-app and desktop never run at the same time:
+
+```kotlin
+debugImplementation("io.github.easyhooon:dari:x.y.z")          // view in the app
+debugImplementation("io.github.easyhooon:dari-desktop:x.y.z")  // view on the desktop
+releaseImplementation("io.github.easyhooon:dari-noop:x.y.z")
+```
+
+- `:dari-runtime` (new): capture, Room storage, `DefaultDariInterceptor`. Shared code is public but
+  gated by `@InternalDariApi` (opt-in required), since Kotlin `internal` doesn't cross modules.
+- `:dari`: runtime + in-app UI, notifications (driven by repository events), shake, export.
+- `:dari-desktop` (new): runtime + socket server + default masking. No UI, no notifications.
+- `:dari-noop`: release builds. Depends only on `dari-core`.
+- `:dari-inspector-protocol` (new, plain Kotlin/JVM): wire DTOs, envelope, framing.
+- `:dari-desktop-app` (later, CMP desktop app, not published to Maven Central).
+- `:dari-core`: only gains `DariPayloadRedactor` (additive).
+
+All three `Dari` objects expose the same API (`./gradlew checkDariApiParity`). `Dari` and
+`DariInitializer` share FQNs, so adding both `dari` and `dari-desktop` fails with a duplicate class.
+
+### Release and data protection
+
+- Release uses `dari-noop`: verified the sample release APK contains no Room, `LocalServerSocket`,
+  inspector or runtime classes, and no `dari_` socket name.
+- `dari-desktop` stays off (no capture, no server, `createInterceptor` returns null) unless the app
+  is debuggable, or opts in with manifest meta-data `com.easyhooon.dari.desktop.ALLOW_NON_DEBUGGABLE`.
+- Only adb (uid 2000) or root may connect; no INTERNET permission.
+- Built-in masking before anything leaves the device: sensitive JSON keys at any depth (including
+  stringified JSON), `key: value` / `key=value` text (decoded protobuf, query strings), `Bearer`/`Basic`
+  credentials. Raw protobuf previews are dropped. Masking fails closed. `Dari.setPayloadRedactor`
+  runs after it; if it throws, the message is not sent.
+- Nothing logs payloads; the server logs only rejected peer UIDs.
 
 ## Transport
 
@@ -85,14 +109,14 @@ exposes entries as `InspectorEntry(wireId, entry)`; the wire `id` is the temp id
 created in this process and the Room id for entries restored from disk. Mutations and their events
 happen under one lock, so events and snapshots agree. Trimmed entries are not sent as removals.
 
-## `:dari` changes
+## Runtime and server
 
 1. `MessageRepository`: internal `SharedFlow<RepositoryEvent>` (`Added`, `Updated`, `Cleared`)
    alongside the existing `StateFlow`; `list` serves the current snapshot.
 2. `DariInspectorServer`: starts in `Dari.init` only when enabled; one session per client.
-3. `Dari.startDesktopInspector(redactor: DariPayloadRedactor? = null)` / `stopDesktopInspector()`,
-   mirrored in `:dari-noop`. Not in `DariConfig`: it lives in published `dari-core`, and adding a
-   field would break its binary compatibility.
+3. The server starts from `Dari.init` in `dari-desktop`; `Dari.setPayloadRedactor` adds custom
+   masking. Not in `DariConfig`: it lives in published `dari-core`, and adding a field would break
+   its binary compatibility.
 
 ## Desktop app
 
@@ -109,7 +133,7 @@ happen under one lock, so events and snapshots agree. Trimmed entries are not se
 | --- | --- | --- |
 | 0 | Spike: abstract socket + peer UID check over `adb forward` on a real device | done |
 | 1 | Protocol module + repository events + server + opt-in/redactor (+ noop) + tests | done |
-| 2 | Desktop MVP via `./gradlew :dari-desktop:run`: one device, list/detail/live | 3–4 days |
+| 2 | Desktop MVP via `./gradlew :dari-desktop-app:run`: one device, list/detail/live | 3–4 days |
 | 3 | macOS packaging: `.dmg`, signing, notarization | 1–2 days |
 | 4 | Windows (`.msi`), then Linux (`.deb`/AppImage) | 1–2 days each |
 | 5 | Optional necto plugin module | separate issue |

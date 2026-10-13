@@ -42,7 +42,6 @@ composeCompiler {
 
 dependencies {
     api(project(":dari-runtime"))
-    implementation(project(":dari-inspector-protocol"))
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))
@@ -69,7 +68,6 @@ dependencies {
 
     // Test
     testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

@@ -46,7 +46,7 @@ internal class InspectorSession(
     output: OutputStream,
     private val appInfo: AppInfo,
     private val source: InspectorDataSource,
-    private val redactor: DariPayloadRedactor?,
+    private val redactor: DariPayloadRedactor,
     private val scope: CoroutineScope,
 ) {
     private val reader = FrameReader(input)
@@ -150,8 +150,7 @@ internal class InspectorSession(
         RepositoryEvent.Cleared -> ObserveEvent.Cleared
     }
 
-    private fun InspectorEntry.redacted(): InspectorEntry =
-        redactor?.let { copy(entry = it.redact(entry)) } ?: this
+    private fun InspectorEntry.redacted(): InspectorEntry = copy(entry = redactor.redact(entry))
 
     private fun <T> decode(serializer: KSerializer<T>, input: JsonElement): T =
         InspectorProtocol.json.decodeFromJsonElement(serializer, input)
