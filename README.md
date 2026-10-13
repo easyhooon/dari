@@ -355,6 +355,12 @@ interface DariInterceptor {
 }
 ```
 
+## Support
+
+If Dari saves you debugging time, you can star the repository,
+[buy me a coffee on Ko-fi](https://ko-fi.com/easyhooon) or
+[sponsor on GitHub](https://github.com/sponsors/easyhooon).
+
 ## License
 
 ```
