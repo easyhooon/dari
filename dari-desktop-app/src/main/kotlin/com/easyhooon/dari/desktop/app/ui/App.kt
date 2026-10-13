@@ -157,8 +157,14 @@ private fun UpdateStatus(updater: Updater, installUpdate: () -> Unit) {
         is Updater.Phase.Available -> Hint("Dari ${phase.version} is available. Dari restarts to install it.") {
             AccentButton("Update", onClick = installUpdate, showDownloadIcon = true)
         }
-        is Updater.Phase.Manual -> Hint("Dari ${phase.version} is available. Opens the download page.") {
-            AccentButton("Update", onClick = updater::openDownloadPage, showDownloadIcon = true)
+        is Updater.Phase.Manual -> Hint(
+            if (phase.blocker != null) {
+                "Dari ${phase.version} is available. Move Dari to Applications to update in place."
+            } else {
+                "Dari ${phase.version} is available. Opens the download page."
+            },
+        ) {
+            AccentButton("Update", onClick = updater::installManually, showDownloadIcon = true)
         }
         is Updater.Phase.Working -> Text(phase.step, style = Dari.type.caption, color = Dari.colors.textSecondary)
         Updater.Phase.Checking -> Text("Checking for updates…", style = Dari.type.caption, color = Dari.colors.textTertiary)

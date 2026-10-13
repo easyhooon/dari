@@ -25,6 +25,7 @@ case "$(uname -s)" in
       [ -n "${!variable:-}" ] || { echo "Missing $variable for macOS release packaging." >&2; exit 1; }
     done
     [[ "$APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]] || { echo "Invalid Apple Team ID." >&2; exit 1; }
+    command -v "${DMGBUILD:-dmgbuild}" > /dev/null || { echo "dmgbuild is required: pip install dmgbuild" >&2; exit 1; }
     arch="$(uname -m)"
     [ "$arch" = "x86_64" ] && arch="x64"
     case "$arch" in arm64 | x64) ;; *) echo "Unsupported macOS architecture." >&2; exit 1 ;; esac
@@ -74,11 +75,10 @@ PY
     xcrun stapler staple "$app"
     xcrun stapler validate "$app"
     spctl --assess --type execute --verbose=2 "$app"
-    mkdir "$stage/dmg"
-    ditto "$app" "$stage/dmg/Dari.app"
-    ln -s /Applications "$stage/dmg/Applications"
     dmg="$stage/$name"
-    hdiutil create -volname "Dari $version" -srcfolder "$stage/dmg" -format UDZO -quiet "$dmg"
+    # dmgbuild lays out the window (background arrow, icon positions) without scripting Finder.
+    "${DMGBUILD:-dmgbuild}" -s dari-desktop-app/packaging/dmg/dmg-settings.py -D app="$app" \
+        -D background=dari-desktop-app/packaging/dmg/background.png "Dari $version" "$dmg"
     codesign --sign "$MACOS_SIGNING_IDENTITY" --keychain "$MACOS_SIGNING_KEYCHAIN" --timestamp "$dmg"
     codesign --verify --strict "$dmg"
     notarize "$dmg"

@@ -19,6 +19,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.util.UUID
+import javax.swing.JOptionPane
 import kotlin.time.Duration.Companion.hours
 
 /**
@@ -38,8 +39,8 @@ class Updater(
         /** A newer version this copy of Dari can install itself. */
         data class Available(val version: SemanticVersion) : Phase
 
-        /** A newer version that has to be installed by hand (Windows, or a copy outside a writable folder). */
-        data class Manual(val version: SemanticVersion) : Phase
+        /** A newer version that has to be installed by hand; [blocker] says why on macOS, null on Windows. */
+        data class Manual(val version: SemanticVersion, val blocker: String? = null) : Phase
         data class Working(val step: String) : Phase
         data class Failed(val message: String) : Phase
     }
@@ -82,8 +83,8 @@ class Updater(
             val latest = withContext(Dispatchers.IO) { ReleaseSource.latestVersion() }
             when {
                 latest <= current -> Phase.UpToDate
-                appBundle != null && isInstallable(appBundle) -> Phase.Available(latest)
-                else -> Phase.Manual(latest)
+                appBundle == null -> Phase.Manual(latest)
+                else -> installBlocker(appBundle)?.let { Phase.Manual(latest, it) } ?: Phase.Available(latest)
             }
         } catch (e: Exception) {
             // A failed background check shouldn't put an error in the title bar.
@@ -97,7 +98,7 @@ class Updater(
         val target = appBundle
         val version = (phase as? Phase.Available)?.version
         if (target == null || version == null) {
-            openDownloadPage()
+            installManually()
             return
         }
         if (job?.isActive == true) return
@@ -158,6 +159,26 @@ class Updater(
         }
     }
 
+    /** Says why this copy can't update itself, if known, before offering the download page. */
+    fun installManually() {
+        val blocker = (phase as? Phase.Manual)?.blocker
+        if (blocker != null) {
+            val options = arrayOf("OK", "Open Download Page")
+            val choice = JOptionPane.showOptionDialog(
+                null,
+                blocker,
+                "Update Dari",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.INFORMATION_MESSAGE,
+                null,
+                options,
+                options[0],
+            )
+            if (choice != 1) return
+        }
+        openDownloadPage()
+    }
+
     fun openDownloadPage() {
         if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
             Desktop.getDesktop().browse(ReleaseSource.downloadPageUrl)
@@ -174,14 +195,21 @@ class Updater(
         }
 
         /**
-         * Only a copy in a writable folder can be replaced. A translocated or mounted-DMG copy is
-         * read-only, and a Gradle build output would be overwritten by the next build anyway.
+         * Why this copy can't be replaced in place, or null when it can. A translocated or mounted-DMG
+         * copy is read-only, and a Gradle build output would be overwritten by the next build anyway.
          */
-        fun isInstallable(bundle: Path): Boolean {
+        fun installBlocker(bundle: Path): String? {
             val path = bundle.toString()
-            val parent = bundle.parent ?: return false
-            return !path.contains("/AppTranslocation/") && !path.startsWith("/Volumes/") &&
-                !path.contains("/build/compose/") && Files.isWritable(parent)
+            val parent = bundle.parent
+            return when {
+                path.contains("/AppTranslocation/") || path.startsWith("/Volumes/") ->
+                    "Dari is running from the disk image or a temporary location, so it can't update itself. " +
+                        "Drag Dari to the Applications folder, open it from there, and click Update again."
+                path.contains("/build/compose/") -> "Development builds don't update themselves."
+                parent == null || !Files.isWritable(parent) ->
+                    "Dari can't replace itself in ${parent ?: path}. Move it to the Applications folder, open it from there, and click Update again."
+                else -> null
+            }
         }
 
         private fun macArch(): String = if (System.getProperty("os.arch") == "aarch64") "arm64" else "x64"

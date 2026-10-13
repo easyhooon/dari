@@ -59,9 +59,10 @@ elif tool == "ditto":
     else:
         import shutil
         shutil.copytree(args[-2], args[-1])
-elif tool == "hdiutil":
-    staged = pathlib.Path(args[args.index("-srcfolder") + 1])
-    assert (staged / "Dari.app/Contents/stapled-ticket").exists()
+elif tool == "dmgbuild":
+    assert args[args.index("-s") + 1].endswith("dmg-settings.py")
+    app = pathlib.Path(next(arg[4:] for arg in args if arg.startswith("app=")))
+    assert (app / "Contents/stapled-ticket").exists()
     pathlib.Path(args[-1]).write_bytes(b"disk-image")
 elif tool == "xcrun":
     if args[:2] == ["notarytool", "submit"]:
@@ -126,7 +127,7 @@ class MacOSPackagingTest(unittest.TestCase):
         stub = self.bin / "stub"
         stub.write_text(STUB)
         stub.chmod(0o755)
-        for tool in ("uname", "plutil", "codesign", "ditto", "hdiutil", "xcrun", "spctl", "security", "uuidgen"):
+        for tool in ("uname", "plutil", "codesign", "ditto", "dmgbuild", "xcrun", "spctl", "security", "uuidgen"):
             (self.bin / tool).symlink_to(stub)
         (self.root / "gradlew").symlink_to(stub)
         (self.root / "scripts/smoke-test-desktop-app.sh").symlink_to(stub)
@@ -238,6 +239,10 @@ class MacOSPackagingTest(unittest.TestCase):
 
     def test_missing_credentials_stop_before_build_or_apple_calls(self):
         self.assertNotEqual(self.run_script(MACOS_SIGNING_IDENTITY="").returncode, 0)
+        self.assertTrue(all(event[0] == "uname" for event in self.events()))
+
+    def test_missing_dmgbuild_stops_before_build(self):
+        self.assertNotEqual(self.run_script(DMGBUILD="missing-dmgbuild").returncode, 0)
         self.assertTrue(all(event[0] == "uname" for event in self.events()))
 
     def test_setup_selects_identity_and_removes_credential_files(self):

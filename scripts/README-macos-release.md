@@ -43,6 +43,10 @@ signed app, notarizes and staples the app, then creates, signs, notarizes and st
 the DMG. Only after those steps does it copy the DMG into `build/release` and generate
 its `.sha256`. The temporary keychain and credential files are removed even on failure.
 
+The DMG window layout (background arrow, icon positions) comes from `dmgbuild` with
+`dari-desktop-app/packaging/dmg/dmg-settings.py`. Run `scripts/make-dmg-background.py`
+(needs Pillow) to redraw the background, and keep its icon positions in sync.
+
 ## Before publishing 2.1.1
 
 1. Run unit and packaging contract tests. Build installers from a reviewed commit whose
