@@ -79,6 +79,7 @@ mavenPublishing {
         }
     }
 
-    publishToMavenCentral()
+    // Publish as soon as Central validates the upload, without a manual step in the Central Portal.
+    publishToMavenCentral(automaticRelease = true)
     signAllPublications()
 }
