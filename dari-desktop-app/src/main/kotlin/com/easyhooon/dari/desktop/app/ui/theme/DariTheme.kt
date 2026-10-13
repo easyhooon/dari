@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.easyhooon.dari.desktop.app.Appearance
 
 // Layout rules borrowed from Necto's design notes: colour carries status only, one separator
 // per region, weight/colour for hierarchy, UI face for labels and mono face for values.
@@ -116,8 +117,12 @@ object Dari {
 }
 
 @Composable
-fun DariTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
+fun DariTheme(appearance: Appearance = Appearance.SYSTEM, content: @Composable () -> Unit) {
+    val dark = when (appearance) {
+        Appearance.SYSTEM -> isSystemInDarkTheme()
+        Appearance.LIGHT -> false
+        Appearance.DARK -> true
+    }
     val colors = if (dark) DarkColors else LightColors
     // Material components (menus, text selection) pick up the same neutrals.
     val material = if (dark) {

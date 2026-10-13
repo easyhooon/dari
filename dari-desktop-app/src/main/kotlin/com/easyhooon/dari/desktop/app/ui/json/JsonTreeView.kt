@@ -38,18 +38,18 @@ import java.awt.datatransfer.StringSelection
 
 /** JSON shows as a foldable tree; anything else falls back to a plain code block. */
 @Composable
-fun JsonPayload(text: String, modifier: Modifier = Modifier) {
+fun JsonPayload(text: String, foldingEnabled: Boolean, modifier: Modifier = Modifier) {
     when (val content = remember(text) { parseJsonViewerContent(text) }) {
-        is JsonViewerContent.Structured -> JsonTree(content.element, modifier)
+        is JsonViewerContent.Structured -> JsonTree(content.element, foldingEnabled, modifier)
         is JsonViewerContent.PlainText -> CodeBlock(content.text, modifier)
     }
 }
 
 @Composable
-private fun JsonTree(element: JsonElement, modifier: Modifier) {
+private fun JsonTree(element: JsonElement, foldingEnabled: Boolean, modifier: Modifier) {
     // Nodes deeper than two levels start folded, as in the in-app viewer.
     var collapsed by remember(element) { mutableStateOf(defaultCollapsedPaths(element)) }
-    val rows = remember(element, collapsed) { buildJsonTreeRows(element, collapsed) }
+    val rows = remember(element, collapsed, foldingEnabled) { buildJsonTreeRows(element, collapsed, foldingEnabled) }
     val allPaths = remember(element) { allCollapsiblePaths(element) }
     val pretty = remember(element) { prettyJson.encodeToString(JsonElement.serializer(), element) }
     Column(
@@ -57,15 +57,15 @@ private fun JsonTree(element: JsonElement, modifier: Modifier) {
             .background(Dari.colors.surface, RoundedCornerShape(DariMetrics.radius))
             .border(1.dp, Dari.colors.border, RoundedCornerShape(DariMetrics.radius)),
     ) {
-        if (allPaths.isNotEmpty()) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.End,
-            ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            if (foldingEnabled && allPaths.isNotEmpty()) {
                 QuietButton("Expand all", onClick = { collapsed = emptySet() }, enabled = collapsed.isNotEmpty())
                 QuietButton("Collapse all", onClick = { collapsed = allPaths }, enabled = collapsed != allPaths)
-                QuietButton("Copy", onClick = { copyToClipboard(pretty) })
             }
+            QuietButton("Copy", onClick = { copyToClipboard(pretty) })
         }
         Column(Modifier.padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 8.dp)) {
             rows.forEach { row ->

@@ -63,12 +63,14 @@ fun MessageTable(
     onMove: (Int) -> Unit,
     onClose: () -> Unit,
     emptyHint: Pair<String, String?>,
+    showTags: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val focus = remember { FocusRequester() }
     BoxWithConstraints(modifier) {
         // Narrow table: drop Tag and Size so the handler name keeps its room.
         val compact = maxWidth < COMPACT_WIDTH
+        val tagColumn = showTags && !compact
         Column(
             Modifier.fillMaxSize().focusRequester(focus).focusable().onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -80,7 +82,7 @@ fun MessageTable(
                 }
             },
         ) {
-            HeaderRow(compact)
+            HeaderRow(compact, tagColumn)
             if (messages.isEmpty()) {
                 EmptyState(emptyHint.first, emptyHint.second, Modifier.fillMaxSize())
                 return@Column
@@ -98,6 +100,7 @@ fun MessageTable(
                     MessageRow(
                         message = message,
                         compact = compact,
+                        tagColumn = tagColumn,
                         selected = message.id == selectedId,
                         onClick = {
                             focus.requestFocus()
@@ -111,7 +114,7 @@ fun MessageTable(
 }
 
 @Composable
-private fun HeaderRow(compact: Boolean) {
+private fun HeaderRow(compact: Boolean, tagColumn: Boolean) {
     val border = Dari.colors.border
     Row(
         Modifier.fillMaxWidth().height(DariMetrics.rowHeight)
@@ -121,7 +124,7 @@ private fun HeaderRow(compact: Boolean) {
         HeaderCell("Status", StatusWidth)
         HeaderCell("Dir", DirectionWidth)
         HeaderCell("Handler", null)
-        if (!compact) HeaderCell("Tag", TagWidth)
+        if (tagColumn) HeaderCell("Tag", TagWidth)
         HeaderCell("Time", TimeWidth, TextAlign.End)
         HeaderCell("Duration", DurationWidth, TextAlign.End)
         if (!compact) HeaderCell("Size", SizeWidth, TextAlign.End)
@@ -140,7 +143,13 @@ private fun RowScope.HeaderCell(text: String, width: Dp?, align: TextAlign = Tex
 }
 
 @Composable
-private fun MessageRow(message: WireMessageSummary, compact: Boolean, selected: Boolean, onClick: () -> Unit) {
+private fun MessageRow(
+    message: WireMessageSummary,
+    compact: Boolean,
+    tagColumn: Boolean,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     val fill = when {
@@ -185,7 +194,7 @@ private fun MessageRow(message: WireMessageSummary, compact: Boolean, selected: 
                 )
             }
         }
-        if (!compact) Box(cell(TagWidth)) { message.tag?.let { Badge(it) } }
+        if (tagColumn) Box(cell(TagWidth)) { message.tag?.let { Badge(it) } }
         NumericCell(formatTime(message.requestTimestamp), TimeWidth)
         NumericCell(durationLabel(message), DurationWidth)
         if (!compact) NumericCell(formatBytes(message.requestSizeBytes + message.responseSizeBytes), SizeWidth)

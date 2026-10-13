@@ -31,7 +31,12 @@ import com.easyhooon.dari.inspector.protocol.WirePayloadMetadata
  * response bodies side by side (stacked when the pane is narrow), each scrolling on its own.
  */
 @Composable
-fun DetailPane(detail: WireMessageDetail?, onClose: () -> Unit, modifier: Modifier = Modifier) {
+fun DetailPane(
+    detail: WireMessageDetail?,
+    jsonFoldingEnabled: Boolean,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier.background(Dari.colors.surface)) {
         if (detail == null) {
             EmptyState("Select a message", "Its request and response appear here.", Modifier.fillMaxWidth().weight(1f))
@@ -74,6 +79,7 @@ fun DetailPane(detail: WireMessageDetail?, onClose: () -> Unit, modifier: Modifi
                     summary.requestSizeBytes,
                     detail.requestDataTruncated,
                     detail.requestPayloadMetadata,
+                    jsonFoldingEnabled,
                     it,
                 )
             }
@@ -84,6 +90,7 @@ fun DetailPane(detail: WireMessageDetail?, onClose: () -> Unit, modifier: Modifi
                     summary.responseSizeBytes,
                     detail.responseDataTruncated,
                     detail.responsePayloadMetadata,
+                    jsonFoldingEnabled,
                     it,
                 )
             }
@@ -122,6 +129,7 @@ private fun PayloadColumn(
     sizeBytes: Int,
     truncated: Boolean,
     metadata: WirePayloadMetadata?,
+    jsonFoldingEnabled: Boolean,
     modifier: Modifier,
 ) {
     SelectionContainer(modifier) {
@@ -143,7 +151,7 @@ private fun PayloadColumn(
             if (data == null) {
                 Text("No payload", style = Dari.type.caption, color = Dari.colors.textTertiary)
             } else {
-                JsonPayload(data)
+                JsonPayload(data, jsonFoldingEnabled)
             }
         }
     }

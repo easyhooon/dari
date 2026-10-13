@@ -18,10 +18,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.window.WindowDraggableArea
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,7 +35,9 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowScope
+import com.easyhooon.dari.desktop.app.Appearance
 import com.easyhooon.dari.desktop.app.ConnectionState
+import com.easyhooon.dari.desktop.app.DesktopSettings
 import com.easyhooon.dari.desktop.app.InspectorController
 import com.easyhooon.dari.desktop.app.isMacOs
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
@@ -43,11 +49,11 @@ import java.awt.Cursor
 private val TrafficLightInset = if (isMacOs) 78.dp else 12.dp
 
 @Composable
-fun WindowScope.App(controller: InspectorController) {
-    DariTheme {
+fun WindowScope.App(controller: InspectorController, settings: DesktopSettings) {
+    DariTheme(settings.appearance) {
         Column(Modifier.fillMaxSize().background(Dari.colors.background)) {
             // The title bar is transparent on macOS, so this row is what moves the window.
-            WindowDraggableArea { TitleBar(controller) }
+            WindowDraggableArea { TitleBar(controller, settings) }
             Divider()
             if (controller.adbMissing) {
                 EmptyState(
@@ -59,14 +65,14 @@ fun WindowScope.App(controller: InspectorController) {
             }
             FilterBar(controller)
             Divider()
-            Workspace(controller)
+            Workspace(controller, settings)
         }
     }
 }
 
 /** Title bar row: device and app pickers plus the connection state. No sidebar — Dari has one job. */
 @Composable
-private fun TitleBar(controller: InspectorController) {
+private fun TitleBar(controller: InspectorController, settings: DesktopSettings) {
     val state = controller.state
     Row(
         Modifier.fillMaxWidth().height(DariMetrics.toolbarHeight).padding(start = TrafficLightInset, end = 12.dp),
@@ -107,6 +113,7 @@ private fun TitleBar(controller: InspectorController) {
             maxLines = 1,
             modifier = Modifier.widthIn(max = 420.dp),
         )
+        SettingsMenu(settings)
         if (state == ConnectionState.Idle) {
             QuietButton("Connect", onClick = controller::connect, enabled = controller.applicationId.isNotBlank())
         } else {
@@ -158,7 +165,7 @@ private fun FilterBar(controller: InspectorController) {
 
 /** Table with a resizable detail pane docked on the right. */
 @Composable
-private fun Workspace(controller: InspectorController) {
+private fun Workspace(controller: InspectorController, settings: DesktopSettings) {
     val visible = controller.visibleMessages()
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -174,6 +181,7 @@ private fun Workspace(controller: InspectorController) {
                 onMove = { controller.moveSelection(visible, it) },
                 onClose = controller::closeDetail,
                 emptyHint = emptyHint(controller),
+                showTags = settings.showTags,
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             )
             Box(
@@ -191,6 +199,7 @@ private fun Workspace(controller: InspectorController) {
             }
             DetailPane(
                 detail = controller.detail,
+                jsonFoldingEnabled = settings.jsonFoldingEnabled,
                 onClose = controller::closeDetail,
                 modifier = Modifier.width(with(density) { detailWidth.coerceIn(minDetail, maxDetail).toDp() })
                     .fillMaxHeight(),
@@ -219,3 +228,37 @@ private fun emptyHint(controller: InspectorController): Pair<String, String?> = 
 }
 
 private const val DETAIL_FRACTION = 0.55f
+
+/** ⚙ menu mirroring View in the menu bar, for discoverability on Windows and Linux. */
+@Composable
+private fun SettingsMenu(settings: DesktopSettings) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        QuietButton("⚙", onClick = { expanded = true })
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            Appearance.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(checkLabel(settings.appearance == option, appearanceLabel(option)), style = Dari.type.label) },
+                    onClick = { settings.updateAppearance(option) },
+                )
+            }
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(checkLabel(settings.jsonFoldingEnabled, "Fold JSON"), style = Dari.type.label) },
+                onClick = { settings.updateJsonFolding(!settings.jsonFoldingEnabled) },
+            )
+            DropdownMenuItem(
+                text = { Text(checkLabel(settings.showTags, "Show tags"), style = Dari.type.label) },
+                onClick = { settings.updateShowTags(!settings.showTags) },
+            )
+        }
+    }
+}
+
+private fun checkLabel(checked: Boolean, label: String) = (if (checked) "✓  " else "    ") + label
+
+fun appearanceLabel(appearance: Appearance): String = when (appearance) {
+    Appearance.SYSTEM -> "Match system"
+    Appearance.LIGHT -> "Light"
+    Appearance.DARK -> "Dark"
+}

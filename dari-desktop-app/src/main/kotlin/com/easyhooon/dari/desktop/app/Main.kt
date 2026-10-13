@@ -14,6 +14,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.easyhooon.dari.desktop.app.adb.Adb
 import com.easyhooon.dari.desktop.app.ui.App
+import com.easyhooon.dari.desktop.app.ui.appearanceLabel
 import java.awt.Taskbar
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
@@ -26,6 +27,7 @@ fun main() {
     // Native menu bar and system appearance on macOS; must be set before any window exists.
     System.setProperty("apple.awt.application.name", "Dari")
     System.setProperty("apple.awt.application.appearance", "system")
+    System.setProperty("apple.laf.useScreenMenuBar", "true")
 
     val icon = loadAppIcon()
     // Dock icon while running unpackaged (`./gradlew run`); packaged apps use the bundle icon.
@@ -41,6 +43,7 @@ fun main() {
             // ANDROID_SERIAL picks the device first, as it does for adb itself.
             InspectorController(scope, Adb.locate()?.let(::Adb), APP_VERSION, System.getenv("ANDROID_SERIAL"))
         }
+        val settings = remember { DesktopSettings() }
         LaunchedEffect(Unit) { controller.start() }
 
         Window(
@@ -59,6 +62,22 @@ fun main() {
                 window.rootPane.putClientProperty("apple.awt.windowTitleVisible", false)
             }
             MenuBar {
+                Menu("View") {
+                    Appearance.entries.forEach { option ->
+                        RadioButtonItem(
+                            appearanceLabel(option),
+                            selected = settings.appearance == option,
+                            onClick = { settings.updateAppearance(option) },
+                        )
+                    }
+                    Separator()
+                    CheckboxItem(
+                        "Fold JSON",
+                        checked = settings.jsonFoldingEnabled,
+                        onCheckedChange = settings::updateJsonFolding,
+                    )
+                    CheckboxItem("Show Tags", checked = settings.showTags, onCheckedChange = settings::updateShowTags)
+                }
                 Menu("Session") {
                     Item("Reconnect", shortcut = shortcut(Key.R), onClick = controller::connect)
                     Item("Disconnect", shortcut = shortcut(Key.D), onClick = controller::disconnectByUser)
@@ -66,7 +85,7 @@ fun main() {
                     Item("Clear Messages", shortcut = shortcut(Key.K), onClick = controller::clearMessages)
                 }
             }
-            App(controller)
+            App(controller, settings)
         }
     }
 }
