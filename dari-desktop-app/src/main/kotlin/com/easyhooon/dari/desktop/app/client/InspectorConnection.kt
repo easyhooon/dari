@@ -161,7 +161,9 @@ class InspectorConnection private constructor(
                 } ?: throw IOException("$applicationId is not running Dari desktop on this device")
                 if (!hello.accepted) throw IOException("App rejected the connection: ${hello.rejection}")
                 socket.soTimeout = 0
-                return InspectorConnection(socket, adb, serial, port, requireNotNull(hello.app))
+                // An IOException keeps the cleanup below; requireNotNull would leak the socket and forward.
+                val app = hello.app ?: throw IOException("Handshake is missing app info")
+                return InspectorConnection(socket, adb, serial, port, app)
             } catch (e: IOException) {
                 runCatching { socket.close() }
                 adb.removeForward(serial, port)
