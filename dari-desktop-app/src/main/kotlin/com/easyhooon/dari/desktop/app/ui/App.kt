@@ -292,7 +292,7 @@ private fun statusLine(state: ConnectionState): String = when (state) {
     ConnectionState.Idle -> "Not connected"
     is ConnectionState.Connecting -> state.reason?.let { "Waiting for app · $it" } ?: "Connecting…"
     // The library version stays in the tooltip; the desktop version is in About.
-    is ConnectionState.Connected -> with(state.app) { "App v$appVersion · API $sdkInt" }
+    is ConnectionState.Connected -> with(state.app) { "$appName v$appVersion · API $sdkInt" }
 }
 
 private fun statusDetails(state: ConnectionState): String = when (state) {

@@ -67,7 +67,8 @@ private fun JsonTree(element: JsonElement, foldingEnabled: Boolean, onCopy: () -
                     CopyButton(onCopy)
                 }
             }
-            Column(Modifier.padding(start = 4.dp, end = if (foldable) 12.dp else 72.dp, top = if (foldable) 0.dp else 8.dp, bottom = 8.dp)) {
+            // The first row is always "{" or "[", so the corner Copy button needs no reserved margin.
+            Column(Modifier.padding(start = 4.dp, end = 12.dp, top = if (foldable) 0.dp else 8.dp, bottom = 8.dp)) {
                 rows.forEach { row ->
                     JsonRow(row) { path ->
                         collapsed = if (path in collapsed) collapsed - path else collapsed + path
