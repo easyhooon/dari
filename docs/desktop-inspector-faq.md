@@ -149,6 +149,21 @@ A real phone is reached over USB. An emulator runs `adbd` inside it and register
 over local TCP (port 5555 for the first emulator), so to every adb client it looks like a USB device.
 That is why the Dari desktop app needs no special case for emulators.
 
+### Which ports are fixed?
+
+None of them; they are defaults.
+
+| Port | What it is | Can it change? |
+| --- | --- | --- |
+| 5037 | The adb server on the computer. Android Studio, `adb` and the Dari desktop app connect to it | Yes: `ANDROID_ADB_SERVER_PORT` or `adb -P <port>` |
+| 5554 / 5555 | One emulator's pair: console port and adb port. The serial `emulator-5554` names the console port | Each extra emulator takes the next pair (5556/5557, 5558/5559, …) |
+| 5555 on a phone | Conventional port for `adb tcpip 5555` (Wi-Fi debugging) | Any port in the command; Android 11+ wireless debugging picks one at pairing |
+| Dari's forward port (e.g. 56778) | The tunnel from `adb forward tcp:0 …` | Picked by the OS each time |
+
+The Dari desktop app runs the `adb` binary, so with a non-default server port it follows
+`ANDROID_ADB_SERVER_PORT` when Dari is started with that variable set. Emulators and Wi-Fi devices
+need nothing extra: anything `adb devices` lists shows up in Dari.
+
 ### Side by side
 
 | | Android Studio | Dari desktop app |
