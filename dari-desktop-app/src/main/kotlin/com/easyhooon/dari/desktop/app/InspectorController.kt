@@ -19,6 +19,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
+import java.io.File
 import java.io.IOException
 
 sealed interface ConnectionState {
@@ -55,7 +56,12 @@ class InspectorController(
     var directionFilter by mutableStateOf<String?>(null)
     var statusFilter by mutableStateOf<String?>(null)
 
+    /** Short confirmation such as "Copied", cleared after a moment. */
+    var notice by mutableStateOf<String?>(null)
+        private set
+
     private var connection: InspectorConnection? = null
+    private var noticeJob: Job? = null
 
     // ANDROID_SERIAL or a pick in the device menu; automatic picks may be revised later.
     private var deviceChosenByUser = preferredSerial != null
@@ -157,6 +163,58 @@ class InspectorController(
     fun clearMessages() {
         val conn = connection ?: return
         scope.launch { runCatching { conn.clear() } }
+    }
+
+    // Read Compose state (not `connection`) so menu items re-enable when a session starts.
+    val canCopy: Boolean get() = state is ConnectionState.Connected && selectedId != null
+
+    val canExport: Boolean get() = state is ConnectionState.Connected && messages.isNotEmpty()
+
+    /** Copies the selected message as readable text, like the app's "Share as text". */
+    fun copySelected() {
+        val id = selectedId ?: return
+        scope.launch {
+            val message = fetchDetail(id) ?: return@launch showNotice("Couldn't copy: message unavailable")
+            copyText(MessageExport.text(message))
+            showNotice("Copied message")
+        }
+    }
+
+    fun copy(text: String, what: String) {
+        copyText(text)
+        showNotice("Copied $what")
+    }
+
+    /** Saves the selected message, or with [all] every message passing the filters (oldest first). */
+    fun export(target: File, format: ExportFormat, all: Boolean) {
+        val ids = if (all) visibleMessages().reversed().map { it.id } else listOfNotNull(selectedId)
+        scope.launch {
+            if (all) showNotice("Exporting ${ids.size} messages…", clearAfter = false)
+            val details = ids.mapNotNull { fetchDetail(it) }
+            val result = runCatching {
+                withContext(Dispatchers.IO) { target.writeText(MessageExport.format(details, format)) }
+            }
+            result.exceptionOrNull()?.let { AppLog.error("Export to ${target.name} failed", it) }
+            val saved = if (details.size == 1) "message" else "${details.size} messages"
+            showNotice(if (result.isSuccess) "Saved $saved to ${target.name}" else "Export failed")
+        }
+    }
+
+    private suspend fun fetchDetail(id: Long): WireMessageDetail? {
+        detail?.takeIf { it.summary.id == id && messages[id] == it.summary }?.let { return it }
+        val conn = connection ?: return null
+        return runCatching { conn.detail(id) }.getOrNull()
+    }
+
+    private fun showNotice(text: String, clearAfter: Boolean = true) {
+        noticeJob?.cancel()
+        notice = text
+        if (clearAfter) {
+            noticeJob = scope.launch {
+                delay(NOTICE_MILLIS)
+                notice = null
+            }
+        }
     }
 
     /** Newest first, after the search, direction and status facets. */
@@ -261,5 +319,6 @@ class InspectorController(
     private companion object {
         const val POLL_INTERVAL_MS = 2_000L
         const val MAX_MESSAGES = 2_000
+        const val NOTICE_MILLIS = 2_500L
     }
 }

@@ -48,6 +48,13 @@ Download Dari only from the repository's releases page.
 2. The installer isn't code-signed, so SmartScreen may warn on first run. Click **More info → Run anyway**.
 3. Optionally, compare `certutil -hashfile Dari-<version>-x64.msi SHA256` with the `.sha256` file from the same release.
 
+### Updates
+
+Dari checks the releases page on launch and every six hours. When a newer version exists, an **Update to &lt;version&gt;** button appears in the title bar, and **Help → Install Dari &lt;version&gt;** does the same.
+
+- **macOS**: Dari downloads the new image, checks its `.sha256`, bundle ID, version and code signature, then quits and relaunches as the new version. If anything fails, the installed version is kept. This works when Dari sits in a folder you can write to, such as **Applications**; otherwise the button opens the download page.
+- **Windows**: the button opens the download page. Run the new `.msi`; it upgrades the installed copy.
+
 ## Connect
 
 1. Keep `adb` available: set `ANDROID_HOME`, or install Android Studio in its default location.
@@ -73,6 +80,7 @@ Tunnels are removed when the desktop app disconnects or quits. `adb forward --li
 - **Debug builds only, unless you opt in.** The socket opens only in debuggable builds, or in a non-debuggable internal build that sets the manifest flag below. Release builds use `dari-noop`, which contains no capture code.
 - **adb only.** Only adb (shell) or root can connect, so other apps on the device can't read messages.
 - **Masked by default.** Before anything leaves the device, values under keys such as `token`, `password`, `secret`, `cookie` or `authorization` are masked, as are `Bearer` credentials. Raw protobuf previews aren't sent.
+- **Nothing about you leaves your computer.** The desktop app has no analytics or telemetry. Its only network request is the update check: a request to `github.com` on launch and every six hours, which sends nothing but what any browser visit would. `dari.log` stays local and records failures only.
 
 Add your own masking on top. It runs after the built-in masking, and if it throws, the message isn't sent:
 
@@ -104,6 +112,13 @@ A non-debuggable internal build, such as staging, can opt in with this entry in 
 | No device | Check `adb devices`. Accept the USB debugging prompt on the device. |
 | App is in the background | Android pauses background apps. Bring the app to the foreground and Dari reconnects. |
 | Not running Dari | Check that the app is a debuggable build using `dari` 2.0.0 or later. |
+
+To report a problem, use **Help → Report an Issue…**. It opens the bug form with your Dari version and OS filled in; **Help → Suggest a Feature…** opens the feature request form. **Help → Show Log File** opens the folder with `dari.log` (`~/Library/Logs/Dari` on macOS, `%LOCALAPPDATA%\Dari\logs` on Windows). The log records failures only, never message contents.
+
+## Uninstall
+
+- **macOS**: quit Dari and move `/Applications/Dari.app` to the Trash. To remove its settings and log too, delete `~/Library/Logs/Dari` and `~/Library/Preferences/io.github.easyhooon.plist`.
+- **Windows**: **Settings → Apps → Installed apps → Dari → Uninstall**. Settings live in the registry under `HKEY_CURRENT_USER\Software\JavaSoft\Prefs\io\github\easyhooon`, and the log in `%LOCALAPPDATA%\Dari`.
 
 ## Build from source
 

@@ -24,6 +24,15 @@ Related: [design](desktop-inspector-design.md), [FAQ](desktop-inspector-faq.md).
   /Applications/Dari.app` is the fallback if "damaged" appears.
 - **Lesson**: reproduce with the published artifact before changing user-facing install docs.
 
+### Packaged app quit on launch: `NoClassDefFoundError: java/net/http/HttpClient`
+
+- **Cause**: jpackage bundles a trimmed JRE with only the modules Compose expects. The updater's
+  `java.net.http` wasn't one of them. `./gradlew run` uses a full JDK, so only the packaged app
+  crashed. It was found in the updater's end-to-end test.
+- **Fix**: list the modules explicitly in `nativeDistributions { modules(...) }`, taken from
+  `./gradlew :dari-desktop-app:suggestRuntimeModules`, plus `jdk.crypto.ec` for TLS. After adding a
+  JDK API, rerun that task and launch the packaged app, not just `run`.
+
 ### Intel macOS build fails: "code object is not signed at all"
 
 - **Symptom**: the 2.0.0 `Desktop App Release` run failed on `macos-15-intel`, so no installers were attached.

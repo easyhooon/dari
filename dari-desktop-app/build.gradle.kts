@@ -32,12 +32,18 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "Dari"
-            packageVersion = libs.versions.dari.get()
+            // -PdariDesktopVersion=1.9.0 packages an older version to test the in-app updater.
+            packageVersion = (findProperty("dariDesktopVersion") as String?) ?: libs.versions.dari.get()
             description = "Desktop inspector for Dari WebView bridge messages"
             vendor = "easyhooon"
+            copyright = "© 2026 easyhooon. Apache License 2.0."
+            // jpackage bundles a trimmed JRE. From `suggestRuntimeModules`, plus jdk.crypto.ec for TLS
+            // to GitHub; without java.net.http the updater crashes the packaged app.
+            modules("java.instrument", "java.net.http", "java.prefs", "jdk.unsupported", "jdk.crypto.ec")
 
             macOS {
                 bundleID = "io.github.easyhooon.dari.desktop"
+                appCategory = "public.app-category.developer-tools"
                 iconFile.set(project.file("icons/dari.icns"))
             }
             windows {
