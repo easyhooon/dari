@@ -16,9 +16,8 @@ file, and installs or updates `/Applications/Dari.app`:
 curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install-desktop.sh | bash
 ```
 
-Files downloaded with `curl` don't get macOS's download flag, so Dari opens right away without the
-first-launch prompt below. The checksum is what catches a bad download, so run the command only from
-this page or the repository. To pin a version, put `DARI_VERSION=2.0.0` before `bash`.
+The checksum is what catches a bad download, so run the command only from this page or the
+repository. To pin a version, put `DARI_VERSION=2.0.0` before `bash`.
 
 ### macOS from the DMG
 
@@ -26,21 +25,7 @@ this page or the repository. To pin a version, put `DARI_VERSION=2.0.0` before `
 2. Open the image and drag **Dari** into **Applications**.
 3. Optionally, compare `shasum -a 256 Dari-<version>-arm64.dmg` with the `.sha256` file from the same release. A match means the download isn't corrupted; it doesn't prove who published it.
 
-#### First launch
-
-The app is ad-hoc signed, without an Apple Developer ID or notarization, so macOS says it can't check Dari for malicious software and blocks it the first time:
-
-1. Open Dari once and click **Done**.
-2. Go to **System Settings → Privacy & Security** and click **Open Anyway** next to the Dari message.
-3. Confirm. Later launches open normally.
-
-If macOS instead says **"Dari is damaged and can't be opened"**, run this in Terminal, then open Dari again. It clears the download flag on Dari only and changes no system setting:
-
-```bash
-xattr -dr com.apple.quarantine /Applications/Dari.app
-```
-
-Download Dari only from the repository's releases page.
+Dari is signed with a Developer ID and notarized by Apple, so it opens without a security prompt. Download it only from the repository's releases page.
 
 ### Windows (preview)
 
@@ -52,7 +37,7 @@ Download Dari only from the repository's releases page.
 
 Dari checks the releases page on launch and every six hours. When a newer version exists, an **Update to &lt;version&gt;** button appears in the title bar, and **Help → Install Dari &lt;version&gt;** does the same.
 
-- **macOS**: Dari downloads the new image, checks its `.sha256`, bundle ID, version and code signature, then quits and relaunches as the new version. If anything fails, the installed version is kept. This works when Dari sits in a folder you can write to, such as **Applications**; otherwise the button opens the download page.
+- **macOS**: Dari downloads the new image, checks its `.sha256`, bundle ID, version and code signature, then quits and relaunches as the new version. If anything fails, the installed version is kept. This works when Dari sits in a folder you can write to, such as **Applications**; otherwise Dari tells you to move it to **Applications** and open it from there.
 - **Windows**: the button opens the download page. Run the new `.msi`; it upgrades the installed copy.
 
 ## Connect
