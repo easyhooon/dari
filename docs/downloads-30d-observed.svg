@@ -4,7 +4,7 @@
 <style>.background{fill:#fff}text{font:14px system-ui,sans-serif;fill:#253047}.axis{font-size:12px;fill:#58657b}@media(prefers-color-scheme:dark){.background{fill:#121a2b}text{fill:#e5eaf4}.axis{fill:#b4bed0}}</style>
 <rect class="background" width="960" height="390" rx="12"/>
 <text x="72" y="30" font-size="21" font-weight="700">Dari rolling 30-day downloads</text>
-<text x="72" y="53" class="axis">Observed 2026-10-13 to 2026-10-13 UTC · updated 2026-10-13 04:55 UTC</text>
+<text x="72" y="53" class="axis">Observed 2026-10-13 to 2026-10-13 UTC · updated 2026-10-13 05:15 UTC</text>
 <line x1="72" x2="932" y1="312.0" y2="312.0" stroke="#9aa4bb" stroke-opacity=".3"/><text x="60" y="316.0" text-anchor="end" class="axis">0</text>
 <line x1="72" x2="932" y1="254.5" y2="254.5" stroke="#9aa4bb" stroke-opacity=".3"/><text x="60" y="258.5" text-anchor="end" class="axis">45</text>
 <line x1="72" x2="932" y1="197.0" y2="197.0" stroke="#9aa4bb" stroke-opacity=".3"/><text x="60" y="201.0" text-anchor="end" class="axis">90</text>
