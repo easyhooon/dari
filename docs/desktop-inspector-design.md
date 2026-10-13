@@ -187,8 +187,8 @@ happen under one lock, so events and snapshots agree. Trimmed entries are not se
 | --- | --- | --- |
 | 0 | Spike: abstract socket + peer UID check over `adb forward` on a real device | done |
 | 1 | Protocol module + repository events + server + opt-in/redactor (+ noop) + tests | done |
-| 2 | Desktop MVP via `./gradlew :dari-desktop-app:run`: one device, list/detail/live | 3–4 days |
-| 3 | macOS packaging: `.dmg`, signing, notarization | 1–2 days |
+| 2 | Desktop MVP via `./gradlew :dari-desktop-app:run`: one device, list/detail/live | done |
+| 3 | macOS packaging: ad-hoc signed `.dmg` (arm64, x64) + SHA-256, release workflow, install docs | done |
 | 4 | Windows (`.msi`), then Linux (`.deb`/AppImage) | 1–2 days each |
 | 5 | Optional necto plugin module | separate issue |
 
