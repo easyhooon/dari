@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Sample Scarf's public Dari badge and render its observed 30-day trend."""
 
+import argparse
 import csv
 import datetime as dt
 import html
@@ -160,4 +161,8 @@ def update(now=None, count=None, data_path=DATA_PATH, svg_path=SVG_PATH):
 
 
 if __name__ == "__main__":
-    update()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--data-path", type=Path, default=DATA_PATH)
+    parser.add_argument("--svg-path", type=Path, default=SVG_PATH)
+    args = parser.parse_args()
+    update(data_path=args.data_path, svg_path=args.svg_path)

@@ -13,9 +13,11 @@ to `docs/downloads-30d-observed.csv` and renders
 fails rather than being published as an exact count.
 
 `.github/workflows/downloads.yml` runs once a day and commits those two
-public aggregate files if they changed. `workflow_dispatch` can run it on
-demand. GitHub Actions scheduling is approximate, so the SVG shows the actual
-UTC observation times. Failed badge requests leave the previous chart intact.
+public aggregate files to `dari-downloads-data` if they changed. The README
+loads the SVG from that branch because `main` requires changes through a pull
+request. `workflow_dispatch` can run the sampler on demand. GitHub Actions
+scheduling is approximate, so the SVG shows the actual UTC observation times.
+Failed badge requests leave the previous chart intact.
 
 This is an observed trend of **rolling 30-day artifact requests**, not a daily
 download series. History begins when sampling begins; this source cannot
