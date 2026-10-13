@@ -165,6 +165,12 @@ exposes entries as `InspectorEntry(wireId, entry)`; the wire `id` is the temp id
 created in this process and the Room id for entries restored from disk. Mutations and their events
 happen under one lock, so events and snapshots agree. Trimmed entries are not sent as removals.
 
+Each session writes events straight to the socket, and the repository's event buffer holds 256
+events and drops the oldest on overflow. A desktop that stalls long enough to fall 256 events behind
+can miss some, including `cleared`. This is accepted for a local USB debugging tool: such a stall
+usually means the connection is gone, and every reconnect starts with `list`, which resyncs the view.
+A sequence number with an explicit resync signal would close the gap if it ever matters.
+
 ## Runtime and server
 
 1. `MessageRepository`: internal `SharedFlow<RepositoryEvent>` (`Added`, `Updated`, `Cleared`)
