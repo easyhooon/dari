@@ -57,8 +57,7 @@ private val TrafficLightInset = if (isMacOs) 78.dp else 12.dp
 fun WindowScope.App(controller: InspectorController, settings: DesktopSettings) {
     DariTheme(settings.appearance) {
         Column(Modifier.fillMaxSize().background(Dari.colors.background)) {
-            // The title bar is transparent on macOS, so this row is what moves the window.
-            WindowDraggableArea { TitleBar(controller, settings) }
+            TitleBar(controller, settings)
             Divider()
             if (controller.adbMissing) {
                 EmptyState(
@@ -78,7 +77,7 @@ fun WindowScope.App(controller: InspectorController, settings: DesktopSettings) 
 /** Title bar row: device and app pickers plus the connection state. No sidebar — Dari has one job. */
 @OptIn(ExperimentalFoundationApi::class) // TooltipArea
 @Composable
-private fun TitleBar(controller: InspectorController, settings: DesktopSettings) {
+private fun WindowScope.TitleBar(controller: InspectorController, settings: DesktopSettings) {
     val state = controller.state
     Row(
         Modifier.fillMaxWidth().height(DariMetrics.toolbarHeight).padding(start = TrafficLightInset, end = 12.dp),
@@ -113,7 +112,9 @@ private fun TitleBar(controller: InspectorController, settings: DesktopSettings)
                 modifier = Modifier.width(220.dp),
             )
         }
-        Spacer(Modifier.weight(1f))
+        // The title bar is transparent on macOS; its empty middle moves the window. Wrapping the whole
+        // row would swallow clicks on the pickers and buttons.
+        WindowDraggableArea(Modifier.weight(1f).fillMaxHeight()) {}
         val status = statusLine(state)
         // The line can be cut off on narrow windows; hovering shows all of it.
         TooltipArea(
