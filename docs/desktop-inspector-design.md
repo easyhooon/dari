@@ -3,6 +3,7 @@
 Status: draft · Scope: macOS first, then Windows, then Linux.
 
 Questions and the reasoning behind decisions: [desktop-inspector-faq.md](desktop-inspector-faq.md).
+Problems hit along the way and their fixes: [desktop-inspector-troubleshooting.md](desktop-inspector-troubleshooting.md).
 
 ## Goal
 
