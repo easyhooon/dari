@@ -25,7 +25,11 @@ case "$(uname -s)" in
     [ "$arch" = "x86_64" ] && arch="x64"
     ./gradlew -PskipPublicationSigning :dari-desktop-app:createDistributable
     app="$binaries/app/Dari.app"
-    # jpackage already signs ad-hoc with the JVM's entitlements; re-signing would drop them, so only verify.
+    # On Apple Silicon jpackage already signs ad-hoc with the JVM's entitlements; re-signing would drop
+    # them. On Intel it leaves the app unsigned, so sign it ad-hoc here.
+    if ! codesign --verify --deep --strict "$app" 2> /dev/null; then
+      codesign --force --deep --sign - "$app"
+    fi
     codesign --verify --deep --strict "$app"
     codesign -dv "$app" 2>&1 | grep -q "flags=.*adhoc"
     name="Dari-$version-$arch.dmg"
