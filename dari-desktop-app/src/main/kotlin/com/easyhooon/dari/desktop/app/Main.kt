@@ -200,6 +200,7 @@ fun main() {
                     Separator()
                     Item("Release Notes", onClick = { browse(ReleaseSource.pageUrl) })
                     Item("Report an Issue…", onClick = { browse(IssueReport.newIssueUrl(APP_VERSION)) })
+                    Item("Suggest a Feature…", onClick = { browse(IssueReport.featureRequestUrl()) })
                     Item("Show Log File", onClick = ::showLogFolder)
                     Item("Third-Party Notices", onClick = { noticesOpen = true })
                     if (!isMacOs) {

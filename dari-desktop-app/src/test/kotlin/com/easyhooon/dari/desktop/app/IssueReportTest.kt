@@ -15,4 +15,9 @@ class IssueReportTest {
         assertTrue("Dari desktop: 2.0.1" in body)
         assertFalse(System.getProperty("user.home") in body)
     }
+
+    @Test
+    fun `feature requests open the feature form`() {
+        assertTrue(IssueReport.featureRequestUrl().toString().endsWith("issues/new?template=feature_request.yml"))
+    }
 }
