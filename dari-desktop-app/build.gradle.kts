@@ -23,6 +23,9 @@ dependencies {
 compose.desktop {
     application {
         mainClass = "com.easyhooon.dari.desktop.app.MainKt"
+        // Package with the toolchain JDK; Compose rejects Homebrew JDKs for jpackage.
+        javaHome = javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(17)) }
+            .get().metadata.installationPath.asFile.absolutePath
         // Dock name for `run`; packaged apps take it from packageName. The flag exists only on macOS JVMs.
         if (System.getProperty("os.name").startsWith("Mac")) jvmArgs += "-Xdock:name=Dari"
 

@@ -55,6 +55,9 @@ class InspectorController(
 
     private var connection: InspectorConnection? = null
 
+    // Set when the user closes the detail pane; new messages then stop reopening it.
+    private var detailDismissed = false
+
     // Connects on its own when exactly one Dari app is found, until the user disconnects.
     private var autoConnect = true
     private var connectJob: Job? = null
@@ -121,11 +124,13 @@ class InspectorController(
     }
 
     fun select(id: Long) {
+        detailDismissed = false
         selectedId = id
         loadDetail(id)
     }
 
     fun closeDetail() {
+        detailDismissed = true
         selectedId = null
         detail = null
     }
@@ -189,7 +194,12 @@ class InspectorController(
 
     // Keeps the detail pane filled so the latest payloads are visible without a click.
     private fun selectNewestIfNone() {
-        if (selectedId == null) messages.values.lastOrNull()?.let { select(it.id) }
+        if (selectedId == null && !detailDismissed) {
+            messages.values.lastOrNull()?.let { newest ->
+                selectedId = newest.id
+                loadDetail(newest.id)
+            }
+        }
     }
 
     private fun merge(items: List<WireMessageSummary>) {
@@ -213,7 +223,10 @@ class InspectorController(
     private suspend fun refreshDevices(adb: Adb) {
         val found = withContext(Dispatchers.IO) { runCatching { adb.devices() }.getOrDefault(emptyList()) }
         devices = found
-        val serial = selectedSerial ?: found.firstOrNull()?.serial?.also { selectedSerial = it } ?: return
+        // With nothing chosen yet, prefer a device that is actually running a Dari app.
+        val serial = selectedSerial ?: withContext(Dispatchers.IO) {
+            found.firstOrNull { adb.dariApps(it.serial).isNotEmpty() } ?: found.firstOrNull()
+        }?.serial?.also { selectedSerial = it } ?: return
         if (found.none { it.serial == serial }) return
         val apps = withContext(Dispatchers.IO) { adb.dariApps(serial) }
         discoveredApps = apps

@@ -157,7 +157,7 @@ class InspectorConnection private constructor(
                     FrameReader(socket.getInputStream()).read(ServerHello.serializer())
                 } catch (_: SocketTimeoutException) {
                     // Android freezes cached apps: the socket accepts but nothing answers.
-                    throw IOException("$applicationId did not answer; bring it to the foreground")
+                    throw IOException("app is in the background")
                 } ?: throw IOException("$applicationId is not running Dari desktop on this device")
                 if (!hello.accepted) throw IOException("App rejected the connection: ${hello.rejection}")
                 socket.soTimeout = 0

@@ -1,6 +1,9 @@
 package com.easyhooon.dari.desktop.app.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -17,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.window.WindowDraggableArea
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -33,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowScope
 import com.easyhooon.dari.desktop.app.Appearance
@@ -71,6 +76,7 @@ fun WindowScope.App(controller: InspectorController, settings: DesktopSettings) 
 }
 
 /** Title bar row: device and app pickers plus the connection state. No sidebar — Dari has one job. */
+@OptIn(ExperimentalFoundationApi::class) // TooltipArea
 @Composable
 private fun TitleBar(controller: InspectorController, settings: DesktopSettings) {
     val state = controller.state
@@ -106,13 +112,29 @@ private fun TitleBar(controller: InspectorController, settings: DesktopSettings)
             )
         }
         Spacer(Modifier.weight(1f))
-        Text(
-            statusLine(state),
-            style = Dari.type.caption,
-            color = Dari.colors.textTertiary,
-            maxLines = 1,
+        val status = statusLine(state)
+        // The line can be cut off on narrow windows; hovering shows all of it.
+        TooltipArea(
+            tooltip = {
+                Text(
+                    status,
+                    style = Dari.type.caption,
+                    color = Dari.colors.text,
+                    modifier = Modifier.background(Dari.colors.surface, RoundedCornerShape(DariMetrics.radius))
+                        .border(1.dp, Dari.colors.border, RoundedCornerShape(DariMetrics.radius))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+            },
             modifier = Modifier.widthIn(max = 420.dp),
-        )
+        ) {
+            Text(
+                status,
+                style = Dari.type.caption,
+                color = Dari.colors.textTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         SettingsMenu(settings)
         if (state == ConnectionState.Idle) {
             QuietButton("Connect", onClick = controller::connect, enabled = controller.applicationId.isNotBlank())
@@ -184,6 +206,8 @@ private fun Workspace(controller: InspectorController, settings: DesktopSettings
                 showTags = settings.showTags,
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             )
+            // Closed until a message is selected, as in other two-pane apps.
+            if (controller.selectedId == null) return@Row
             Box(
                 Modifier.width(5.dp).fillMaxHeight()
                     .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))

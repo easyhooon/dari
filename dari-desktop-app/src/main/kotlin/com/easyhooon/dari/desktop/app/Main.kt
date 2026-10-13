@@ -19,7 +19,8 @@ import java.awt.Taskbar
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 
-private const val APP_VERSION = "0.1.0"
+// jpackage sets this in packaged builds; `./gradlew run` has no version.
+private val APP_VERSION: String = System.getProperty("jpackage.app-version") ?: "dev"
 
 val isMacOs: Boolean = System.getProperty("os.name").startsWith("Mac")
 
