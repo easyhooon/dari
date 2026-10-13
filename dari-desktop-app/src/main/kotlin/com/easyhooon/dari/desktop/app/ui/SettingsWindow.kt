@@ -30,11 +30,12 @@ import com.easyhooon.dari.desktop.app.DesktopSettings
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariTheme
 
-/** Opened from Dari → Settings… (⌘,) on macOS, or View → Settings… (Ctrl+,) elsewhere. */
+/** Opened from View → Settings… or the macOS application menu. */
 @Composable
 fun SettingsWindow(settings: DesktopSettings, onClose: () -> Unit) {
     Window(
         onCloseRequest = onClose,
+        onPreviewKeyEvent = { handleCloseWindowShortcut(it, onClose = onClose) },
         title = "Dari Settings",
         resizable = false,
         state = rememberWindowState(
@@ -43,6 +44,7 @@ fun SettingsWindow(settings: DesktopSettings, onClose: () -> Unit) {
             height = 270.dp,
         ),
     ) {
+        CloseWindowMenu(onClose)
         DariTheme(settings.appearance) {
             Column(
                 Modifier.fillMaxSize().background(Dari.colors.background).padding(20.dp),
