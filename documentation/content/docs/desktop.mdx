@@ -15,18 +15,17 @@ The Dari desktop app shows the bridge messages of a connected debug build on you
 
 #### First launch
 
-macOS may say **"Dari is damaged and can't be opened"**. The app isn't damaged. It is ad-hoc signed, without an Apple Developer ID or notarization, and macOS blocks such apps when they come from a download. To open it:
+The app is ad-hoc signed, without an Apple Developer ID or notarization, so macOS says it can't check Dari for malicious software and blocks it the first time:
 
-1. Drag **Dari** into **Applications** (step 2 above).
-2. Run this in Terminal. It clears the download flag on Dari only and changes no system setting:
+1. Open Dari once and click **Done**.
+2. Go to **System Settings → Privacy & Security** and click **Open Anyway** next to the Dari message.
+3. Confirm. Later launches open normally.
 
-   ```bash
-   xattr -dr com.apple.quarantine /Applications/Dari.app
-   ```
+If macOS instead says **"Dari is damaged and can't be opened"**, run this in Terminal, then open Dari again. It clears the download flag on Dari only and changes no system setting:
 
-3. Open Dari. Later launches open normally.
-
-If macOS instead says it can't verify the developer, go to **System Settings → Privacy & Security** and click **Open Anyway** next to the Dari message.
+```bash
+xattr -dr com.apple.quarantine /Applications/Dari.app
+```
 
 Download Dari only from the repository's releases page.
 

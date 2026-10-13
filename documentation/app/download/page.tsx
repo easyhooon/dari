@@ -28,8 +28,8 @@ export default function DownloadPage() {
           computer.
         </p>
         <p>
-          macOS says Dari is damaged? It isn&apos;t: the app is ad-hoc signed. Move it to Applications, then run{' '}
-          <code>xattr -dr com.apple.quarantine /Applications/Dari.app</code>.
+          macOS blocks the first launch because Dari isn&apos;t notarized: click <strong>Open Anyway</strong> in System
+          Settings → Privacy &amp; Security.
         </p>
         <p>
           First launch, connecting a device and privacy: see the{' '}
