@@ -158,7 +158,7 @@ class InspectorConnection private constructor(
                 } catch (_: SocketTimeoutException) {
                     // Android freezes cached apps: the socket accepts but nothing answers.
                     throw IOException("app is in the background")
-                } ?: throw IOException("$applicationId is not running Dari desktop on this device")
+                } ?: throw IOException("$applicationId isn't running Dari on this device")
                 if (!hello.accepted) throw IOException("App rejected the connection: ${hello.rejection}")
                 socket.soTimeout = 0
                 // An IOException keeps the cleanup below; requireNotNull would leak the socket and forward.
