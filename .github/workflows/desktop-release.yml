@@ -2,12 +2,12 @@ name: Desktop App Release
 
 # Builds the desktop app for macOS (Apple Silicon, Intel) and Windows (x64), smoke-tests each build,
 # and attaches the installers and their SHA-256 files to the release for the given tag.
-# Ad-hoc signed, not notarized, on macOS; unsigned on Windows. Linux ships once tested on a real machine.
+# Developer ID signed and notarized on macOS; unsigned on Windows. Linux awaits real-machine testing.
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to attach the installers to (e.g. 2.0.0)"
+        description: "Release tag to attach the installers to (e.g. 2.1.1)"
         required: true
       ref:
         description: "Commit or branch to build from; defaults to the tag. Use it to repackage a release with fixed build scripts."
@@ -24,6 +24,7 @@ jobs:
       matrix:
         runner: [macos-15, macos-15-intel, windows-latest]
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
     defaults:
       run:
         shell: bash
@@ -48,9 +49,29 @@ jobs:
             exit 1
           fi
       - name: Smoke test
+        if: runner.os != 'macOS'
         run: scripts/smoke-test-desktop-app.sh
+      - name: Prepare macOS signing and notarization
+        if: runner.os == 'macOS'
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: scripts/setup-macos-signing.sh
       - name: Package
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: scripts/package-desktop-app.sh
+      - name: Remove temporary macOS credentials
+        if: always() && runner.os == 'macOS'
+        run: |
+          keychain="$RUNNER_TEMP/dari-signing.keychain-db"
+          if [ -e "$keychain" ]; then
+            security delete-keychain "$keychain"
+          fi
+          rm -f "$RUNNER_TEMP/dari-signing.p12" "$RUNNER_TEMP/dari-notary-auth.log"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: installer-${{ matrix.runner }}

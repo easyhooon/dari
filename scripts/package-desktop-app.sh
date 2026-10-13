@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Packages the desktop app for the OS it runs on, plus a SHA-256 file for each artifact.
-#   macOS:   ad-hoc signed Dari.app in Dari-<version>-<arm64|x64>.dmg (no Developer ID, no notarization)
+#   macOS:   Developer ID signed, notarized, stapled Dari.app and arm64/x64 DMG
 #   Linux:   dari_<version>_<amd64|arm64>.deb
 #   Windows: Dari-<version>-x64.msi (unsigned; run from Git Bash)
 # Output: dari-desktop-app/build/release/
@@ -21,23 +21,72 @@ checksum() {
 
 case "$(uname -s)" in
   Darwin)
+    for variable in MACOS_SIGNING_IDENTITY MACOS_SIGNING_KEYCHAIN MACOS_NOTARY_PROFILE APPLE_TEAM_ID; do
+      [ -n "${!variable:-}" ] || { echo "Missing $variable for macOS release packaging." >&2; exit 1; }
+    done
+    [[ "$APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]] || { echo "Invalid Apple Team ID." >&2; exit 1; }
     arch="$(uname -m)"
     [ "$arch" = "x86_64" ] && arch="x64"
-    ./gradlew -PskipPublicationSigning :dari-desktop-app:createDistributable
-    app="$binaries/app/Dari.app"
-    # On Apple Silicon jpackage already signs ad-hoc with the JVM's entitlements; re-signing would drop
-    # them. On Intel it leaves the app unsigned, so sign it ad-hoc here.
-    if ! codesign --verify --deep --strict "$app" 2> /dev/null; then
-      codesign --force --deep --sign - "$app"
-    fi
-    codesign --verify --deep --strict "$app"
-    codesign -dv "$app" 2>&1 | grep -q "flags=.*adhoc"
+    case "$arch" in arm64 | x64) ;; *) echo "Unsupported macOS architecture." >&2; exit 1 ;; esac
     name="Dari-$version-$arch.dmg"
+    rm -f "$out/$name" "$out/$name.sha256"
     stage="$(mktemp -d)"
     trap 'rm -rf "$stage"' EXIT
-    cp -R "$app" "$stage/"
-    ln -s /Applications "$stage/Applications"
-    hdiutil create -volname "Dari $version" -srcfolder "$stage" -ov -format UDZO -quiet "$out/$name"
+    export DARI_MACOS_SIGN=true
+    ./gradlew -PskipPublicationSigning :dari-desktop-app:createDistributable
+    app="$binaries/app/Dari.app"
+    [ "$(plutil -extract CFBundleShortVersionString raw -o - "$app/Contents/Info.plist")" = "$version" ] || {
+      echo "The packaged app version does not match the release version." >&2; exit 1;
+    }
+    [ "$(plutil -extract CFBundleIdentifier raw -o - "$app/Contents/Info.plist")" = "io.github.easyhooon.dari.desktop" ] || {
+      echo "The packaged app has an unexpected bundle identifier." >&2; exit 1;
+    }
+    scripts/verify-macos-signature.sh "$app" "$APPLE_TEAM_ID"
+    # Exercise the signed JVM and native libraries without rebuilding the bundle.
+    scripts/smoke-test-desktop-app.sh --skip-build
+
+    notarize() {
+      local notary_exit=0
+      xcrun notarytool submit "$1" --keychain-profile "$MACOS_NOTARY_PROFILE" \
+          --keychain "$MACOS_SIGNING_KEYCHAIN" --wait --timeout 30m --output-format json \
+          > "$stage/notary-result.json" 2> "$stage/notary-error.log" || notary_exit=$?
+      python3 - "$stage/notary-result.json" "$notary_exit" <<'PY'
+import json, re, sys
+try:
+    with open(sys.argv[1]) as result:
+        submission = json.load(result)
+except (ValueError, OSError):
+    sys.exit("Apple notarization submission failed; no valid result was returned.")
+status = submission.get("status")
+identifier = submission.get("id", "")
+if isinstance(identifier, str) and re.fullmatch(r"[0-9a-fA-F-]{36}", identifier):
+    print("Notarization submission ID: " + identifier)
+if status in ("Accepted", "Invalid", "In Progress"):
+    print("Notarization status: " + status)
+if sys.argv[2] != "0" or status != "Accepted":
+    sys.exit("Apple did not accept the submission. Use notarytool log with its ID to investigate.")
+PY
+    }
+
+    # Staple the app before placing it in the DMG, including for offline in-app updates.
+    ditto -c -k --sequesterRsrc --keepParent "$app" "$stage/Dari.zip"
+    notarize "$stage/Dari.zip"
+    xcrun stapler staple "$app"
+    xcrun stapler validate "$app"
+    spctl --assess --type execute --verbose=2 "$app"
+    mkdir "$stage/dmg"
+    ditto "$app" "$stage/dmg/Dari.app"
+    ln -s /Applications "$stage/dmg/Applications"
+    dmg="$stage/$name"
+    hdiutil create -volname "Dari $version" -srcfolder "$stage/dmg" -format UDZO -quiet "$dmg"
+    codesign --sign "$MACOS_SIGNING_IDENTITY" --keychain "$MACOS_SIGNING_KEYCHAIN" --timestamp "$dmg"
+    codesign --verify --strict "$dmg"
+    notarize "$dmg"
+    xcrun stapler staple "$dmg"
+    xcrun stapler validate "$dmg"
+    spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
+    cp "$dmg" "$out/$name"
+    # Stapling changes the DMG bytes; publish only the hash of the final disk image.
     checksum "$name"
     ;;
   Linux)
