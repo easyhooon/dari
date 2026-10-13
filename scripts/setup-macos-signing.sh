@@ -53,10 +53,17 @@ print(identities[0])
 ')"
 printf 'MACOS_SIGNING_IDENTITY=%s\n' "$identity" >> "$GITHUB_ENV"
 
-# Suppress auth diagnostics; they can include the account identifier.
+# Show auth diagnostics with the account identifier and password redacted.
 if ! xcrun notarytool store-credentials dari-release --apple-id "$APPLE_ID" \
     --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID" \
     --keychain "$keychain" > "$auth_log" 2>&1; then
   echo "Could not validate the Apple notarization credentials." >&2
+  python3 - "$auth_log" >&2 <<'PY'
+import os, sys
+text = open(sys.argv[1], errors="replace").read()
+for name in ("APPLE_ID", "APPLE_APP_SPECIFIC_PASSWORD"):
+    text = text.replace(os.environ[name], "<" + name + ">")
+print(text.strip())
+PY
   exit 1
 fi

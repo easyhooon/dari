@@ -79,7 +79,8 @@ elif tool == "xcrun":
             sys.exit(1)
     elif args[:2] == ["notarytool", "store-credentials"]:
         if os.environ.get("FAIL_AUTH") == "1":
-            print("private-auth-diagnostic", file=sys.stderr)
+            print("Error: HTTP status code: 401 for " + os.environ["APPLE_ID"] + " " +
+                  os.environ["APPLE_APP_SPECIFIC_PASSWORD"], file=sys.stderr)
             sys.exit(1)
 elif tool == "spctl":
     kind = "dmg" if args[-1].endswith(".dmg") else "app"
@@ -250,10 +251,13 @@ class MacOSPackagingTest(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertFalse((self.root / "dari-signing.p12").exists())
 
-    def test_auth_failure_does_not_print_auth_diagnostics(self):
+    def test_auth_failure_prints_redacted_auth_diagnostics(self):
         result = self.run_script("setup-macos-signing.sh", FAIL_AUTH="1")
+        output = result.stdout + result.stderr
         self.assertNotEqual(result.returncode, 0)
-        self.assertNotIn("private-auth-diagnostic", result.stdout + result.stderr)
+        self.assertIn("HTTP status code: 401 for <APPLE_ID> <APPLE_APP_SPECIFIC_PASSWORD>", output)
+        self.assertNotIn("dummy@example.invalid", output)
+        self.assertNotIn("dummy-app-password", output)
         self.assertFalse((self.root / "dari-notary-auth.log").exists())
 
 
