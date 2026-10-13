@@ -35,6 +35,13 @@ Download Dari only from the repository's releases page.
 2. The installer isn't code-signed, so SmartScreen may warn on first run. Click **More info → Run anyway**.
 3. Optionally, compare `certutil -hashfile Dari-<version>-x64.msi SHA256` with the `.sha256` file from the same release.
 
+### Updates
+
+Dari checks the releases page on launch and every six hours. When a newer version exists, an **Update to &lt;version&gt;** button appears in the title bar, and **Help → Install Dari &lt;version&gt;** does the same.
+
+- **macOS**: Dari downloads the new image, checks its `.sha256`, bundle ID, version and code signature, then quits and relaunches as the new version. If anything fails, the installed version is kept. This works when Dari sits in a folder you can write to, such as **Applications**; otherwise the button opens the download page.
+- **Windows**: the button opens the download page. Run the new `.msi`; it upgrades the installed copy.
+
 ## Connect
 
 1. Keep `adb` available: set `ANDROID_HOME`, or install Android Studio in its default location.

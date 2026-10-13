@@ -19,9 +19,12 @@ import com.easyhooon.dari.desktop.app.adb.Adb
 import com.easyhooon.dari.desktop.app.ui.App
 import com.easyhooon.dari.desktop.app.ui.SettingsWindow
 import com.easyhooon.dari.desktop.app.ui.appearanceLabel
+import com.easyhooon.dari.desktop.app.update.ReleaseSource
+import com.easyhooon.dari.desktop.app.update.Updater
 import java.awt.Desktop
 import java.awt.Taskbar
 import java.awt.image.BufferedImage
+import java.net.URI
 import javax.imageio.ImageIO
 
 // jpackage sets this in packaged builds; `./gradlew run` has no version.
@@ -50,9 +53,16 @@ fun main() {
             InspectorController(scope, Adb.locate()?.let(::Adb), APP_VERSION, System.getenv("ANDROID_SERIAL"))
         }
         val settings = remember { DesktopSettings() }
+        val updater = remember { Updater(scope, APP_VERSION) }
+        val quit = {
+            controller.disconnect()
+            exitApplication()
+        }
+        val installUpdate = { updater.install(quit) }
         var settingsOpen by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
             controller.start()
+            updater.startPeriodicChecks()
             // macOS keeps settings under the app menu: Dari → Settings… (⌘,).
             if (isMacOs && Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_PREFERENCES)) {
                 Desktop.getDesktop().setPreferencesHandler { settingsOpen = true }
@@ -61,10 +71,7 @@ fun main() {
         if (settingsOpen) SettingsWindow(settings, onClose = { settingsOpen = false })
 
         Window(
-            onCloseRequest = {
-                controller.disconnect()
-                exitApplication()
-            },
+            onCloseRequest = quit,
             title = "Dari",
             icon = icon?.let { BitmapPainter(it.toComposeImageBitmap()) },
             state = rememberWindowState(width = 1280.dp, height = 820.dp),
@@ -102,13 +109,32 @@ fun main() {
                     Separator()
                     Item("Clear Messages", shortcut = shortcut(Key.K), onClick = controller::clearMessages)
                 }
+                Menu("Help") {
+                    Item("Check for Updates…", enabled = updater.enabled, onClick = updater::checkNow)
+                    val newer = updater.newerVersion
+                    Item(
+                        when {
+                            newer == null -> "Install Update"
+                            updater.phase is Updater.Phase.Available -> "Install Dari $newer"
+                            else -> "Download Dari $newer…"
+                        },
+                        enabled = newer != null,
+                        onClick = installUpdate,
+                    )
+                    Separator()
+                    Item("Release Notes", onClick = { browse(ReleaseSource.pageUrl) })
+                }
             }
-            App(controller, settings)
+            App(controller, settings, updater, installUpdate)
         }
     }
 }
 
 private fun loadAppIcon(): BufferedImage? =
     Thread.currentThread().contextClassLoader.getResourceAsStream("dari-icon.png")?.use(ImageIO::read)
+
+private fun browse(uri: URI) {
+    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) Desktop.getDesktop().browse(uri)
+}
 
 private fun shortcut(key: Key) = if (isMacOs) KeyShortcut(key, meta = true) else KeyShortcut(key, ctrl = true)

@@ -44,16 +44,17 @@ import com.easyhooon.dari.desktop.app.isMacOs
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
 import com.easyhooon.dari.desktop.app.ui.theme.DariTheme
+import com.easyhooon.dari.desktop.app.update.Updater
 import java.awt.Cursor
 
 // Leaves room for the macOS traffic lights inside the transparent title bar.
 private val TrafficLightInset = if (isMacOs) 78.dp else 12.dp
 
 @Composable
-fun WindowScope.App(controller: InspectorController, settings: DesktopSettings) {
+fun WindowScope.App(controller: InspectorController, settings: DesktopSettings, updater: Updater, installUpdate: () -> Unit) {
     DariTheme(settings.appearance) {
         Column(Modifier.fillMaxSize().background(Dari.colors.background)) {
-            TitleBar(controller)
+            TitleBar(controller, updater, installUpdate)
             Divider()
             if (controller.adbMissing) {
                 EmptyState(
@@ -73,7 +74,7 @@ fun WindowScope.App(controller: InspectorController, settings: DesktopSettings) 
 /** Title bar row: device and app pickers plus the connection state. No sidebar — Dari has one job. */
 @OptIn(ExperimentalFoundationApi::class) // TooltipArea
 @Composable
-private fun WindowScope.TitleBar(controller: InspectorController) {
+private fun WindowScope.TitleBar(controller: InspectorController, updater: Updater, installUpdate: () -> Unit) {
     val state = controller.state
     Row(
         Modifier.fillMaxWidth().height(DariMetrics.toolbarHeight).padding(start = TrafficLightInset, end = 12.dp),
@@ -116,6 +117,7 @@ private fun WindowScope.TitleBar(controller: InspectorController) {
         // The title bar is transparent on macOS; its empty middle moves the window. Wrapping the whole
         // row would swallow clicks on the pickers and buttons.
         WindowDraggableArea(Modifier.weight(1f).fillMaxHeight()) {}
+        UpdateStatus(updater, installUpdate)
         val status = statusLine(state)
         // Short on screen; hovering shows every field with its label.
         TooltipArea(
@@ -143,6 +145,33 @@ private fun WindowScope.TitleBar(controller: InspectorController) {
         // Disconnect and Reconnect live in the Session menu.
         if (state == ConnectionState.Idle) {
             QuietButton("Connect", onClick = controller::connect, enabled = controller.applicationId.isNotBlank())
+        }
+    }
+}
+
+/** Shown only when there is something to act on: a newer version, progress, or a failure. */
+@OptIn(ExperimentalFoundationApi::class) // TooltipArea
+@Composable
+private fun UpdateStatus(updater: Updater, installUpdate: () -> Unit) {
+    when (val phase = updater.phase) {
+        is Updater.Phase.Available -> AccentButton("Update to ${phase.version}", onClick = installUpdate)
+        is Updater.Phase.Manual -> AccentButton("Download ${phase.version}", onClick = updater::openDownloadPage)
+        is Updater.Phase.Working -> Text(phase.step, style = Dari.type.caption, color = Dari.colors.textSecondary)
+        Updater.Phase.Checking -> Text("Checking for updates…", style = Dari.type.caption, color = Dari.colors.textTertiary)
+        Updater.Phase.UpToDate, Updater.Phase.Idle -> Unit
+        is Updater.Phase.Failed -> TooltipArea(
+            tooltip = {
+                Text(
+                    phase.message,
+                    style = Dari.type.caption,
+                    color = Dari.colors.text,
+                    modifier = Modifier.background(Dari.colors.surface, RoundedCornerShape(DariMetrics.radius))
+                        .border(1.dp, Dari.colors.border, RoundedCornerShape(DariMetrics.radius))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+            },
+        ) {
+            Text("Update failed", style = Dari.type.caption, color = Dari.colors.danger)
         }
     }
 }

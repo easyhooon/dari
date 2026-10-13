@@ -124,6 +124,23 @@ fun QuietButton(text: String, onClick: () -> Unit, enabled: Boolean = true, dang
     }
 }
 
+/** Tinted accent button for the one action worth noticing, such as an available update. */
+@Composable
+fun AccentButton(text: String, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    Box(
+        Modifier.height(DariMetrics.controlHeight)
+            .background(Dari.colors.accent.copy(alpha = if (hovered) 0.22f else 0.14f), RoundedCornerShape(DariMetrics.radius))
+            .hoverable(interaction)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, style = Dari.type.label, color = Dari.colors.accent)
+    }
+}
+
 @Composable
 fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
     BasicTextField(
