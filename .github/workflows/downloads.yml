@@ -1,0 +1,46 @@
+name: Update Dari downloads chart
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/downloads.yml'
+      - 'scripts/update-downloads.py'
+      - 'scripts/test-update-downloads.py'
+      - 'docs/downloads-30d-observed.csv'
+      - 'docs/downloads-30d-observed.svg'
+      - 'README.md'
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test chart generator
+        run: |
+          python3 scripts/test-update-downloads.py
+          python3 -c 'import xml.etree.ElementTree as ET; ET.parse("docs/downloads-30d-observed.svg")'
+
+  update:
+    if: github.event_name != 'pull_request'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sample public Scarf badge
+        run: python3 scripts/update-downloads.py
+      - name: Commit chart if changed
+        run: |
+          git add docs/downloads-30d-observed.csv docs/downloads-30d-observed.svg
+          if git diff --cached --quiet; then exit 0; fi
+          git -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'docs: update Dari downloads observation'
+          git push

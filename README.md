@@ -22,6 +22,16 @@ GitHub stars for `easyhooon/dari` over time. This live chart shows repository st
   </picture>
 </a>
 
+## Download history
+
+[![Scarf downloads for Dari](https://api.scarf.sh/v2/packages/Easyhooon/829e32f5-20a5-45b8-b758-fe71daf64cac/downloads-badge)](https://app.scarf.sh/packages/Easyhooon/repository-jvm/io.github.easyhooon%2Fdari)
+
+![Observed Dari rolling 30-day downloads](docs/downloads-30d-observed.svg)
+
+Each point is a daily observation of [Scarf's public monthly downloads badge](https://api.scarf.sh/v2/packages/Easyhooon/829e32f5-20a5-45b8-b758-fe71daf64cac/downloads-badge) for the single Maven Central artifact `io.github.easyhooon:dari`. It is a **preceding 30-day count**, not downloads on that day or unique users. The chart starts on October 13, 2026; earlier observations cannot be reconstructed from this badge. A scheduled GitHub Action records the public count each day and updates the SVG. The graph states its observed period and last update time.
+
+This scope excludes `dari-core`, `dari-noop`, platform artifacts, Ding, and the rest of the Easyhooon namespace. A build can fetch several artifacts together, so adding their counts would not estimate users. [Scarf says](https://docs.scarf.sh/package-registry-integrations-maven-central/) Maven Central data typically appears about a week after a download.
+
 ## Screenshots
 
 <table>
