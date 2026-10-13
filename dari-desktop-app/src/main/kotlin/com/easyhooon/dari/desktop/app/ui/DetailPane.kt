@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.easyhooon.dari.desktop.app.ui.json.JsonPayload
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
 import com.easyhooon.dari.inspector.protocol.WirePayloadMetadata
@@ -142,7 +143,7 @@ private fun PayloadColumn(
             if (data == null) {
                 Text("No payload", style = Dari.type.caption, color = Dari.colors.textTertiary)
             } else {
-                CodeBlock(prettyJsonOrRaw(data))
+                JsonPayload(data)
             }
         }
     }

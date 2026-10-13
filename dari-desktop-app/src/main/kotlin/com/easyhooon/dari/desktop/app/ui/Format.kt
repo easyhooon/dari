@@ -1,9 +1,6 @@
 package com.easyhooon.dari.desktop.app.ui
 
 import com.easyhooon.dari.inspector.protocol.WireMessageSummary
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -28,14 +25,6 @@ fun durationLabel(message: WireMessageSummary): String {
 
 fun formatBytes(bytes: Int): String =
     if (bytes < BYTES_PER_KB) "$bytes B" else String.format(Locale.US, "%.1f kB", bytes / BYTES_PER_KB.toDouble())
-
-private val prettyJson = Json { prettyPrint = true }
-
-fun prettyJsonOrRaw(text: String): String = try {
-    prettyJson.encodeToString(JsonElement.serializer(), prettyJson.parseToJsonElement(text))
-} catch (_: SerializationException) {
-    text
-}
 
 private const val MILLIS_PER_SECOND = 1_000
 private const val BYTES_PER_KB = 1_000
