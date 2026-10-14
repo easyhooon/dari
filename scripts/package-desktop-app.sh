@@ -69,11 +69,27 @@ if sys.argv[2] != "0" or status != "Accepted":
 PY
     }
 
+    # Stapling fetches the ticket from Apple's CDN, which drops connections now and then
+    # (NSURLErrorDomain -1005, "Error 68"). It is idempotent, so retry with growing waits.
+    staple() {
+      local attempt
+      for attempt in 1 2 3 4 5; do
+        if xcrun stapler staple "$1" && xcrun stapler validate "$1"; then
+          return 0
+        fi
+        if [ "$attempt" -lt 5 ]; then
+          echo "Stapling $1 failed (attempt $attempt of 5); retrying." >&2
+          sleep $((attempt * ${STAPLE_RETRY_DELAY:-15}))
+        fi
+      done
+      echo "Stapling $1 failed after 5 attempts." >&2
+      return 1
+    }
+
     # Staple the app before placing it in the DMG, including for offline in-app updates.
     ditto -c -k --sequesterRsrc --keepParent "$app" "$stage/Dari.zip"
     notarize "$stage/Dari.zip"
-    xcrun stapler staple "$app"
-    xcrun stapler validate "$app"
+    staple "$app"
     spctl --assess --type execute --verbose=2 "$app"
     dmg="$stage/$name"
     # dmgbuild lays out the window (background arrow, icon positions) without scripting Finder.
@@ -82,8 +98,7 @@ PY
     codesign --sign "$MACOS_SIGNING_IDENTITY" --keychain "$MACOS_SIGNING_KEYCHAIN" --timestamp "$dmg"
     codesign --verify --strict "$dmg"
     notarize "$dmg"
-    xcrun stapler staple "$dmg"
-    xcrun stapler validate "$dmg"
+    staple "$dmg"
     spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
     cp "$dmg" "$out/$name"
     # Stapling changes the DMG bytes; publish only the hash of the final disk image.

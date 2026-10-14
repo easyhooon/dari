@@ -33,6 +33,15 @@ Related: [design](desktop-inspector-design.md), [FAQ](desktop-inspector-faq.md).
   `./gradlew :dari-desktop-app:suggestRuntimeModules`, plus `jdk.crypto.ec` for TLS. After adding a
   JDK API, rerun that task and launch the packaged app, not just `run`.
 
+### Release run fails at stapling: "The staple and validate action failed! Error 68"
+
+- **Cause**: notarization was already accepted, but `xcrun stapler` lost its connection to Apple's
+  ticket service (`NSURLErrorDomain -1005`, "The network connection was lost"). It recurred on the
+  hosted runners, most often on Intel. It is a network blip, not a code or signing problem.
+- **Fix**: `package-desktop-app.sh` retries staple and validate up to five times with growing waits;
+  stapling is idempotent. Before that, re-running the failed job (`gh run rerun <id> --failed`) was
+  enough, as for 2.1.3.
+
 ### Intel macOS build fails: "code object is not signed at all"
 
 - **Symptom**: the 2.0.0 `Desktop App Release` run failed on `macos-15-intel`, so no installers were attached.
