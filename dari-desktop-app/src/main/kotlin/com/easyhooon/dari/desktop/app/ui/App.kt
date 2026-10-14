@@ -284,6 +284,9 @@ private fun Workspace(controller: InspectorController, settings: DesktopSettings
                 onClose = controller::closeDetail,
                 modifier = Modifier.width(with(density) { detailWidth.coerceIn(minDetail, maxDetail).toDp() })
                     .fillMaxHeight(),
+                // `visible` is newest first, so the selected row's index is the number of newer messages.
+                newerCount = visible.indexOfFirst { it.id == controller.selectedId }.coerceAtLeast(0),
+                onShowLatest = { visible.firstOrNull()?.let { controller.select(it.id) } },
             )
         }
     }

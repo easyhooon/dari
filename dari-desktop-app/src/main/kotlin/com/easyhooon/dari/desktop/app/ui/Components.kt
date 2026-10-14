@@ -79,6 +79,8 @@ fun StatusMark(status: String, modifier: Modifier = Modifier) {
             },
             style = Dari.type.codeCaption,
             color = color,
+            maxLines = 1,
+            softWrap = false,
         )
     }
 }
