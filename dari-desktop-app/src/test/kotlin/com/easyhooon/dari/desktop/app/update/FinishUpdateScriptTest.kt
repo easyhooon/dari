@@ -40,6 +40,29 @@ class FinishUpdateScriptTest {
     }
 
     @Test
+    fun `retries the relaunch while LaunchServices still sees the old process`() {
+        stage()
+        // Fails twice with -600-like errors, then succeeds; records its arguments.
+        val calls = root.resolve("open-calls")
+        val flakyOpen = root.resolve("flaky-open").also {
+            Files.writeString(
+                it,
+                """
+                #!/bin/sh
+                echo "${'$'}*" >> "$calls"
+                [ "${'$'}(wc -l < "$calls")" -gt 2 ]
+                """.trimIndent(),
+            )
+            it.toFile().setExecutable(true)
+        }
+        assertEquals(0, finish(open = flakyOpen.toString()))
+        assertEquals("new", Files.readString(target.resolve("Contents/version")))
+        val opens = Files.readAllLines(calls)
+        assertEquals(3, opens.size)
+        assertTrue(opens.all { it == "-n $target" })
+    }
+
+    @Test
     fun `refuses a workspace it did not create`() {
         stage()
         val other = root.resolve("Documents").also { Files.createDirectories(it.resolve("Contents")) }
@@ -60,7 +83,10 @@ class FinishUpdateScriptTest {
     private fun finish(open: String, workspace: Path = this.workspace): Int {
         val process = ProcessBuilder("/bin/sh", script.toString(), "999999", target.toString(), workspace.toString())
             .redirectErrorStream(true)
-            .apply { environment()["DARI_UPDATE_OPEN"] = open }
+            .apply {
+                environment()["DARI_UPDATE_OPEN"] = open
+                environment()["DARI_UPDATE_RETRY_DELAY"] = "0"
+            }
             .start()
         process.inputStream.readAllBytes()
         assertTrue(process.waitFor(10, TimeUnit.SECONDS))
