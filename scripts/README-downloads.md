@@ -27,3 +27,15 @@ people or installs. Scarf typically receives Maven Central downloads with
 about a week's delay.
 
 Run `python3 scripts/test-update-downloads.py` for offline validation.
+
+## Daily Discord summary
+
+After sampling, `scripts/notify-discord.py` posts one message to the
+`DISCORD_WEBHOOK_URL` secret: the Scarf 30-day total and its change since the
+previous observed date, GitHub stars, and cumulative `.dmg`/`.msi` downloads
+from GitHub Releases (checksum files excluded; in-app updater fetches
+included). Stars and installer totals are appended to
+`docs/repo-stats-daily.csv` on `dari-downloads-data` so the next run can show
+the change. The public badge cannot separate POM or metadata requests from
+artifact downloads, so the message says so instead of splitting them. Run
+`python3 scripts/notify-discord.py --dry-run` to print the message locally.
