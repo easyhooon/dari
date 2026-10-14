@@ -33,6 +33,16 @@ Related: [design](desktop-inspector-design.md), [FAQ](desktop-inspector-faq.md).
   `./gradlew :dari-desktop-app:suggestRuntimeModules`, plus `jdk.crypto.ec` for TLS. After adding a
   JDK API, rerun that task and launch the packaged app, not just `run`.
 
+### In-app update rolled back: "_LSOpenURLsWithCompletionHandler() failed with error -600"
+
+- **Cause**: the helper relaunched Dari 0.3 s after the old process exited. LaunchServices still
+  listed the old Dari as running, so `open` sent a reopen Apple event to the dead process
+  (`procNotFound`). The helper then restored 2.1.2 as designed, so the update looked like a no-op.
+  Found when updating 2.1.2 to 2.1.3; it reproduced on both attempts.
+- **Fix**: wait a second after the old process exits, launch with `open -n`, and retry up to five
+  times before rolling back. The helper that runs is the one inside the *installed* app, so the fix
+  applies to updates from 2.1.4 on; from 2.1.2 or 2.1.3, reinstall once (terminal script or DMG).
+
 ### Intel macOS build fails: "code object is not signed at all"
 
 - **Symptom**: the 2.0.0 `Desktop App Release` run failed on `macos-15-intel`, so no installers were attached.
