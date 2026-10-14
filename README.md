@@ -11,6 +11,25 @@ Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualiz
 
 📖 **[Documentation](https://easyhooon.github.io/dari)** — Setup guide, configuration reference, and API docs.
 
+## Desktop App
+
+See the bridge messages of a connected debug build on your computer, on a bigger screen. It needs only adb: no proxy, certificate or port setup.
+
+https://github.com/user-attachments/assets/b7332358-953b-4391-9f68-4e547efcb9e7
+
+- Live messages from a USB-connected device or emulator, with the request and response side by side
+- Foldable JSON with Expand all / Collapse all and one-click Copy, plus text and JSON export
+- Payloads are masked on the device before they reach the desktop
+- macOS (signed and notarized, Apple Silicon and Intel) and Windows (preview), with in-app updates
+
+📥 **[Download](https://easyhooon.github.io/dari/download)** or install from the terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install-desktop.sh | bash
+```
+
+See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for requirements and troubleshooting.
+
 ## Star History
 
 GitHub stars for `easyhooon/dari` over time. This live chart shows repository stars, not library downloads.
