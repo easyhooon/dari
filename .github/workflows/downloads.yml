@@ -6,11 +6,13 @@ on:
       - '.github/workflows/downloads.yml'
       - 'scripts/update-downloads.py'
       - 'scripts/test-update-downloads.py'
+      - 'scripts/notify-discord.py'
+      - 'scripts/test-notify-discord.py'
       - 'docs/downloads-30d-observed.csv'
       - 'docs/downloads-30d-observed.svg'
       - 'README.md'
   schedule:
-    - cron: '17 6 * * *'
+    - cron: '7 0 * * *' # 09:07 KST; GitHub may start it late
   workflow_dispatch:
 
 permissions:
@@ -24,6 +26,7 @@ jobs:
       - name: Test chart generator
         run: |
           python3 scripts/test-update-downloads.py
+          python3 scripts/test-notify-discord.py
           python3 -c 'import xml.etree.ElementTree as ET; ET.parse("docs/downloads-30d-observed.svg")'
 
   update:
@@ -39,16 +42,31 @@ jobs:
           ref: dari-downloads-data
           path: stats-data
       - name: Sample public Scarf badge
+        id: scarf
+        # Keep going so the Discord summary still reports stars and installers.
+        continue-on-error: true
         run: |
           python3 scripts/update-downloads.py \
             --data-path stats-data/docs/downloads-30d-observed.csv \
             --svg-path stats-data/docs/downloads-30d-observed.svg
+      - name: Record repo stats and post Discord summary
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          python3 scripts/notify-discord.py \
+            --scarf-path stats-data/docs/downloads-30d-observed.csv \
+            --stats-path stats-data/docs/repo-stats-daily.csv
       - name: Commit chart if changed
+        if: ${{ !cancelled() }}
         working-directory: stats-data
         run: |
-          git add docs/downloads-30d-observed.csv docs/downloads-30d-observed.svg
+          git add -A docs
           if git diff --cached --quiet; then exit 0; fi
           git -c user.name='github-actions[bot]' \
             -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
             commit -m 'docs: update Dari downloads observation'
           git push origin HEAD:dari-downloads-data
+      - name: Fail if the Scarf sample failed
+        if: ${{ steps.scarf.outcome == 'failure' }}
+        run: exit 1
