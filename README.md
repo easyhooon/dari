@@ -15,7 +15,7 @@ Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualiz
 
 See the bridge messages of a connected debug build on your computer, on a bigger screen. It needs only adb: no proxy, certificate or port setup.
 
-<img src="screenshots/desktop_app.png" width="800" />
+https://github.com/user-attachments/assets/b7332358-953b-4391-9f68-4e547efcb9e7
 
 - Live messages from a USB-connected device or emulator, with the request and response side by side
 - Foldable JSON with Expand all / Collapse all and one-click Copy, plus text and JSON export
