@@ -94,9 +94,9 @@ def split_today(rows, today: dt.date):
 
 def delta(value: int, previous, today: dt.date) -> str:
     if previous is None:
-        return "첫 관측, 비교 기준 없음"
+        return "첫 관측"
     stamp, old = previous
-    label = "전일 관측 대비" if stamp.date() == today - dt.timedelta(days=1) else f"직전 관측 {stamp.date()} 대비"
+    label = "전일 대비" if stamp.date() == today - dt.timedelta(days=1) else f"{stamp:%m/%d} 관측 대비"
     return f"{label} {value - old:+,}"
 
 
@@ -104,25 +104,35 @@ def build_message(now, scarf_rows, stats_rows, latest):
     today = now.date()
     scarf_today, scarf_prev = split_today(scarf_rows, today)
     stats_today, stats_prev = split_today(stats_rows, today)
-    lines = [f"**Dari 일일 통계** · {now.astimezone(KST):%Y-%m-%d %H:%M} KST"]
-    if scarf_today:
-        lines.append(f"**Scarf 30일 요청 합계**: {scarf_today[1]:,} ({delta(scarf_today[1], scarf_prev, today)})")
-    else:
-        lines.append("**Scarf 30일 요청 합계**: 오늘 샘플 실패")
-    lines.append(
-        "-# `io.github.easyhooon:dari` 이동 합계. POM·메타데이터·자동 도구 요청 포함(이 소스로는 구분 불가), "
-        "사용자·설치 수 아님, 약 1주 지연. 차이는 그날 다운로드 수가 아님."
-    )
     _, stars, installers = stats_today
     star_prev = (stats_prev[0], stats_prev[1]) if stats_prev else None
     installer_prev = (stats_prev[0], stats_prev[2]) if stats_prev else None
-    lines.append(f"**GitHub stars**: {stars:,} ({delta(stars, star_prev, today)})")
-    latest_note = f" · 최신 설치 파일 {latest[0]}: {latest[1]:,}" if latest else ""
-    lines.append(
-        f"**데스크톱 설치 파일 누적 다운로드**: {installers:,} "
-        f"({delta(installers, installer_prev, today)}){latest_note}"
+    local = now.astimezone(KST)
+    scarf_line = (
+        f"• 30일 요청 합계: **{scarf_today[1]:,}건** ({delta(scarf_today[1], scarf_prev, today)})"
+        if scarf_today else "• 30일 요청 합계: 오늘 샘플 실패"
     )
-    lines.append("-# GitHub Releases의 .dmg/.msi 다운로드 횟수. 인앱 업데이터·재다운로드 포함, 사용자 수 아님.")
+    lines = [
+        f"📊 **Dari 일일 통계 — {local.month}월 {local.day}일**",
+        f"-# {local:%Y-%m-%d %H:%M} KST 관측",
+        "",
+        "**Maven Central (Scarf)**",
+        scarf_line,
+        "• 대상: `io.github.easyhooon:dari`",
+        "",
+        "**GitHub**",
+        f"• Stars: **{stars:,}개** ({delta(stars, star_prev, today)})",
+        "",
+        "**데스크톱 앱 설치 파일**",
+        f"• 누적 다운로드: **{installers:,}회** ({delta(installers, installer_prev, today)})",
+    ]
+    if latest:
+        lines.append(f"• 최신 버전 {latest[0]}: **{latest[1]:,}회**")
+    lines += [
+        "",
+        "_Scarf 수치는 POM·메타데이터·자동 도구 요청이 섞인 30일 이동 합계로, 사용자 수가 아니며 약 1주 늦게 반영됩니다. "
+        "변화량은 그날 다운로드 수가 아닙니다. 설치 파일 횟수는 .dmg/.msi 기준이며 인앱 업데이터·재다운로드를 포함합니다._",
+    ]
     return "\n".join(lines)
 
 

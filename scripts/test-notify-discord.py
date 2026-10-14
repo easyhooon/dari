@@ -38,7 +38,8 @@ class NotifyDiscordTest(unittest.TestCase):
     def test_first_run_has_no_baseline(self):
         message = module.run(self.now, self.scarf, self.stats, (35, 6, ("2.1.3", 3)), None)
         self.assertIn("오늘 샘플 실패", message)
-        self.assertIn("**GitHub stars**: 35 (첫 관측", message)
+        self.assertIn("• Stars: **35개** (첫 관측", message)
+        self.assertIn("Dari 일일 통계 — 10월 15일", message)
         self.assertIn("2026-10-15 09:07 KST", message)
 
     def test_deltas_against_previous_dates(self):
@@ -47,10 +48,11 @@ class NotifyDiscordTest(unittest.TestCase):
         self.stats.write_text("observed_utc,stars,installer_downloads\n2026-10-14T00:07:00Z,34,5\n"
                               "2026-10-15T00:01:00Z,99,99\n", encoding="utf-8")
         message = module.run(self.now, self.scarf, self.stats, (35, 6, ("2.1.3", 3)), None)
-        self.assertIn("**Scarf 30일 요청 합계**: 190 (직전 관측 2026-10-13 대비 +8)", message)
-        self.assertIn("**GitHub stars**: 35 (전일 관측 대비 +1)", message)
-        self.assertIn("누적 다운로드**: 6 (전일 관측 대비 +1) · 최신 설치 파일 2.1.3: 3", message)
-        self.assertIn("사용자·설치 수 아님", message)
+        self.assertIn("• 30일 요청 합계: **190건** (10/13 관측 대비 +8)", message)
+        self.assertIn("• Stars: **35개** (전일 대비 +1)", message)
+        self.assertIn("• 누적 다운로드: **6회** (전일 대비 +1)", message)
+        self.assertIn("• 최신 버전 2.1.3: **3회**", message)
+        self.assertIn("사용자 수가 아니며", message)
         self.assertEqual(len(module.read_stats(self.stats)), 2)
 
 
