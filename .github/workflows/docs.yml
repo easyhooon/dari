@@ -8,11 +8,13 @@ on:
     branches: [main]
     paths:
       - 'documentation/**'
+      - 'gradle/libs.versions.toml'
       - '.github/workflows/docs.yml'
   pull_request:
     branches: [main]
     paths:
       - 'documentation/**'
+      - 'gradle/libs.versions.toml'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
