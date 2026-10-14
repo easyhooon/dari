@@ -285,7 +285,7 @@ stateDiagram-v2
 So upgrading `dari` is all it takes. `Dari.setDesktopInspectorEnabled(false)` keeps the socket closed
 for anyone who doesn't want it. Release builds still use `dari-noop`.
 
-## 7. What is ad-hoc signing, and why use it?
+## 7. How is the macOS app signed?
 
 macOS has three levels:
 
@@ -295,9 +295,9 @@ macOS has three levels:
 | Ad-hoc (`codesign --sign -`) | The files weren't altered | First launch is blocked ("can't check for malicious software"); System Settings → Privacy & Security → **Open Anyway**, once | Free |
 | Developer ID plus notarization | Who published it, and Apple scanned it | Opens normally | Apple Developer Program (yearly fee), signing secrets in CI |
 
-Dari ships ad-hoc signed DMGs, as Necto does. The audience is developers, and allowing an app once is
-a small ask. Moving to Developer ID later only changes the signing step and the CI secrets. The
-Windows MSI is unsigned, so SmartScreen shows a similar one-time **More info → Run anyway**.
+Dari 2.0.0–2.1.0 shipped ad-hoc signed DMGs. Since 2.1.1 the app and DMG are Developer ID signed and
+notarized, so they open without a prompt. The Windows MSI is still unsigned, so SmartScreen shows a
+one-time **More info → Run anyway**.
 
 ## 8. Which "server" did the stop-time race condition refer to?
 

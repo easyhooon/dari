@@ -28,7 +28,7 @@ export default function DownloadPage() {
           <code>{'curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install-desktop.sh | bash'}</code>
         </pre>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Verifies the SHA-256 checksum and opens without the first-launch prompt.
+          Verifies the SHA-256 checksum before installing.
         </p>
       </div>
 
@@ -38,11 +38,7 @@ export default function DownloadPage() {
           computer.
         </p>
         <p>
-          macOS blocks the first launch because Dari isn&apos;t notarized: click <strong>Open Anyway</strong> in System
-          Settings → Privacy &amp; Security.
-        </p>
-        <p>
-          First launch, connecting a device and privacy: see the{' '}
+          Installing, connecting a device and privacy: see the{' '}
           <Link href="/docs/desktop" className="underline underline-offset-4 hover:text-gray-900 dark:hover:text-gray-100">
             Desktop App guide
           </Link>
