@@ -38,10 +38,21 @@ Related: [design](desktop-inspector-design.md), [FAQ](desktop-inspector-faq.md).
 - **Cause**: the helper relaunched Dari 0.3 s after the old process exited. LaunchServices still
   listed the old Dari as running, so `open` sent a reopen Apple event to the dead process
   (`procNotFound`). The helper then restored 2.1.2 as designed, so the update looked like a no-op.
-  Found when updating 2.1.2 to 2.1.3; it reproduced on both attempts.
+  Found when updating 2.1.2 to 2.1.3; it reproduced on both attempts. The helper is unchanged since
+  2.1.0, so this is a timing race present from the start, not a regression: a busy Mac makes
+  LaunchServices slower to drop the old process.
 - **Fix**: wait a second after the old process exits, launch with `open -n`, and retry up to five
   times before rolling back. The helper that runs is the one inside the *installed* app, so the fix
   applies to updates from 2.1.4 on; from 2.1.2 or 2.1.3, reinstall once (terminal script or DMG).
+
+### Release run fails at stapling: "The staple and validate action failed! Error 68"
+
+- **Cause**: notarization was already accepted, but `xcrun stapler` lost its connection to Apple's
+  ticket service (`NSURLErrorDomain -1005`, "The network connection was lost"). It recurred on the
+  hosted runners, most often on Intel. It is a network blip, not a code or signing problem.
+- **Fix**: `package-desktop-app.sh` retries staple and validate up to five times with growing waits;
+  stapling is idempotent. Before that, re-running the failed job (`gh run rerun <id> --failed`) was
+  enough, as for 2.1.3.
 
 ### Intel macOS build fails: "code object is not signed at all"
 

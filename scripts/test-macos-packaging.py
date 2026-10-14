@@ -74,6 +74,12 @@ elif tool == "xcrun":
     elif args[:2] == ["stapler", "staple"]:
         if os.environ.get("FAIL_STAPLE") == "1":
             sys.exit(1)
+        # FLAKY_STAPLE=N fails the first N staple calls, like a dropped connection to Apple.
+        flaky = pathlib.Path(os.environ["TOOL_LOG"] + ".flaky")
+        failures = int(flaky.read_text()) if flaky.exists() else 0
+        if failures < int(os.environ.get("FLAKY_STAPLE", "0")):
+            flaky.write_text(str(failures + 1))
+            sys.exit(68)
         target = pathlib.Path(args[-1])
         if target.suffix == ".dmg":
             with target.open("ab") as dmg:
@@ -147,6 +153,7 @@ class MacOSPackagingTest(unittest.TestCase):
             "MACOS_CERTIFICATE_PASSWORD": "dummy-p12-password",
             "GITHUB_ENV": str(self.root / "github-env"),
             "RUNNER_TEMP": str(self.root),
+            "STAPLE_RETRY_DELAY": "0",
         })
 
     def run_script(self, name="package-desktop-app.sh", **environment):
@@ -217,6 +224,16 @@ class MacOSPackagingTest(unittest.TestCase):
         self.restore_entitlements()
         self.assertNotEqual(self.run_script(TEST_APP_VERSION="2.1.0").returncode, 0)
         self.assertEqual(self.artifacts(), [])
+
+    def test_transient_staple_failures_are_retried(self):
+        result = self.run_script(FLAKY_STAPLE="2")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("retrying", result.stderr)
+        staples = [event for event in self.events() if event[:3] == ["xcrun", "stapler", "staple"]]
+        # Two failed attempts on the app, then one success each for the app and the DMG.
+        self.assertEqual(len(staples), 4)
+        self.assertTrue(staples[-1][-1].endswith(".dmg"))
+        self.assertEqual(len([path for path in self.artifacts() if path.suffix == ".dmg"]), 1)
 
     def test_staple_validation_and_gatekeeper_failures_never_publish(self):
         for setting in ("FAIL_VALIDATE", "FAIL_ASSESS"):
