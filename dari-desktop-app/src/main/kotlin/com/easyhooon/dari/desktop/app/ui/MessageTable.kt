@@ -46,7 +46,7 @@ import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
 import com.easyhooon.dari.inspector.protocol.WireMessageSummary
 
-private val StatusWidth = 64.dp
+private val StatusWidth = 72.dp
 private val DirectionWidth = 72.dp
 private val TagWidth = 108.dp
 private val TimeWidth = 104.dp

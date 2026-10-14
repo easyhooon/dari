@@ -3,7 +3,11 @@ package com.easyhooon.dari.desktop.app.ui
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -33,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.desktop.app.ExportFormat
@@ -58,6 +63,8 @@ fun DetailPane(
     onSave: (ExportFormat) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    newerCount: Int = 0,
+    onShowLatest: () -> Unit = {},
 ) {
     Column(modifier.background(Dari.colors.surface)) {
         if (detail == null) {
@@ -82,6 +89,9 @@ fun DetailPane(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
+                    // The detail stays on the message being read (as in Charles or Chrome DevTools);
+                    // newer arrivals are counted here instead of replacing it.
+                    if (newerCount > 0) NewerHint(newerCount, onShowLatest)
                     ExportMenu(onCopy, onSave)
                     QuietButton("✕", onClick = onClose, contentDescription = "Close details")
                 }
@@ -134,6 +144,23 @@ fun DetailPane(
             }
         }
     }
+}
+
+@Composable
+private fun NewerHint(count: Int, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    Text(
+        "$count new · Show latest",
+        style = Dari.type.label,
+        color = Dari.colors.accent,
+        maxLines = 1,
+        modifier = Modifier
+            .background(Dari.colors.accent.copy(alpha = if (hovered) 0.18f else 0.1f), RoundedCornerShape(DariMetrics.radius))
+            .hoverable(interaction)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+    )
 }
 
 /** The in-app detail screen's share and save actions, desktop style. */
