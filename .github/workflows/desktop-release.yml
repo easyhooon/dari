@@ -72,7 +72,7 @@ jobs:
         run: scripts/package-desktop-app.sh
       - name: Show Compose signing logs
         if: failure() && runner.os == 'macOS'
-        run: tail -n 50 dari-desktop-app/build/compose/logs/createDistributable/*.txt || true
+        run: tail -n 50 dari-desktop-app/build/compose/logs/createReleaseDistributable/*.txt || true
       - name: Remove temporary macOS credentials
         if: always() && runner.os == 'macOS'
         run: |

@@ -29,6 +29,13 @@ compose.desktop {
         // Dock name for `run`; packaged apps take it from packageName. The flag exists only on macOS JVMs.
         if (System.getProperty("os.name").startsWith("Mac")) jvmArgs += "-Xdock:name=Dari"
 
+        // Release tasks (createReleaseDistributable, packageRelease*) shrink the jars with ProGuard.
+        // Obfuscation stays off so log and issue-report stack traces remain readable.
+        buildTypes.release.proguard {
+            obfuscate.set(false)
+            configurationFiles.from(project.file("compose-desktop.pro"))
+        }
+
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "Dari"
