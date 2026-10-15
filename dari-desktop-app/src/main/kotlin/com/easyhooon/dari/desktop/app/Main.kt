@@ -166,7 +166,7 @@ fun main() {
                         checked = settings.maskingEnabled,
                         onCheckedChange = { enabled ->
                             settings.updateMasking(enabled)
-                            controller.onMaskingChanged(enabled)
+                            controller.onMaskingChanged()
                         },
                     )
                     Separator()

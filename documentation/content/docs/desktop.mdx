@@ -79,7 +79,7 @@ Tunnels are removed when the desktop app disconnects or quits. `adb forward --li
 
 - **Debug builds only, unless you opt in.** The socket opens only in debuggable builds, or in a non-debuggable internal build that sets the manifest flag below. Release builds use `dari-noop`, which contains no capture code.
 - **adb only.** Only adb (shell) or root can connect, so other apps on the device can't read messages.
-- **Masking is opt-in.** By default, payloads arrive as captured, the same as the in-app screen. Turn on **Mask sensitive values** in the desktop app's settings, and the device masks values under keys such as `token`, `password`, `secret`, `cookie` or `authorization`, and `Bearer` credentials, before they leave it. This is separate from the in-app setting. Apps on dari older than 2.2.0 always mask. See [Masking](./masking) for the exact rules.
+- **Masking is opt-in.** By default, the desktop app receives payloads as captured, whatever the in-app setting is. Turn on **Mask sensitive values** in the desktop app's settings, and the device masks values under keys such as `token`, `password`, `secret`, `cookie` or `authorization`, and `Bearer` credentials, before they leave it. This is separate from the in-app setting. Apps on dari older than 2.2.0 always mask. See [Masking](./masking) for the exact rules.
 - **Nothing about you leaves your computer.** The desktop app has no analytics or telemetry. Its only network request is the update check: a request to `github.com` on launch and every six hours, which sends nothing but what any browser visit would. `dari.log` stays local and records failures only.
 
 Add your own masking. It runs on every message, after the built-in masking when that is on, and if it throws, the message isn't sent:

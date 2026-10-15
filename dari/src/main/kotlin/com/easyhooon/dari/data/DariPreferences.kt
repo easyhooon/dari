@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.io.IOException
 
 /**
  * Persists user-toggled Dari settings so changes
@@ -141,7 +142,11 @@ internal class DariPreferences(
 
     fun setMaskingEnabled(value: Boolean) {
         scope.launch {
-            dataStore.edit { it[KEY_MASKING_ENABLED] = value }
+            try {
+                dataStore.edit { it[KEY_MASKING_ENABLED] = value }
+            } catch (_: IOException) {
+                // Keeps the previous value; the toggle shows it again from the unchanged flow.
+            }
         }
     }
 

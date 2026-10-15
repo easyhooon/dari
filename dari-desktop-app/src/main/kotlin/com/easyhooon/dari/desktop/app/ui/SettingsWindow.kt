@@ -80,7 +80,7 @@ fun SettingsWindow(settings: DesktopSettings, controller: InspectorController, o
                     checkbox = true,
                     onClick = {
                         settings.updateMasking(!settings.maskingEnabled)
-                        controller.onMaskingChanged(settings.maskingEnabled)
+                        controller.onMaskingChanged()
                     },
                 )
                 val note = if (controller.state is ConnectionState.Connected && controller.appAlwaysMasks) {
