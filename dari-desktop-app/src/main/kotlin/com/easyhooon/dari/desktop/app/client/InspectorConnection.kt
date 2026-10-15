@@ -7,9 +7,11 @@ import com.easyhooon.dari.inspector.protocol.DetailInput
 import com.easyhooon.dari.inspector.protocol.FrameReader
 import com.easyhooon.dari.inspector.protocol.FrameWriter
 import com.easyhooon.dari.inspector.protocol.InspectorError
+import com.easyhooon.dari.inspector.protocol.InspectorErrorCode
 import com.easyhooon.dari.inspector.protocol.InspectorFrame
 import com.easyhooon.dari.inspector.protocol.InspectorOperations
 import com.easyhooon.dari.inspector.protocol.InspectorProtocol
+import com.easyhooon.dari.inspector.protocol.InspectorSettings
 import com.easyhooon.dari.inspector.protocol.ListInput
 import com.easyhooon.dari.inspector.protocol.ListOutput
 import com.easyhooon.dari.inspector.protocol.ObserveEvent
@@ -74,6 +76,15 @@ class InspectorConnection private constructor(
     suspend fun clear() {
         val requestId = nextId.incrementAndGet().toString()
         await(requestId, InspectorFrame.Invoke(requestId, InspectorOperations.CLEAR))
+    }
+
+    /** Masks what the app sends on this connection. Returns false when its dari predates 2.2.0, which always masks. */
+    suspend fun setMasking(enabled: Boolean): Boolean = try {
+        call(InspectorOperations.SETTINGS_UPDATE, InspectorSettings.serializer(), InspectorSettings(enabled), InspectorSettings.serializer())
+        true
+    } catch (e: InspectorException) {
+        if (e.error.code != InspectorErrorCode.OPERATION_NOT_FOUND) throw e
+        false
     }
 
     override fun close() {

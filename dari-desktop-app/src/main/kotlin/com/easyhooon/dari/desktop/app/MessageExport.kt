@@ -18,7 +18,7 @@ enum class ExportFormat(val extension: String) { TEXT("txt"), JSON("json") }
 
 /**
  * Same text and JSON formats as the in-app exporter (`DariExporter` in :dari), so files from the
- * phone and the desktop look alike. Payloads come from the device already masked.
+ * phone and the desktop look alike. Payloads arrive as the device sent them, masked only when the masking setting is on.
  */
 object MessageExport {
     private val prettyJson = Json { prettyPrint = true }

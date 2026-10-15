@@ -68,6 +68,7 @@ import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessageStatus
 import com.easyhooon.dari.export.DariExporter
 import com.easyhooon.dari.export.ExportFormat
+import com.easyhooon.dari.masking.maskedIf
 import com.easyhooon.dari.matchesHandlerQuery
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.easyhooon.dari.ui.components.MessageListItem
@@ -159,6 +160,10 @@ class DariActivity : ComponentActivity() {
                 val showTagChip by Dari.preferences.showTagChipFlow().collectAsStateWithLifecycle(
                     initialValue = Dari.preferences.showTagChip,
                 )
+                val maskingEnabled by Dari.preferences.maskingEnabledFlow()
+                    .collectAsStateWithLifecycle(
+                        initialValue = Dari.preferences.maskingEnabled,
+                    )
                 var isSearchMode by rememberSaveable { mutableStateOf(false) }
                 var searchQuery by rememberSaveable { mutableStateOf("") }
                 var selectedTag by rememberSaveable { mutableStateOf<String?>(null) }
@@ -269,7 +274,7 @@ class DariActivity : ComponentActivity() {
                                                 lifecycleScope.launch {
                                                     DariExporter.exportAndShare(
                                                         this@DariActivity,
-                                                        filteredEntries,
+                                                        filteredEntries.maskedIf(maskingEnabled),
                                                         ExportFormat.TEXT,
                                                     )
                                                 }
@@ -282,7 +287,7 @@ class DariActivity : ComponentActivity() {
                                                 lifecycleScope.launch {
                                                     DariExporter.exportAndShare(
                                                         this@DariActivity,
-                                                        filteredEntries,
+                                                        filteredEntries.maskedIf(maskingEnabled),
                                                         ExportFormat.JSON,
                                                     )
                                                 }
@@ -293,14 +298,14 @@ class DariActivity : ComponentActivity() {
                                             text = { Text("Save as TEXT") },
                                             onClick = {
                                                 exportMenuExpanded = false
-                                                launchSave(filteredEntries, ExportFormat.TEXT)
+                                                launchSave(filteredEntries.maskedIf(maskingEnabled), ExportFormat.TEXT)
                                             },
                                         )
                                         DropdownMenuItem(
                                             text = { Text("Save as JSON") },
                                             onClick = {
                                                 exportMenuExpanded = false
-                                                launchSave(filteredEntries, ExportFormat.JSON)
+                                                launchSave(filteredEntries.maskedIf(maskingEnabled), ExportFormat.JSON)
                                             },
                                         )
                                     }
@@ -409,6 +414,8 @@ class DariActivity : ComponentActivity() {
                             onJsonFoldingEnabledChange = { Dari.setJsonFoldingEnabled(it) },
                             showTagChip = showTagChip,
                             onShowTagChipChange = { Dari.setShowTagChip(it) },
+                            maskingEnabled = maskingEnabled,
+                            onMaskingEnabledChange = { Dari.setMaskingEnabled(it) },
                             onClearMessages = {
                                 showSettingsSheet = false
                                 showClearDialog = true

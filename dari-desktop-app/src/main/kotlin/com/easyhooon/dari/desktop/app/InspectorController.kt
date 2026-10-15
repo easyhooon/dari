@@ -17,6 +17,8 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import java.io.File
@@ -34,6 +36,7 @@ class InspectorController(
     private val adb: Adb?,
     private val clientVersion: String,
     preferredSerial: String? = null,
+    private val maskingEnabled: () -> Boolean = { false },
 ) {
     var devices by mutableStateOf<List<AdbDevice>>(emptyList())
         private set
@@ -59,11 +62,21 @@ class InspectorController(
     var directionFilter by mutableStateOf<String?>(null)
     var statusFilter by mutableStateOf<String?>(null)
 
+    /** The connected app's dari predates 2.2.0 and masks regardless of the setting. */
+    var appAlwaysMasks by mutableStateOf(false)
+        private set
+
     /** Short confirmation such as "Copied", cleared after a moment. */
     var notice by mutableStateOf<String?>(null)
         private set
 
     private var connection: InspectorConnection? = null
+
+    // Masking updates run one at a time and send the latest setting, so rapid toggles apply in order.
+    private val maskingMutex = Mutex()
+
+    // Bumped once a masking change applies; detail responses requested before it are dropped.
+    private var maskingGeneration = 0
     private var noticeJob: Job? = null
 
     // ANDROID_SERIAL or a pick in the device menu; automatic picks may be revised later.
@@ -140,7 +153,30 @@ class InspectorController(
         connectJob = null
         connection?.let { conn -> scope.launch(Dispatchers.IO) { conn.close() } }
         connection = null
+        appAlwaysMasks = false
         state = ConnectionState.Idle
+    }
+
+    /** Applies the desktop's current masking setting to the connected app. */
+    fun onMaskingChanged() {
+        val conn = connection ?: return
+        scope.launch {
+            maskingMutex.withLock { runCatching { conn.setMasking(maskingEnabled()) } }
+                .onSuccess {
+                    // Summaries carry no payloads, so only the open detail needs refetching.
+                    maskingGeneration++
+                    detail = null
+                    selectedId?.let(::loadDetail)
+                }
+                .onFailure {
+                    AppLog.error("Changing masking failed", it)
+                    // The app may still send under the old setting; a new session applies the saved one.
+                    showNotice("Couldn't change masking, reconnecting")
+                    maskingGeneration++
+                    detail = null
+                    if (connection === conn) connect()
+                }
+        }
     }
 
     fun select(id: Long) {
@@ -212,7 +248,8 @@ class InspectorController(
     private suspend fun fetchDetail(id: Long): WireMessageDetail? {
         detail?.takeIf { it.summary.id == id && messages[id] == it.summary }?.let { return it }
         val conn = connection ?: return null
-        return runCatching { conn.detail(id) }.getOrNull()
+        val generation = maskingGeneration
+        return runCatching { conn.detail(id) }.getOrNull()?.takeIf { generation == maskingGeneration }
     }
 
     private fun showNotice(text: String, clearAfter: Boolean = true) {
@@ -241,6 +278,7 @@ class InspectorController(
     }
 
     private suspend fun runSession(conn: InspectorConnection) {
+        appAlwaysMasks = !maskingMutex.withLock { conn.setMasking(maskingEnabled()) }
         val events = conn.observe()
         val backlog = conn.list()
         messages = emptyMap()
@@ -300,9 +338,10 @@ class InspectorController(
 
     private fun loadDetail(id: Long) {
         val conn = connection ?: return
+        val generation = maskingGeneration
         scope.launch {
             val result = runCatching { conn.detail(id) }.getOrNull()
-            if (selectedId == id) detail = result
+            if (selectedId == id && generation == maskingGeneration) detail = result
         }
     }
 

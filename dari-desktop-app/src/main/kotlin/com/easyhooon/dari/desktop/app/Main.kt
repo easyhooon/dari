@@ -72,11 +72,17 @@ fun main() {
 
     application {
         val scope = rememberCoroutineScope()
+        val settings = remember { DesktopSettings() }
         val controller = remember {
             // ANDROID_SERIAL picks the device first, as it does for adb itself.
-            InspectorController(scope, Adb.locate()?.let(::Adb), APP_VERSION, System.getenv("ANDROID_SERIAL"))
+            InspectorController(
+                scope,
+                Adb.locate()?.let(::Adb),
+                APP_VERSION,
+                System.getenv("ANDROID_SERIAL"),
+                maskingEnabled = { settings.maskingEnabled },
+            )
         }
-        val settings = remember { DesktopSettings() }
         val updater = remember { Updater(scope, APP_VERSION) }
         val quit = {
             controller.disconnect()
@@ -111,7 +117,7 @@ fun main() {
             }
         }
         val iconPainter = remember { icon?.let { BitmapPainter(it.toComposeImageBitmap()) } }
-        if (settingsOpen) SettingsWindow(settings, onClose = { settingsOpen = false })
+        if (settingsOpen) SettingsWindow(settings, controller, onClose = { settingsOpen = false })
         if (noticesOpen) NoticesWindow(settings.appearance, onClose = { noticesOpen = false })
         if (aboutOpen) {
             AboutWindow(
@@ -155,6 +161,14 @@ fun main() {
                         onCheckedChange = settings::updateJsonFolding,
                     )
                     CheckboxItem("Show Tags", checked = settings.showTags, onCheckedChange = settings::updateShowTags)
+                    CheckboxItem(
+                        "Mask Sensitive Values",
+                        checked = settings.maskingEnabled,
+                        onCheckedChange = { enabled ->
+                            settings.updateMasking(enabled)
+                            controller.onMaskingChanged()
+                        },
+                    )
                     Separator()
                     Item("Settings…", shortcut = shortcut(Key.Comma), onClick = { settingsOpen = true })
                 }

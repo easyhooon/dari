@@ -26,13 +26,15 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
 import com.easyhooon.dari.desktop.app.Appearance
+import com.easyhooon.dari.desktop.app.ConnectionState
 import com.easyhooon.dari.desktop.app.DesktopSettings
+import com.easyhooon.dari.desktop.app.InspectorController
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariTheme
 
 /** Opened from View → Settings… or the macOS application menu. */
 @Composable
-fun SettingsWindow(settings: DesktopSettings, onClose: () -> Unit) {
+fun SettingsWindow(settings: DesktopSettings, controller: InspectorController, onClose: () -> Unit) {
     Window(
         onCloseRequest = onClose,
         onPreviewKeyEvent = { handleCloseWindowShortcut(it, onClose = onClose) },
@@ -41,7 +43,7 @@ fun SettingsWindow(settings: DesktopSettings, onClose: () -> Unit) {
         state = rememberWindowState(
             position = WindowPosition.Aligned(Alignment.Center),
             width = 380.dp,
-            height = 270.dp,
+            height = 330.dp,
         ),
     ) {
         CloseWindowMenu(onClose)
@@ -72,6 +74,21 @@ fun SettingsWindow(settings: DesktopSettings, onClose: () -> Unit) {
                     checkbox = true,
                     onClick = { settings.updateShowTags(!settings.showTags) },
                 )
+                OptionRow(
+                    label = "Mask sensitive values",
+                    selected = settings.maskingEnabled,
+                    checkbox = true,
+                    onClick = {
+                        settings.updateMasking(!settings.maskingEnabled)
+                        controller.onMaskingChanged()
+                    },
+                )
+                val note = if (controller.state is ConnectionState.Connected && controller.appAlwaysMasks) {
+                    "The connected app uses dari older than 2.2.0, which always masks."
+                } else {
+                    "Hides tokens, passwords and cookies before they leave the device."
+                }
+                Text(note, style = Dari.type.caption, color = Dari.colors.textSecondary)
             }
         }
     }
