@@ -3,8 +3,9 @@
 import { useParams } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { ThemeSwitch } from 'fumadocs-ui/layouts/shared/slots/theme-switch';
-import { Github, Globe, SunMoon } from 'lucide-react';
+import { Globe, SunMoon } from 'lucide-react';
 import { i18n } from '@/lib/i18n';
+import { GithubIcon } from '@/components/github-icon';
 import { LanguageSwitcher } from '@/components/language-switcher';
 
 const labels: Record<string, { theme: string; language: string }> = {
@@ -36,7 +37,7 @@ export function SidebarFooter() {
         rel="noopener noreferrer"
         className={`${rowClass} transition-colors hover:bg-fd-accent/50 hover:text-fd-accent-foreground/80`}
       >
-        <Github />
+        <GithubIcon />
         GitHub
       </a>
       <Row icon={<SunMoon />} label={t.theme}>

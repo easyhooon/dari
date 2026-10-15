@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Download, Github } from 'lucide-react';
+import { Download } from 'lucide-react';
+import { GithubIcon } from '@/components/github-icon';
 
 export default function HomePage() {
   return (
@@ -30,7 +31,7 @@ export default function HomePage() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <Github className="size-5" />
+          <GithubIcon className="size-5" />
           GitHub
         </Link>
       </div>
