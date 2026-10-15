@@ -89,6 +89,18 @@ A non-debuggable internal build, such as staging, can opt in with this entry in 
     android:value="true" />
 ```
 
+## Desktop only
+
+For builds where only the desktop app should show messages, such as a staging build used for QA, add this entry. Dari then shows no notification, doesn't open on shake, and removes its launcher shortcut. Messages are still captured, and the desktop app shows them as usual.
+
+```xml
+<meta-data
+    android:name="com.easyhooon.dari.DESKTOP_ONLY"
+    android:value="true" />
+```
+
+A non-debuggable build needs `ALLOW_NON_DEBUGGABLE` above as well; otherwise nothing can show its messages.
+
 ## Troubleshooting
 
 | Status | What to do |

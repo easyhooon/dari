@@ -88,6 +88,18 @@ Dari.setDesktopInspectorEnabled(false)
     android:value="true" />
 ```
 
+## 데스크톱 전용
+
+QA에 쓰는 스테이징 빌드처럼 데스크톱 앱에서만 메시지를 보고 싶은 빌드에는 다음 항목을 넣습니다. 알림을 띄우지 않고, 흔들어도 열리지 않으며, 런처 바로가기도 지웁니다. 메시지는 그대로 캡처되고 데스크톱 앱에서 평소처럼 볼 수 있습니다.
+
+```xml
+<meta-data
+    android:name="com.easyhooon.dari.DESKTOP_ONLY"
+    android:value="true" />
+```
+
+debuggable이 아닌 빌드는 위의 `ALLOW_NON_DEBUGGABLE`도 함께 넣어야 합니다. 그렇지 않으면 메시지를 볼 곳이 없습니다.
+
 ## 문제 해결
 
 | 상태 | 해결 방법 |
