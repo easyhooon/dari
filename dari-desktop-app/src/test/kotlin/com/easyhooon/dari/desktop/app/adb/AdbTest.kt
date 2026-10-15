@@ -40,9 +40,10 @@ class AdbTest {
     fun `returns null when adb is nowhere`() {
         val empty = Files.createTempDirectory("empty").toFile()
         val located = Adb.locate(mapOf("ANDROID_HOME" to empty.absolutePath, "PATH" to empty.absolutePath))
-        // The default SDK location may exist on a developer machine; only assert when it doesn't.
+        // The default SDK or Homebrew location may exist on a developer machine; only assert when it doesn't.
         if (!File(System.getProperty("user.home"), "Library/Android/sdk/platform-tools/adb").exists() &&
-            !File(System.getProperty("user.home"), "Android/Sdk/platform-tools/adb").exists()
+            !File(System.getProperty("user.home"), "Android/Sdk/platform-tools/adb").exists() &&
+            Adb.HOMEBREW_BIN_DIRS.none { File(it, "adb").exists() }
         ) {
             assertNull(located)
         }

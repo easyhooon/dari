@@ -150,6 +150,8 @@ class InspectorConnection private constructor(
         InspectorProtocol.json.decodeFromJsonElement(ObserveEvent.serializer(), element)
 
     companion object {
+        /** First library release with the desktop socket; 1.x apps never answer. */
+        const val MIN_DARI_VERSION = "2.0.0"
         private const val HANDSHAKE_TIMEOUT_MS = 5_000
         private const val REQUEST_TIMEOUT_MS = 10_000L
 
@@ -169,7 +171,7 @@ class InspectorConnection private constructor(
                 } catch (_: SocketTimeoutException) {
                     // Android freezes cached apps: the socket accepts but nothing answers.
                     throw IOException("app is in the background")
-                } ?: throw IOException("$applicationId isn't running Dari on this device")
+                } ?: throw IOException("$applicationId isn't running Dari $MIN_DARI_VERSION+ on this device")
                 if (!hello.accepted) throw IOException("App rejected the connection: ${hello.rejection}")
                 socket.soTimeout = 0
                 // An IOException keeps the cleanup below; requireNotNull would leak the socket and forward.

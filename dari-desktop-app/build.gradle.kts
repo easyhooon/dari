@@ -44,6 +44,8 @@ compose.desktop {
             macOS {
                 bundleID = "io.github.easyhooon.dari.desktop"
                 appCategory = "public.app-category.developer-tools"
+                // The DMG is ULMO (LZMA), which macOS can mount only from 10.15.
+                minimumSystemVersion = "10.15"
                 iconFile.set(project.file("icons/dari.icns"))
                 // Compose also re-signs the runtime after jpackage; retain JDK 17's JVM entitlements.
                 entitlementsFile.set(project.file("packaging/macos-entitlements.plist"))

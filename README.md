@@ -24,6 +24,8 @@ https://github.com/user-attachments/assets/b7332358-953b-4391-9f68-4e547efcb9e7
 - Optional masking of tokens, passwords and cookies, applied on the device before data leaves it
 - macOS (signed and notarized, Apple Silicon and Intel) and Windows (preview), with in-app updates
 
+Requires `dari` 2.0.0 or later in your app's debug build. Apps still on 1.x can't connect until they upgrade.
+
 📥 **[Download](https://easyhooon.github.io/dari/download)** or install from the terminal:
 
 ```bash

@@ -3,7 +3,7 @@ title: Desktop App
 description: Inspect bridge messages from your computer over adb
 ---
 
-The Dari desktop app shows the bridge messages of a connected debug build on your computer: a live list, the request and response side by side, and foldable JSON. It needs `dari` 2.0.0 or later and works with real devices and emulators. It runs on macOS and, in preview, Windows; a Linux build is planned.
+The Dari desktop app shows the bridge messages of a connected debug build on your computer: a live list, the request and response side by side, and foldable JSON. It needs `dari` 2.0.0 or later and works with real devices and emulators. It runs on macOS 10.15 or later and, in preview, Windows; a Linux build is planned.
 
 ## Install
 
@@ -33,6 +33,52 @@ Dari is signed with a Developer ID and notarized by Apple, so it opens without a
 2. The installer isn't code-signed, so SmartScreen may warn on first run. Click **More info → Run anyway**.
 3. Optionally, compare `certutil -hashfile Dari-<version>-x64.msi SHA256` with the `.sha256` file from the same release.
 
+### Download size
+
+Measured on 2.2.0, the macOS download is about 11 MB larger than the Windows one:
+
+| | Windows (`.msi`) | macOS (`.dmg`, Apple Silicon) |
+| --- | --- | --- |
+| Unpacked | 119.3 MB | 127.1 MB |
+| Compression | `MSZIP` | `UDZO` (zlib level 1) |
+| Download | 59.6 MB | 70.7 MB |
+
+Both hold the same app: a Java runtime trimmed by jlink, the app's jars, and Skiko, the native Skia library that Compose draws with. Both also compress with Deflate, the LZ77 + Huffman coding algorithm behind zip and gzip:
+
+- **`MSZIP`**: an MSI keeps its files in a CAB archive, and `MSZIP` compresses them with Deflate in 32 KB blocks. jpackage leaves WiX at this default.
+- **`UDZO`**: a DMG is a compressed disk image, and `UDZO` compresses it with zlib, a thin wrapper around Deflate. `hdiutil` uses zlib level 1, the fastest and weakest, unless told otherwise.
+
+So the gap has two causes:
+
+1. **Larger native libraries on macOS.** `libskiko-macos-arm64.dylib` is 20.8 MB and `libjvm.dylib` 15.7 MB; on Windows, no file but the runtime's `lib/modules` exceeds 12.7 MB. Deflated file by file, the macOS app comes to 65.8 MB, against the 58.4 MB Windows cabinet.
+2. **zlib level 1.** It adds about 5 MB more.
+
+To measure the macOS side:
+
+```bash
+./gradlew :dari-desktop-app:createDistributable
+cd dari-desktop-app/build/compose/binaries/main/app
+du -sh Dari.app Dari.app/Contents/runtime Dari.app/Contents/app
+hdiutil create -srcfolder Dari.app -format UDZO -imagekey zlib-level=9 Dari-level9.dmg
+```
+
+```
+121M	Dari.app
+ 66M	Dari.app/Contents/runtime
+ 54M	Dari.app/Contents/app
+```
+
+`du -h` counts in MiB, so 121M is 127 MB. The same `Dari.app` in other DMG formats:
+
+| Format | Algorithm | Opens on | Size |
+| --- | --- | --- | --- |
+| `UDZO`, level 1 (`hdiutil` default) | zlib (Deflate) | Every macOS | 70.8 MB |
+| `UDZO`, level 9 | zlib (Deflate) | Every macOS | 67.3 MB |
+| `ULFO` | LZFSE: Apple's LZ77 with finite-state entropy coding, built for fast decompression | macOS 10.11+ | 67.3 MB |
+| `ULMO` (releases after 2.2.0) | LZMA: LZ77 with a large dictionary and range coding, as in 7-Zip and xz | macOS 10.15+ | 59.5 MB |
+
+Releases after 2.2.0 use `ULMO`, which brings the DMG close to the Windows size. It needs macOS 10.15, so Dari now requires 10.15 or later; Apple Silicon Macs ship with macOS 11 or later anyway.
+
 ### Updates
 
 Dari checks the releases page on launch and every six hours. When a newer version exists, an **Update to &lt;version&gt;** button appears in the title bar, and **Help → Install Dari &lt;version&gt;** does the same.
@@ -42,7 +88,7 @@ Dari checks the releases page on launch and every six hours. When a newer versio
 
 ## Connect
 
-1. Keep `adb` available: set `ANDROID_HOME`, or install Android Studio in its default location.
+1. Keep `adb` available. Android Studio in its default location already includes it, and Dari also checks `ANDROID_HOME`. Without Android Studio, install [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools): `brew install android-platform-tools` on macOS, or on Windows unzip it and add the `platform-tools` folder to `PATH`.
 2. Connect a device with USB debugging on, or start an emulator.
 3. Run a debuggable build of your app that uses `dari` and bring it to the foreground.
 
@@ -107,6 +153,7 @@ A non-debuggable build needs `ALLOW_NON_DEBUGGABLE` above as well; otherwise not
 | --- | --- |
 | adb not found | Set `ANDROID_HOME`, or add `platform-tools` to `PATH`, then reopen Dari. |
 | No device | Check `adb devices`. Accept the USB debugging prompt on the device. |
+| No Dari app found | Apps on `dari` 1.x have no desktop connection; upgrade to 2.0.0 or later. If the device hides the app list, type the applicationId. |
 | App is in the background | Android pauses background apps. Bring the app to the foreground and Dari reconnects. |
 | Not running Dari | Check that the app is a debuggable build using `dari` 2.0.0 or later. |
 

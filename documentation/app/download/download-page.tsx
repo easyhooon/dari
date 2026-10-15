@@ -6,14 +6,23 @@ import { DownloadButtons } from './download-buttons';
 export type DownloadLang = 'en' | 'ko';
 
 const linkClass = 'underline underline-offset-4 hover:text-gray-900 dark:hover:text-gray-100';
+const platformToolsLink = (
+  <a href="https://developer.android.com/tools/releases/platform-tools" className={linkClass}>
+    SDK Platform-Tools
+  </a>
+);
 
 interface Copy {
   title: string;
   intro: string;
   terminalHeading: string;
   checksumNote: string;
+  adbHeading: string;
+  adbIntro: string;
+  adbWindows: ReactNode;
   requirements: ReactNode;
   guide: ReactNode;
+  videoCaption: string;
 }
 
 const copy: Record<DownloadLang, Copy> = {
@@ -23,10 +32,18 @@ const copy: Record<DownloadLang, Copy> = {
       'Watch WebView bridge messages from a connected debug build, live on your computer. It needs no proxy, certificate or port setup, only adb.',
     terminalHeading: 'Or install on macOS from Terminal',
     checksumNote: 'Verifies the SHA-256 checksum before installing.',
+    adbHeading: 'No adb yet?',
+    adbIntro: 'Android Studio already includes it. Without Android Studio, install SDK Platform-Tools. On macOS:',
+    adbWindows: (
+      <>
+        On Windows, download {platformToolsLink}, unzip it and add the <code>platform-tools</code> folder to{' '}
+        <code>PATH</code>. Then reopen Dari.
+      </>
+    ),
     requirements: (
       <>
         Requires <code>dari</code> 2.0.0 or later in your app&apos;s debug build, and <code>adb</code> on your
-        computer.
+        computer. macOS 10.15 or later.
       </>
     ),
     guide: (
@@ -38,6 +55,7 @@ const copy: Record<DownloadLang, Copy> = {
         .
       </>
     ),
+    videoCaption: 'The sample app on a phone, its bridge messages live in Dari.',
   },
   ko: {
     title: 'Dari 데스크톱',
@@ -45,9 +63,17 @@ const copy: Record<DownloadLang, Copy> = {
       '연결된 디버그 빌드의 WebView 브릿지 메시지를 컴퓨터에서 실시간으로 확인하세요. 프록시, 인증서, 포트 설정 없이 adb만 있으면 됩니다.',
     terminalHeading: '또는 macOS 터미널에서 설치',
     checksumNote: '설치 전에 SHA-256 체크섬을 검증합니다.',
+    adbHeading: 'adb가 없나요?',
+    adbIntro: 'Android Studio에는 이미 포함되어 있습니다. Android Studio가 없다면 SDK Platform-Tools를 설치하세요. macOS:',
+    adbWindows: (
+      <>
+        Windows에서는 {platformToolsLink}를 내려받아 압축을 풀고 <code>platform-tools</code> 폴더를{' '}
+        <code>PATH</code>에 추가한 뒤 Dari를 다시 여세요.
+      </>
+    ),
     requirements: (
       <>
-        앱의 디버그 빌드에 <code>dari</code> 2.0.0 이상이, 컴퓨터에 <code>adb</code>가 필요합니다.
+        앱의 디버그 빌드에 <code>dari</code> 2.0.0 이상이, 컴퓨터에 <code>adb</code>가 필요합니다. macOS는 10.15 이상.
       </>
     ),
     guide: (
@@ -59,6 +85,7 @@ const copy: Record<DownloadLang, Copy> = {
         를 참고하세요.
       </>
     ),
+    videoCaption: '휴대폰의 샘플 앱과, 그 브릿지 메시지가 실시간으로 표시되는 Dari.',
   },
 };
 
@@ -88,10 +115,33 @@ export function DownloadPageContent({ lang }: { lang: DownloadLang }) {
         <p className="text-xs text-gray-500 dark:text-gray-400">{t.checksumNote}</p>
       </div>
 
+      <div className="flex w-full max-w-xl flex-col gap-2 text-left">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.adbHeading}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{t.adbIntro}</p>
+        <pre className="overflow-x-auto rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs dark:border-gray-800 dark:bg-neutral-900">
+          <code>brew install android-platform-tools</code>
+        </pre>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{t.adbWindows}</p>
+      </div>
+
       <div className="flex max-w-xl flex-col gap-2 text-sm text-gray-500 dark:text-gray-400">
         <p>{t.requirements}</p>
         <p>{t.guide}</p>
       </div>
+
+      <figure className="flex w-full max-w-3xl flex-col gap-3">
+        <video
+          src="/dari/desktop-demo.mp4"
+          poster="/dari/desktop-demo-poster.jpg"
+          autoPlay
+          muted
+          loop
+          playsInline
+          controls
+          className="w-full rounded-xl border border-gray-200 dark:border-gray-800"
+        />
+        <figcaption className="text-xs text-gray-500 dark:text-gray-400">{t.videoCaption}</figcaption>
+      </figure>
     </main>
   );
 }
