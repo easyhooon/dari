@@ -6,15 +6,12 @@ export function baseOptions(lang: string = i18n.defaultLanguage): BaseLayoutProp
     nav: {
       title: <span className="font-semibold">Dari</span>,
     },
+    // The sidebar footer renders the theme switch and GitHub link as rows instead.
+    themeSwitch: { enabled: false },
     links: [
       {
         text: lang === 'ko' ? '다운로드' : 'Download',
         url: lang === i18n.defaultLanguage ? '/download' : `/${lang}/download`,
-      },
-      {
-        text: 'GitHub',
-        url: 'https://github.com/easyhooon/dari',
-        external: true,
       },
     ],
   };
