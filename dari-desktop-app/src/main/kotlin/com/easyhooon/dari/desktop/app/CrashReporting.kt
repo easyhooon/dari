@@ -97,6 +97,7 @@ internal object SentryReporter {
             request = null
             serverName = null
             threads = null
+            setModules(null)
             unknown = null
             contexts.keys().toList().forEach(contexts::remove)
             exceptions?.forEach { exception ->

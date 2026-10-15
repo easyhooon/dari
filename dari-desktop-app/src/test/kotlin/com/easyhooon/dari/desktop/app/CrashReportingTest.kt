@@ -61,6 +61,7 @@ class CrashReportingTest {
         val json = sent.single().toJson()
         assertFalse("PAYLOAD" in json, json)
         assertFalse(InetAddress.getLocalHost().hostName in json, json)
+        assertFalse(""""modules"""" in json, "bundled library versions are dropped")
         assertTrue(""""type":"RuntimeException"""" in json, json)
         assertTrue(""""type":"IllegalStateException"""" in json, json)
         assertTrue(""""handled":false""" in json, json)
