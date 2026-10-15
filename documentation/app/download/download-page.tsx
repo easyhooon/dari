@@ -43,7 +43,7 @@ const copy: Record<DownloadLang, Copy> = {
     requirements: (
       <>
         Requires <code>dari</code> 2.0.0 or later in your app&apos;s debug build, and <code>adb</code> on your
-        computer.
+        computer. macOS 10.15 or later.
       </>
     ),
     guide: (
@@ -73,7 +73,7 @@ const copy: Record<DownloadLang, Copy> = {
     ),
     requirements: (
       <>
-        앱의 디버그 빌드에 <code>dari</code> 2.0.0 이상이, 컴퓨터에 <code>adb</code>가 필요합니다.
+        앱의 디버그 빌드에 <code>dari</code> 2.0.0 이상이, 컴퓨터에 <code>adb</code>가 필요합니다. macOS는 10.15 이상.
       </>
     ),
     guide: (
