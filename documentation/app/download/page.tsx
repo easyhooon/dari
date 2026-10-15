@@ -32,6 +32,26 @@ export default function DownloadPage() {
         </p>
       </div>
 
+      <div className="flex w-full max-w-xl flex-col gap-2 text-left">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No adb yet?</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Android Studio already includes it. Without Android Studio, install SDK Platform-Tools. On macOS:
+        </p>
+        <pre className="overflow-x-auto rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs dark:border-gray-800 dark:bg-neutral-900">
+          <code>brew install android-platform-tools</code>
+        </pre>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          On Windows, download{' '}
+          <a
+            href="https://developer.android.com/tools/releases/platform-tools"
+            className="underline underline-offset-4 hover:text-gray-900 dark:hover:text-gray-100"
+          >
+            SDK Platform-Tools
+          </a>
+          , unzip it and add the <code>platform-tools</code> folder to <code>PATH</code>. Then reopen Dari.
+        </p>
+      </div>
+
       <div className="flex max-w-xl flex-col gap-2 text-sm text-gray-500 dark:text-gray-400">
         <p>
           Requires <code>dari</code> 2.0.0 or later in your app&apos;s debug build, and <code>adb</code> on your
@@ -45,6 +65,22 @@ export default function DownloadPage() {
           .
         </p>
       </div>
+
+      <figure className="flex w-full max-w-3xl flex-col gap-3">
+        <video
+          src="/dari/desktop-demo.mp4"
+          poster="/dari/desktop-demo-poster.jpg"
+          autoPlay
+          muted
+          loop
+          playsInline
+          controls
+          className="w-full rounded-xl border border-gray-200 dark:border-gray-800"
+        />
+        <figcaption className="text-xs text-gray-500 dark:text-gray-400">
+          The sample app on a phone, its bridge messages live in Dari.
+        </figcaption>
+      </figure>
     </main>
   );
 }

@@ -42,7 +42,7 @@ Dari checks the releases page on launch and every six hours. When a newer versio
 
 ## Connect
 
-1. Keep `adb` available: set `ANDROID_HOME`, or install Android Studio in its default location.
+1. Keep `adb` available. Android Studio in its default location already includes it, and Dari also checks `ANDROID_HOME`. Without Android Studio, install [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools): `brew install android-platform-tools` on macOS, or on Windows unzip it and add the `platform-tools` folder to `PATH`.
 2. Connect a device with USB debugging on, or start an emulator.
 3. Run a debuggable build of your app that uses `dari` and bring it to the foreground.
 
