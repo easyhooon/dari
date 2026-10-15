@@ -19,7 +19,7 @@ https://github.com/user-attachments/assets/b7332358-953b-4391-9f68-4e547efcb9e7
 
 - Live messages from a USB-connected device or emulator, with the request and response side by side
 - Foldable JSON with Expand all / Collapse all and one-click Copy, plus text and JSON export
-- Payloads are masked on the device before they reach the desktop
+- Optional masking of tokens, passwords and cookies, applied on the device before data leaves it
 - macOS (signed and notarized, Apple Silicon and Intel) and Windows (preview), with in-app updates
 
 📥 **[Download](https://easyhooon.github.io/dari/download)** or install from the terminal:

@@ -15,6 +15,7 @@ import com.easyhooon.dari.inspector.protocol.InspectorErrorCode
 import com.easyhooon.dari.inspector.protocol.InspectorFrame
 import com.easyhooon.dari.inspector.protocol.InspectorOperations
 import com.easyhooon.dari.inspector.protocol.InspectorProtocol
+import com.easyhooon.dari.inspector.protocol.InspectorSettings
 import com.easyhooon.dari.inspector.protocol.ListOutput
 import com.easyhooon.dari.inspector.protocol.ObserveEvent
 import com.easyhooon.dari.inspector.protocol.ServerHello
@@ -110,6 +111,25 @@ class InspectorSessionTest {
         assertEquals(InspectorErrorCode.OPERATION_NOT_FOUND, client.result().error?.code)
 
         client.invoke("2", InspectorOperations.DETAIL, buildJsonObject { put("id", "abc") })
+        assertEquals(InspectorErrorCode.INVALID_INPUT, client.result().error?.code)
+    }
+
+    @Test
+    fun `masking is off until the client turns it on for its own connection`() {
+        val client = connect().handshake()
+        client.invoke("1", InspectorOperations.DETAIL, buildJsonObject { put("id", -1L) })
+        assertEquals("""{"token":"secret"}""", client.output(WireMessageDetail.serializer()).requestData)
+
+        client.invoke("2", InspectorOperations.SETTINGS_UPDATE, buildJsonObject { put("maskingEnabled", true) })
+        assertEquals(InspectorSettings(maskingEnabled = true), client.output(InspectorSettings.serializer()))
+        client.invoke("3", InspectorOperations.DETAIL, buildJsonObject { put("id", -1L) })
+        assertEquals("""{"token":"***"}""", client.output(WireMessageDetail.serializer()).requestData)
+
+        val other = connect().handshake()
+        other.invoke("4", InspectorOperations.DETAIL, buildJsonObject { put("id", -1L) })
+        assertEquals("""{"token":"secret"}""", other.output(WireMessageDetail.serializer()).requestData)
+
+        client.invoke("5", InspectorOperations.SETTINGS_UPDATE)
         assertEquals(InspectorErrorCode.INVALID_INPUT, client.result().error?.code)
     }
 

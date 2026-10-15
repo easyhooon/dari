@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -61,6 +62,8 @@ internal fun SettingsBottomSheet(
     onJsonFoldingEnabledChange: (Boolean) -> Unit,
     showTagChip: Boolean,
     onShowTagChipChange: (Boolean) -> Unit,
+    maskingEnabled: Boolean,
+    onMaskingEnabledChange: (Boolean) -> Unit,
     onClearMessages: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -112,6 +115,13 @@ internal fun SettingsBottomSheet(
                 description = "Show bridge tags beside handler names",
                 checked = showTagChip,
                 onCheckedChange = onShowTagChipChange,
+            )
+            SettingToggleRow(
+                icon = Icons.Default.Lock,
+                title = "Mask sensitive values",
+                description = "Hide tokens, passwords and cookies in messages and exports",
+                checked = maskingEnabled,
+                onCheckedChange = onMaskingEnabledChange,
             )
 
             HorizontalDivider(

@@ -1,4 +1,4 @@
-package com.easyhooon.dari.inspector
+package com.easyhooon.dari.masking
 
 import com.easyhooon.dari.MessageEntry
 import kotlinx.serialization.SerializationException
@@ -9,10 +9,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * Default masking applied to every message before it leaves the device.
- * Fails closed: if a payload can't be processed, it is replaced instead of sent raw.
+ * Opt-in masking for the in-app screens and exports (`Dari.setMaskingEnabled`) and, separately,
+ * for each desktop connection. Fails closed: a payload that can't be processed is replaced, not shown raw.
  */
-internal object DesktopPayloadMasker {
+internal object PayloadMasker {
     const val MASK = "***"
     const val REDACTION_FAILED = "[dari: payload hidden, masking failed]"
 
@@ -88,3 +88,8 @@ internal object DesktopPayloadMasker {
         match.groupValues[1] + match.groupValues[2] + maskedValue
     }
 }
+
+internal fun MessageEntry.maskedIf(enabled: Boolean): MessageEntry = if (enabled) PayloadMasker.mask(this) else this
+
+internal fun List<MessageEntry>.maskedIf(enabled: Boolean): List<MessageEntry> =
+    if (enabled) map(PayloadMasker::mask) else this

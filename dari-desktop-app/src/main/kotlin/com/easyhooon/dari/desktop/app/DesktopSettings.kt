@@ -25,6 +25,10 @@ class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().no
     var showTags by mutableStateOf(prefs.getBoolean(KEY_SHOW_TAGS, true))
         private set
 
+    /** Asks the connected app to mask secrets before they leave the device; separate from its in-app setting. */
+    var maskingEnabled by mutableStateOf(prefs.getBoolean(KEY_MASKING, false))
+        private set
+
     val windowBounds: WindowBounds?
         get() {
             val values = listOf(KEY_WINDOW_X, KEY_WINDOW_Y, KEY_WINDOW_WIDTH, KEY_WINDOW_HEIGHT)
@@ -54,11 +58,17 @@ class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().no
         prefs.putBoolean(KEY_SHOW_TAGS, show)
     }
 
+    fun updateMasking(enabled: Boolean) {
+        maskingEnabled = enabled
+        prefs.putBoolean(KEY_MASKING, enabled)
+    }
+
     private companion object {
         const val NODE = "io/github/easyhooon/dari/desktop"
         const val KEY_APPEARANCE = "appearance"
         const val KEY_JSON_FOLDING = "jsonFolding"
         const val KEY_SHOW_TAGS = "showTags"
+        const val KEY_MASKING = "masking"
         const val KEY_WINDOW_X = "windowX"
         const val KEY_WINDOW_Y = "windowY"
         const val KEY_WINDOW_WIDTH = "windowWidth"

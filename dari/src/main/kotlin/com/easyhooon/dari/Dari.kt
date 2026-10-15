@@ -16,7 +16,6 @@ import com.easyhooon.dari.inspector.protocol.InspectorProtocol
 import com.easyhooon.dari.inspector.inspectorAppInfo
 import com.easyhooon.dari.inspector.InspectorSession
 import com.easyhooon.dari.inspector.InspectorDataSource
-import com.easyhooon.dari.inspector.DesktopPayloadMasker
 import com.easyhooon.dari.inspector.DesktopInspectorGate
 import com.easyhooon.dari.inspector.DariInspectorServer
 import com.easyhooon.dari.data.InspectorEntry
@@ -113,7 +112,7 @@ object Dari {
 
     /**
      * Lets the Dari desktop app connect over `adb` (on by default in debuggable builds).
-     * Only adb or root can connect, and payloads are masked before they leave the device.
+     * Only adb or root can connect. The desktop app's own setting masks what it receives.
      */
     @Synchronized
     fun setDesktopInspectorEnabled(enabled: Boolean) {
@@ -147,11 +146,19 @@ object Dari {
     }
 
     /**
-     * Runs after the built-in masking (tokens, passwords, cookies, auth headers; raw previews are
-     * dropped) on every message sent to the desktop app. Throwing hides the message.
+     * Runs on every message sent to the desktop app, after the built-in masking when the desktop
+     * turns it on. Throwing hides the message.
      */
     fun setPayloadRedactor(redactor: DariPayloadRedactor?) {
         payloadRedactor = redactor
+    }
+
+    /**
+     * Masks tokens, passwords, cookies and auth headers, and hides raw previews, in the in-app
+     * screens and exports. Off by default. Persists across process restarts.
+     */
+    fun setMaskingEnabled(enabled: Boolean) {
+        preferences.setMaskingEnabled(enabled)
     }
 
     @Synchronized
@@ -163,10 +170,7 @@ object Dari {
             override fun snapshot(): List<InspectorEntry> = repository.inspectorSnapshot()
             override fun clear() = this@Dari.clear()
         }
-        val redactor = DariPayloadRedactor { entry ->
-            val masked = DesktopPayloadMasker.mask(entry)
-            payloadRedactor?.redact(masked) ?: masked
-        }
+        val redactor = DariPayloadRedactor { entry -> payloadRedactor?.redact(entry) ?: entry }
         val appInfo = inspectorAppInfo(context)
         val server = DariInspectorServer(InspectorProtocol.socketName(context.packageName)) { input, output ->
             InspectorSession(input, output, appInfo, source, redactor, scope).run()

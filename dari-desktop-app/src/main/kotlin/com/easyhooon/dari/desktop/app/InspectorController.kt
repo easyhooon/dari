@@ -34,6 +34,7 @@ class InspectorController(
     private val adb: Adb?,
     private val clientVersion: String,
     preferredSerial: String? = null,
+    private val maskingEnabled: () -> Boolean = { false },
 ) {
     var devices by mutableStateOf<List<AdbDevice>>(emptyList())
         private set
@@ -55,6 +56,10 @@ class InspectorController(
     var filter by mutableStateOf("")
     var directionFilter by mutableStateOf<String?>(null)
     var statusFilter by mutableStateOf<String?>(null)
+
+    /** The connected app's dari predates 2.2.0 and masks regardless of the setting. */
+    var appAlwaysMasks by mutableStateOf(false)
+        private set
 
     /** Short confirmation such as "Copied", cleared after a moment. */
     var notice by mutableStateOf<String?>(null)
@@ -137,7 +142,25 @@ class InspectorController(
         connectJob = null
         connection?.let { conn -> scope.launch(Dispatchers.IO) { conn.close() } }
         connection = null
+        appAlwaysMasks = false
         state = ConnectionState.Idle
+    }
+
+    /** Applies the desktop's masking setting to the connected app. */
+    fun onMaskingChanged(enabled: Boolean) {
+        val conn = connection ?: return
+        scope.launch {
+            runCatching { conn.setMasking(enabled) }
+                .onSuccess {
+                    // Summaries carry no payloads, so only the open detail needs refetching.
+                    detail = null
+                    selectedId?.let(::loadDetail)
+                }
+                .onFailure {
+                    AppLog.error("Changing masking failed", it)
+                    showNotice("Couldn't change masking")
+                }
+        }
     }
 
     fun select(id: Long) {
@@ -232,6 +255,7 @@ class InspectorController(
     }
 
     private suspend fun runSession(conn: InspectorConnection) {
+        appAlwaysMasks = !conn.setMasking(maskingEnabled())
         val events = conn.observe()
         val backlog = conn.list()
         messages = emptyMap()

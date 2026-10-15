@@ -43,6 +43,18 @@ class DariPreferencesTest {
         )
         assertFalse(restoredPreferences.showTagChip)
     }
+
+    @Test
+    fun `masking is off by default and persisted when turned on`() = runBlocking {
+        val dataStore = InMemoryDataStore()
+        val preferences = DariPreferences(dataStore = dataStore, defaultShakeToOpen = false)
+        assertFalse(preferences.maskingEnabled)
+
+        preferences.setMaskingEnabled(true)
+        withTimeout(1_000) { preferences.maskingEnabledFlow().first { it } }
+
+        assertTrue(DariPreferences(dataStore = dataStore, defaultShakeToOpen = false).maskingEnabled)
+    }
 }
 
 private class InMemoryDataStore(

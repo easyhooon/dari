@@ -121,7 +121,7 @@ flowchart LR
         js["JavaScript in WebView"] <-->|"bridge call"| bridge["App bridge code"]
         bridge -->|"onWebToAppRequest / ..."| icpt["DariInterceptor"]
         icpt --> repo["MessageRepository<br/>(memory + Room)"]
-        repo -->|"added / updated / cleared"| sess["InspectorSession<br/>masking + redactor"]
+        repo -->|"added / updated / cleared"| sess["InspectorSession<br/>opt-in masking + redactor"]
         sess --> srv["DariInspectorServer<br/>@dari_&lt;applicationId&gt;<br/>adb (uid 2000) only"]
         adbd["adbd"]
     end
@@ -138,7 +138,7 @@ flowchart LR
 ```
 
 1. A bridge call goes through `DariInterceptor`, and `MessageRepository` stores it and emits an event.
-2. `InspectorSession` masks the message and writes it to the `dari_<applicationId>` socket.
+2. `InspectorSession` masks the message if masking is on, runs the redactor, and writes it to the `dari_<applicationId>` socket.
 3. adb carries the bytes to the forwarded port on the computer.
 4. The desktop app shows the message. It first subscribes to `observe`, then asks for the backlog with
    `list`, then fetches bodies with `detail` when a message is selected.
@@ -200,7 +200,7 @@ need nothing extra: anything `adb devices` lists shows up in Dari.
 | Path to the device | adb server → USB or local TCP → `adbd` | The same adb server and `adbd` |
 | Endpoint inside the app | JDWP, opened by ART in debuggable builds | `dari_<applicationId>`, opened by the `dari` library in debuggable builds |
 | Tunnel | `adb forward tcp:<port> jdwp:<pid>` | `adb forward tcp:0 localabstract:dari_<applicationId>` |
-| What flows | Breakpoints, stepping and variables; Logcat lines; APK installs | Bridge messages: summaries, bodies and live events, masked before they leave |
+| What flows | Breakpoints, stepping and variables; Logcat lines; APK installs | Bridge messages: summaries, bodies and live events, optionally masked before they leave |
 | Who may connect | Anyone with adb access to the device | Only adb (uid 2000) or root, checked by the app |
 | Release builds | Not debuggable, so no JDWP | `dari-noop`, so no socket and no capture code |
 | Setup on the device | USB debugging | USB debugging; the `dari` debug dependency in the app |
@@ -262,7 +262,7 @@ The desktop app could tail `adb logcat` with no library, but:
 - logcat truncates lines at about 4 KB and drops chatty output, so large bodies arrive cut off.
 - Pairing requests with responses, status and duration would have to be re-parsed from text.
 - `Log` calls ship in release builds, unmasked, and any adb client can read them. `dari-noop` ships
-  no capture code, and the desktop channel masks secrets before data leaves the device.
+  no capture code, and the desktop channel can mask secrets before data leaves the device.
 
 ## 6. Why was the library split into two artifacts and then merged back?
 
