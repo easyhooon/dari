@@ -34,12 +34,31 @@ Dari는 Developer ID로 서명되고 Apple 공증을 받았기 때문에 보안 
 
 ### 다운로드 크기
 
-같은 앱인데도 macOS 다운로드(약 71MB)가 Windows(약 60MB)보다 큽니다. 두 설치 파일 모두 축소한 Java 런타임과, Compose UI 라이브러리를 포함한 앱을 담고 있습니다. macOS에서 압축을 푼 크기는 다음과 같습니다.
+2.2.0 기준으로 macOS 다운로드가 Windows보다 약 11MB 큽니다.
+
+| | Windows (`.msi`) | macOS (`.dmg`, Apple Silicon) |
+| --- | --- | --- |
+| 압축 전 | 119.3 MB | 127.1 MB |
+| 압축 방식 | `MSZIP` | `UDZO` (zlib 레벨 1) |
+| 다운로드 | 59.6 MB | 70.7 MB |
+
+두 설치 파일에는 같은 앱이 들어 있습니다. jlink로 줄인 Java 런타임, 앱 jar, 그리고 Compose가 화면을 그릴 때 쓰는 Skia 네이티브 라이브러리 Skiko입니다. 압축도 둘 다 Deflate를 씁니다. Deflate는 zip과 gzip이 쓰는 알고리즘으로, LZ77로 반복되는 바이트를 줄이고 Huffman 코딩으로 한 번 더 줄입니다.
+
+- **`MSZIP`**: MSI는 파일을 CAB 아카이브에 담고, `MSZIP`은 이를 32KB 블록 단위로 Deflate 압축합니다. jpackage는 WiX의 이 기본값을 그대로 씁니다.
+- **`UDZO`**: DMG는 압축된 디스크 이미지이고, `UDZO`는 이미지를 Deflate의 얇은 래퍼인 zlib으로 압축합니다. `hdiutil`은 따로 지정하지 않으면 가장 빠르고 가장 덜 줄어드는 zlib 레벨 1을 씁니다.
+
+그래서 차이는 두 가지에서 납니다.
+
+1. **macOS의 네이티브 라이브러리가 더 큽니다.** `libskiko-macos-arm64.dylib`이 20.8MB, `libjvm.dylib`이 15.7MB입니다. Windows에서는 런타임의 `lib/modules`를 빼면 12.7MB를 넘는 파일이 없습니다. 파일별로 Deflate 압축하면 macOS 앱은 65.8MB, Windows CAB은 58.4MB입니다.
+2. **zlib 레벨 1.** 여기서 약 5MB가 더 붙습니다.
+
+macOS 쪽은 이렇게 측정합니다.
 
 ```bash
 ./gradlew :dari-desktop-app:createDistributable
 cd dari-desktop-app/build/compose/binaries/main/app
 du -sh Dari.app Dari.app/Contents/runtime Dari.app/Contents/app
+hdiutil create -srcfolder Dari.app -format UDZO -imagekey zlib-level=9 Dari-level9.dmg
 ```
 
 ```
@@ -48,15 +67,16 @@ du -sh Dari.app Dari.app/Contents/runtime Dari.app/Contents/app
  54M	Dari.app/Contents/app
 ```
 
-차이는 대부분 압축 방식에서 납니다. DMG는 모든 macOS 버전에서 열리는 zip 계열 압축을 쓰고, Windows 설치 파일은 더 강하게 압축합니다. 같은 `Dari.app`을 `hdiutil create -srcfolder Dari.app -format <format>`으로 묶어 보면 확인할 수 있습니다.
+`du -h`는 MiB 단위라서 121M은 127MB입니다. 같은 `Dari.app`을 다른 DMG 형식으로 묶은 결과입니다.
 
-| DMG 압축 방식 | 크기 |
-| --- | --- |
-| `UDZO` (zlib, 릴리스에 사용) | 70.8 MB |
-| `ULFO` (LZFSE) | 67.3 MB |
-| `ULMO` (LZMA) | 59.5 MB |
+| 형식 | 알고리즘 | 지원 macOS | 크기 |
+| --- | --- | --- | --- |
+| `UDZO`, 레벨 1 (`hdiutil` 기본값) | zlib (Deflate) | 모든 버전 | 70.8 MB |
+| `UDZO`, 레벨 9 | zlib (Deflate) | 모든 버전 | 67.3 MB |
+| `ULFO` | LZFSE: Apple이 만든 LZ77 + 유한 상태 엔트로피 코딩. 압축 해제가 빠름 | 10.11 이상 | 67.3 MB |
+| `ULMO` | LZMA: 큰 사전을 쓰는 LZ77 + 범위 코딩. 7-Zip, xz와 같은 방식 | 10.15 이상 | 59.5 MB |
 
-LZMA로 압축하면 Windows 설치 파일과 크기가 비슷해지지만, 여는 속도가 느리고 macOS 10.15 이상에서만 열립니다.
+2.2.0 이후 릴리스는 `UDZO` 레벨 9를 씁니다. Dari가 지원하는 모든 macOS(10.13 이상)에서 열립니다. `ULMO`를 쓰면 Windows와 크기가 비슷해지지만 macOS 10.15 이상이 필요합니다.
 
 ### 업데이트
 

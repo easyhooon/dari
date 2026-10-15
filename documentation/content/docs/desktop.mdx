@@ -35,12 +35,31 @@ Dari is signed with a Developer ID and notarized by Apple, so it opens without a
 
 ### Download size
 
-The macOS download (about 71 MB) is larger than the Windows one (about 60 MB) even though both hold the same app. Each bundles a trimmed Java runtime and the app with its Compose UI libraries. Unpacked on macOS:
+Measured on 2.2.0, the macOS download is about 11 MB larger than the Windows one:
+
+| | Windows (`.msi`) | macOS (`.dmg`, Apple Silicon) |
+| --- | --- | --- |
+| Unpacked | 119.3 MB | 127.1 MB |
+| Compression | `MSZIP` | `UDZO` (zlib level 1) |
+| Download | 59.6 MB | 70.7 MB |
+
+Both hold the same app: a Java runtime trimmed by jlink, the app's jars, and Skiko, the native Skia library that Compose draws with. Both also compress with Deflate, the LZ77 + Huffman coding algorithm behind zip and gzip:
+
+- **`MSZIP`**: an MSI keeps its files in a CAB archive, and `MSZIP` compresses them with Deflate in 32 KB blocks. jpackage leaves WiX at this default.
+- **`UDZO`**: a DMG is a compressed disk image, and `UDZO` compresses it with zlib, a thin wrapper around Deflate. `hdiutil` uses zlib level 1, the fastest and weakest, unless told otherwise.
+
+So the gap has two causes:
+
+1. **Larger native libraries on macOS.** `libskiko-macos-arm64.dylib` is 20.8 MB and `libjvm.dylib` 15.7 MB; on Windows, no file but the runtime's `lib/modules` exceeds 12.7 MB. Deflated file by file, the macOS app comes to 65.8 MB, against the 58.4 MB Windows cabinet.
+2. **zlib level 1.** It adds about 5 MB more.
+
+To measure the macOS side:
 
 ```bash
 ./gradlew :dari-desktop-app:createDistributable
 cd dari-desktop-app/build/compose/binaries/main/app
 du -sh Dari.app Dari.app/Contents/runtime Dari.app/Contents/app
+hdiutil create -srcfolder Dari.app -format UDZO -imagekey zlib-level=9 Dari-level9.dmg
 ```
 
 ```
@@ -49,15 +68,16 @@ du -sh Dari.app Dari.app/Contents/runtime Dari.app/Contents/app
  54M	Dari.app/Contents/app
 ```
 
-The gap is mostly compression. The DMG uses zip-style compression that every macOS version opens, while the Windows installer compresses harder. Packing the same `Dari.app` with `hdiutil create -srcfolder Dari.app -format <format>` shows it:
+`du -h` counts in MiB, so 121M is 127 MB. The same `Dari.app` in other DMG formats:
 
-| DMG compression | Size |
-| --- | --- |
-| `UDZO` (zlib, used for releases) | 70.8 MB |
-| `ULFO` (LZFSE) | 67.3 MB |
-| `ULMO` (LZMA) | 59.5 MB |
+| Format | Algorithm | Opens on | Size |
+| --- | --- | --- | --- |
+| `UDZO`, level 1 (`hdiutil` default) | zlib (Deflate) | Every macOS | 70.8 MB |
+| `UDZO`, level 9 | zlib (Deflate) | Every macOS | 67.3 MB |
+| `ULFO` | LZFSE: Apple's LZ77 with finite-state entropy coding, built for fast decompression | macOS 10.11+ | 67.3 MB |
+| `ULMO` | LZMA: LZ77 with a large dictionary and range coding, as in 7-Zip and xz | macOS 10.15+ | 59.5 MB |
 
-With LZMA the DMG is about the size of the Windows installer, but it opens slower and only on macOS 10.15 or later.
+Releases after 2.2.0 use `UDZO` at level 9, which opens on every macOS that Dari supports (10.13 and later). `ULMO` would match the Windows size but needs macOS 10.15.
 
 ### Updates
 
