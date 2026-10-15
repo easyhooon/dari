@@ -3,7 +3,7 @@ title: Desktop App
 description: Inspect bridge messages from your computer over adb
 ---
 
-The Dari desktop app shows the bridge messages of a connected debug build on your computer: a live list, the request and response side by side, and foldable JSON. It needs `dari` 2.0.0 or later and works with real devices and emulators. It runs on macOS and, in preview, Windows; a Linux build is planned.
+The Dari desktop app shows the bridge messages of a connected debug build on your computer: a live list, the request and response side by side, and foldable JSON. It needs `dari` 2.0.0 or later and works with real devices and emulators. It runs on macOS 10.15 or later and, in preview, Windows; a Linux build is planned.
 
 ## Install
 
@@ -75,9 +75,9 @@ hdiutil create -srcfolder Dari.app -format UDZO -imagekey zlib-level=9 Dari-leve
 | `UDZO`, level 1 (`hdiutil` default) | zlib (Deflate) | Every macOS | 70.8 MB |
 | `UDZO`, level 9 | zlib (Deflate) | Every macOS | 67.3 MB |
 | `ULFO` | LZFSE: Apple's LZ77 with finite-state entropy coding, built for fast decompression | macOS 10.11+ | 67.3 MB |
-| `ULMO` | LZMA: LZ77 with a large dictionary and range coding, as in 7-Zip and xz | macOS 10.15+ | 59.5 MB |
+| `ULMO` (releases after 2.2.0) | LZMA: LZ77 with a large dictionary and range coding, as in 7-Zip and xz | macOS 10.15+ | 59.5 MB |
 
-Releases after 2.2.0 use `UDZO` at level 9, which opens on every macOS that Dari supports (10.13 and later). `ULMO` would match the Windows size but needs macOS 10.15.
+Releases after 2.2.0 use `ULMO`, which brings the DMG close to the Windows size. It needs macOS 10.15, so Dari now requires 10.15 or later; Apple Silicon Macs ship with macOS 11 or later anyway.
 
 ### Updates
 

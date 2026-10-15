@@ -55,7 +55,7 @@ export default function DownloadPage() {
       <div className="flex max-w-xl flex-col gap-2 text-sm text-gray-500 dark:text-gray-400">
         <p>
           Requires <code>dari</code> 2.0.0 or later in your app&apos;s debug build, and <code>adb</code> on your
-          computer.
+          computer. macOS 10.15 or later.
         </p>
         <p>
           Installing, connecting a device and privacy: see the{' '}
