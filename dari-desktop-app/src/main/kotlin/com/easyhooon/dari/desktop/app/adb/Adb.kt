@@ -83,7 +83,9 @@ class Adb(private val executable: String) {
         private const val TIMEOUT_SECONDS = 10L
 
         // Homebrew's `android-platform-tools`; apps opened from Finder don't inherit the shell's PATH.
-        internal val HOMEBREW_BIN_DIRS = listOf("/opt/homebrew/bin", "/usr/local/bin")
+        // macOS only: on Windows `/opt/...` maps to `C:\opt\...`, which any user can create.
+        internal val HOMEBREW_BIN_DIRS =
+            if (System.getProperty("os.name").startsWith("Mac")) listOf("/opt/homebrew/bin", "/usr/local/bin") else emptyList()
 
         /** `ANDROID_HOME`/`ANDROID_SDK_ROOT`, the default SDK locations, `PATH`, then Homebrew. */
         fun locate(env: Map<String, String> = System.getenv()): String? {
