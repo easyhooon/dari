@@ -24,7 +24,7 @@ if tool == "uname":
     print("Darwin" if args == ["-s"] else os.environ.get("TEST_ARCH", "arm64"))
 elif tool == "gradlew":
     assert os.environ.get("DARI_MACOS_SIGN") == "true"
-    app = pathlib.Path("dari-desktop-app/build/compose/binaries/main/app/Dari.app")
+    app = pathlib.Path("dari-desktop-app/build/compose/binaries/main-release/app/Dari.app")
     (app / "Contents/runtime/Contents/Home/lib/server").mkdir(parents=True)
     (app / "Contents/runtime/Contents/Home/lib/server/libjvm.dylib").touch()
     (app / "Contents/Info.plist").touch()
@@ -189,7 +189,7 @@ class MacOSPackagingTest(unittest.TestCase):
                 self.assertTrue(submits[-2][3].endswith("Dari.zip"))
                 self.assertTrue(submits[-1][3].endswith(".dmg"))
                 self.assertTrue(any(event[:2] == ["smoke-test-desktop-app.sh", "--skip-build"] for event in events))
-                ticket = self.root / "dari-desktop-app/build/compose/binaries/main/app/Dari.app/Contents/stapled-ticket"
+                ticket = self.root / "dari-desktop-app/build/compose/binaries/main-release/app/Dari.app/Contents/stapled-ticket"
                 self.assertTrue(ticket.exists())
                 self.assertFalse(any(event[0] == "codesign" and "--sign" in event and "-" in event for event in events))
                 for kind in ("app", "dmg"):
