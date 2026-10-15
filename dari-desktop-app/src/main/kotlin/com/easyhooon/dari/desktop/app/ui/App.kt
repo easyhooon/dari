@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowScope
 import com.easyhooon.dari.desktop.app.Appearance
 import com.easyhooon.dari.desktop.app.ConnectionState
+import com.easyhooon.dari.desktop.app.CrashReporting
 import com.easyhooon.dari.desktop.app.DesktopSettings
 import com.easyhooon.dari.desktop.app.InspectorController
 import com.easyhooon.dari.desktop.app.client.InspectorConnection.Companion.MIN_DARI_VERSION
@@ -57,6 +58,10 @@ fun WindowScope.App(controller: InspectorController, settings: DesktopSettings, 
         Column(Modifier.fillMaxSize().background(Dari.colors.background)) {
             TitleBar(controller, updater, installUpdate)
             Divider()
+            if (CrashReporting.isAvailable && !settings.crashReportNoticeDismissed) {
+                CrashReportNotice(settings)
+                Divider()
+            }
             if (controller.adbMissing) {
                 EmptyState(
                     "adb not found",
@@ -147,6 +152,29 @@ private fun WindowScope.TitleBar(controller: InspectorController, updater: Updat
         if (state == ConnectionState.Idle) {
             QuietButton("Connect", onClick = controller::connect, enabled = controller.applicationId.isNotBlank())
         }
+    }
+}
+
+/** Tells the user once that crash reports are on by default, with a way to turn them off. */
+@Composable
+private fun CrashReportNotice(settings: DesktopSettings) {
+    Row(
+        Modifier.fillMaxWidth().background(Dari.colors.surface).padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "Dari sends crash reports: the error type, stack trace and OS and Java versions, never messages. " +
+                "You can change this in Settings.",
+            style = Dari.type.caption,
+            color = Dari.colors.textSecondary,
+            modifier = Modifier.weight(1f),
+        )
+        QuietButton("Turn Off", onClick = {
+            settings.updateCrashReports(false)
+            settings.dismissCrashReportNotice()
+        })
+        QuietButton("OK", onClick = settings::dismissCrashReportNotice)
     }
 }
 

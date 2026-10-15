@@ -69,7 +69,7 @@ jobs:
       - name: Package
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Enables the opt-in crash reports; without the secret they stay unavailable.
+          # Enables crash reports; without the secret they stay unavailable.
           DARI_SENTRY_DSN: ${{ secrets.DARI_SENTRY_DSN }}
         run: scripts/package-desktop-app.sh
       - name: Show Compose signing logs

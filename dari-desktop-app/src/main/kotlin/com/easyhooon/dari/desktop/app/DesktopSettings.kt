@@ -29,8 +29,12 @@ class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().no
     var maskingEnabled by mutableStateOf(prefs.getBoolean(KEY_MASKING, false))
         private set
 
-    /** Sends uncaught exceptions (type, stack trace, OS/Java versions) when the build has a DSN. */
-    var crashReportsEnabled by mutableStateOf(prefs.getBoolean(KEY_CRASH_REPORTS, false))
+    /** Sends uncaught exceptions (type, stack trace, OS/Java versions) when the build has a DSN. On by default. */
+    var crashReportsEnabled by mutableStateOf(prefs.getBoolean(KEY_CRASH_REPORTS, true))
+        private set
+
+    /** Whether the one-time notice that crash reports are on has been dismissed. */
+    var crashReportNoticeDismissed by mutableStateOf(prefs.getBoolean(KEY_CRASH_REPORT_NOTICE, false))
         private set
 
     val windowBounds: WindowBounds?
@@ -72,6 +76,11 @@ class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().no
         prefs.putBoolean(KEY_CRASH_REPORTS, enabled)
     }
 
+    fun dismissCrashReportNotice() {
+        crashReportNoticeDismissed = true
+        prefs.putBoolean(KEY_CRASH_REPORT_NOTICE, true)
+    }
+
     private companion object {
         const val NODE = "io/github/easyhooon/dari/desktop"
         const val KEY_APPEARANCE = "appearance"
@@ -79,6 +88,7 @@ class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().no
         const val KEY_SHOW_TAGS = "showTags"
         const val KEY_MASKING = "masking"
         const val KEY_CRASH_REPORTS = "crashReports"
+        const val KEY_CRASH_REPORT_NOTICE = "crashReportNotice"
         const val KEY_WINDOW_X = "windowX"
         const val KEY_WINDOW_Y = "windowY"
         const val KEY_WINDOW_WIDTH = "windowWidth"

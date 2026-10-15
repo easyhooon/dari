@@ -8,8 +8,8 @@ import io.sentry.protocol.Mechanism
 import java.util.Properties
 
 /**
- * Opt-in crash reports. Only uncaught exceptions are sent, reduced to their types, stack traces and
- * OS/arch/Java tags, since Dari shows bridge payloads that may hold end-user data.
+ * Crash reports, on by default and turned off in Settings. Only uncaught exceptions are sent, reduced to
+ * their types, stack traces and OS/arch/Java tags, since Dari shows bridge payloads that may hold end-user data.
  */
 object CrashReporting {
     /** Baked in at build time (-PdariSentryDsn / DARI_SENTRY_DSN); blank in local and fork builds. */
