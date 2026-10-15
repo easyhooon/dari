@@ -32,6 +32,32 @@ Dari는 Developer ID로 서명되고 Apple 공증을 받았기 때문에 보안 
 2. 설치 파일에 코드 서명이 없어서 처음 실행할 때 SmartScreen 경고가 뜰 수 있습니다. **추가 정보 → 실행**을 누릅니다.
 3. 필요하면 `certutil -hashfile Dari-<version>-x64.msi SHA256` 결과를 같은 릴리스의 `.sha256` 파일과 비교합니다.
 
+### 다운로드 크기
+
+같은 앱인데도 macOS 다운로드(약 71MB)가 Windows(약 60MB)보다 큽니다. 두 설치 파일 모두 축소한 Java 런타임과, Compose UI 라이브러리를 포함한 앱을 담고 있습니다. macOS에서 압축을 푼 크기는 다음과 같습니다.
+
+```bash
+./gradlew :dari-desktop-app:createDistributable
+cd dari-desktop-app/build/compose/binaries/main/app
+du -sh Dari.app Dari.app/Contents/runtime Dari.app/Contents/app
+```
+
+```
+121M	Dari.app
+ 66M	Dari.app/Contents/runtime
+ 54M	Dari.app/Contents/app
+```
+
+차이는 대부분 압축 방식에서 납니다. DMG는 모든 macOS 버전에서 열리는 zip 계열 압축을 쓰고, Windows 설치 파일은 더 강하게 압축합니다. 같은 `Dari.app`을 `hdiutil create -srcfolder Dari.app -format <format>`으로 묶어 보면 확인할 수 있습니다.
+
+| DMG 압축 방식 | 크기 |
+| --- | --- |
+| `UDZO` (zlib, 릴리스에 사용) | 70.8 MB |
+| `ULFO` (LZFSE) | 67.3 MB |
+| `ULMO` (LZMA) | 59.5 MB |
+
+LZMA로 압축하면 Windows 설치 파일과 크기가 비슷해지지만, 여는 속도가 느리고 macOS 10.15 이상에서만 열립니다.
+
 ### 업데이트
 
 Dari는 실행할 때와 6시간마다 릴리스 페이지를 확인합니다. 새 버전이 있으면 타이틀 바에 **Update to &lt;version&gt;** 버튼이 나타나고, **Help → Install Dari &lt;version&gt;** 메뉴도 같은 동작을 합니다.

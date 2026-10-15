@@ -33,6 +33,32 @@ Dari is signed with a Developer ID and notarized by Apple, so it opens without a
 2. The installer isn't code-signed, so SmartScreen may warn on first run. Click **More info → Run anyway**.
 3. Optionally, compare `certutil -hashfile Dari-<version>-x64.msi SHA256` with the `.sha256` file from the same release.
 
+### Download size
+
+The macOS download (about 71 MB) is larger than the Windows one (about 60 MB) even though both hold the same app. Each bundles a trimmed Java runtime and the app with its Compose UI libraries. Unpacked on macOS:
+
+```bash
+./gradlew :dari-desktop-app:createDistributable
+cd dari-desktop-app/build/compose/binaries/main/app
+du -sh Dari.app Dari.app/Contents/runtime Dari.app/Contents/app
+```
+
+```
+121M	Dari.app
+ 66M	Dari.app/Contents/runtime
+ 54M	Dari.app/Contents/app
+```
+
+The gap is mostly compression. The DMG uses zip-style compression that every macOS version opens, while the Windows installer compresses harder. Packing the same `Dari.app` with `hdiutil create -srcfolder Dari.app -format <format>` shows it:
+
+| DMG compression | Size |
+| --- | --- |
+| `UDZO` (zlib, used for releases) | 70.8 MB |
+| `ULFO` (LZFSE) | 67.3 MB |
+| `ULMO` (LZMA) | 59.5 MB |
+
+With LZMA the DMG is about the size of the Windows installer, but it opens slower and only on macOS 10.15 or later.
+
 ### Updates
 
 Dari checks the releases page on launch and every six hours. When a newer version exists, an **Update to &lt;version&gt;** button appears in the title bar, and **Help → Install Dari &lt;version&gt;** does the same.
