@@ -5,9 +5,9 @@ import os.path
 app = defines["app"]  # noqa: F821
 files = [app]
 symlinks = {"Applications": "/Applications"}
-# LZMA: about 11 MB smaller than hdiutil's default UDZO, but opens only on macOS 10.15+,
-# which matches minimumSystemVersion in build.gradle.kts.
-format = "ULMO"
+# LZFSE: smaller than UDZO, and decompressed in the kernel, so copying Dari out takes about
+# a third of the time ULMO (LZMA) does, for a few MB more. Opens on macOS 10.11+.
+format = "ULFO"
 
 background = defines["background"]  # noqa: F821; background@2x.png next to it is picked up too
 window_rect = ((200, 120), (660, 400))
