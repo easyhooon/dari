@@ -1,6 +1,8 @@
 [![Featured in Android Weekly #748](https://androidweekly.net/issues/issue-748/badge)](https://androidweekly.net/issues/issue-748)
 # Dari
 
+**English** | [한국어](README.ko.md)
+
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.easyhooon/dari)](https://central.sonatype.com/artifact/io.github.easyhooon/dari)
 [![Documentation](https://img.shields.io/badge/docs-easyhooon.github.io%2Fdari-blue)](https://easyhooon.github.io/dari)
 [![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/easyhooon/dari?utm_source=readme&utm_medium=badge)
