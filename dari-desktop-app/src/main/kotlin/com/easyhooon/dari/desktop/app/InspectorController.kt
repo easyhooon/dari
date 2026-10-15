@@ -50,6 +50,9 @@ class InspectorController(
         private set
     var selectedId by mutableStateOf<Long?>(null)
         private set
+
+    // Messages added after the current selection was made; drives the "N new · Show latest" hint.
+    private var arrivedSinceSelection by mutableStateOf<Set<Long>>(emptySet())
     var detail by mutableStateOf<WireMessageDetail?>(null)
         private set
     var filter by mutableStateOf("")
@@ -143,14 +146,20 @@ class InspectorController(
     fun select(id: Long) {
         detailDismissed = false
         selectedId = id
+        arrivedSinceSelection = emptySet()
         loadDetail(id)
     }
 
     fun closeDetail() {
         detailDismissed = true
         selectedId = null
+        arrivedSinceSelection = emptySet()
         detail = null
     }
+
+    /** Messages in [visible] that arrived while the selected one was open. */
+    fun newerCount(visible: List<WireMessageSummary>): Int =
+        if (selectedId == null) 0 else visible.count { it.id in arrivedSinceSelection }
 
     /** Moves the selection within [visible] by [delta] rows (keyboard ↑/↓). */
     fun moveSelection(visible: List<WireMessageSummary>, delta: Int) {
@@ -235,6 +244,7 @@ class InspectorController(
         val events = conn.observe()
         val backlog = conn.list()
         messages = emptyMap()
+        arrivedSinceSelection = emptySet()
         detail = null
         merge(backlog)
         state = ConnectionState.Connected(conn.app)
@@ -243,10 +253,16 @@ class InspectorController(
         for (event in events) apply(event)
     }
 
-    private fun apply(event: ObserveEvent) {
+    // Internal so tests can feed events without a device.
+    internal fun apply(event: ObserveEvent) {
         when (event) {
             is ObserveEvent.Added -> {
                 merge(listOf(event.message))
+                if (selectedId != null) {
+                    val arrived = arrivedSinceSelection + event.message.id
+                    // Drops evicted ids so the set stays bounded by MAX_MESSAGES.
+                    arrivedSinceSelection = if (arrived.size > messages.size) arrived.filterTo(HashSet()) { it in messages } else arrived
+                }
                 selectNewestIfNone()
             }
             is ObserveEvent.Updated -> {
@@ -255,6 +271,7 @@ class InspectorController(
             }
             ObserveEvent.Cleared -> {
                 messages = emptyMap()
+                arrivedSinceSelection = emptySet()
                 selectedId = null
                 detail = null
             }
