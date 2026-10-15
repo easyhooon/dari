@@ -153,6 +153,7 @@ A non-debuggable build needs `ALLOW_NON_DEBUGGABLE` above as well; otherwise not
 | --- | --- |
 | adb not found | Set `ANDROID_HOME`, or add `platform-tools` to `PATH`, then reopen Dari. |
 | No device | Check `adb devices`. Accept the USB debugging prompt on the device. |
+| No Dari app found | Apps on `dari` 1.x have no desktop connection; upgrade to 2.0.0 or later. If the device hides the app list, type the applicationId. |
 | App is in the background | Android pauses background apps. Bring the app to the foreground and Dari reconnects. |
 | Not running Dari | Check that the app is a debuggable build using `dari` 2.0.0 or later. |
 

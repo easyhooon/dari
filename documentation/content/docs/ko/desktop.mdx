@@ -152,6 +152,7 @@ debuggable이 아닌 빌드는 위의 `ALLOW_NON_DEBUGGABLE`도 함께 넣어야
 | --- | --- |
 | adb not found | `ANDROID_HOME`을 설정하거나 `platform-tools`를 `PATH`에 추가한 뒤 Dari를 다시 엽니다. |
 | No device | `adb devices`로 확인하고, 기기에 뜬 USB 디버깅 허용 창을 수락합니다. |
+| No Dari app found | `dari` 1.x를 쓰는 앱은 데스크톱 연결을 지원하지 않으므로 2.0.0 이상으로 올립니다. 기기가 앱 목록을 숨기면 applicationId를 직접 입력합니다. |
 | App is in the background | Android는 백그라운드 앱을 일시 정지합니다. 앱을 화면 맨 앞에 띄우면 Dari가 다시 연결합니다. |
 | Not running Dari | 앱이 `dari` 2.0.0 이상을 쓰는 debuggable 빌드인지 확인합니다. |
 

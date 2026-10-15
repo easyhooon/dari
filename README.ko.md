@@ -24,6 +24,8 @@ https://github.com/user-attachments/assets/b7332358-953b-4391-9f68-4e547efcb9e7
 - 토큰, 비밀번호, 쿠키 마스킹(선택). 데이터가 기기를 떠나기 전에 기기에서 적용
 - macOS(서명 및 공증, Apple Silicon·Intel)와 Windows(미리보기), 앱 내 업데이트 지원
 
+앱의 디버그 빌드에 `dari` 2.0.0 이상이 필요합니다. 1.x를 쓰는 앱은 업그레이드해야 연결됩니다.
+
 📥 **[다운로드](https://easyhooon.github.io/dari/ko/download)** 또는 터미널에서 설치:
 
 ```bash
