@@ -8,7 +8,7 @@ export default function HomePage() {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/dari/logo.png" alt="Dari logo" width={280} height={280} className="rounded-3xl" />
       <h1 className="text-7xl font-bold tracking-tight">Dari</h1>
-      <p className="max-w-xl text-xl text-gray-500 dark:text-gray-400">
+      <p className="max-w-2xl text-xl text-gray-500 dark:text-gray-400">
         A Chucker-inspired WebView bridge communication inspector for Android.
       </p>
       <div className="flex gap-4">
