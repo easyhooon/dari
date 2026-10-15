@@ -82,7 +82,10 @@ class Adb(private val executable: String) {
     companion object {
         private const val TIMEOUT_SECONDS = 10L
 
-        /** `ANDROID_HOME`/`ANDROID_SDK_ROOT`, the default SDK locations, then `PATH`. */
+        // Homebrew's `android-platform-tools`; apps opened from Finder don't inherit the shell's PATH.
+        internal val HOMEBREW_BIN_DIRS = listOf("/opt/homebrew/bin", "/usr/local/bin")
+
+        /** `ANDROID_HOME`/`ANDROID_SDK_ROOT`, the default SDK locations, `PATH`, then Homebrew. */
         fun locate(env: Map<String, String> = System.getenv()): String? {
             val exe = if (System.getProperty("os.name").startsWith("Windows")) "adb.exe" else "adb"
             val home = System.getProperty("user.home")
@@ -94,7 +97,8 @@ class Adb(private val executable: String) {
                 env["LOCALAPPDATA"]?.let { "$it/Android/Sdk" },
             )
             val candidates = sdkRoots.map { File(it, "platform-tools/$exe") } +
-                env["PATH"].orEmpty().split(File.pathSeparator).filter { it.isNotBlank() }.map { File(it, exe) }
+                env["PATH"].orEmpty().split(File.pathSeparator).filter { it.isNotBlank() }.map { File(it, exe) } +
+                HOMEBREW_BIN_DIRS.map { File(it, exe) }
             return candidates.firstOrNull { it.canExecute() }?.absolutePath
         }
 
