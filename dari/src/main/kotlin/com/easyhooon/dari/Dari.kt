@@ -65,6 +65,9 @@ object Dari {
     @Volatile
     private var desktopConnected = false
 
+    // Manifest flag: no notification, shake or launcher shortcut, only the desktop app.
+    private var desktopOnly = false
+
     private var notification: DariNotification? = null
     private var shakeManager: DariShakeManager? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -90,14 +93,15 @@ object Dari {
             )
         }
 
-        if (config.showNotification) {
+        desktopOnly = DesktopOnlyGate.isEnabled(this.context)
+        if (config.showNotification && !desktopOnly) {
             notification = DariNotification(this.context)
         }
         observeNewMessages()
 
         applyShakeToOpen(preferences.shakeToOpen)
 
-        addDynamicShortcut()
+        if (desktopOnly) removeDynamicShortcut() else addDynamicShortcut()
 
         if (desktopInspectorEnabled) startDesktopInspector()
     }
@@ -200,7 +204,7 @@ object Dari {
 
     private fun applyShakeToOpen(enabled: Boolean) {
         shakeManager?.unregister()
-        shakeManager = if (enabled && !desktopConnected) {
+        shakeManager = if (enabled && !desktopConnected && !desktopOnly) {
             DariShakeManager(context).also { it.register() }
         } else {
             null
@@ -249,7 +253,7 @@ object Dari {
      */
     fun showNotification() {
         if (desktopConnected) return
-        if (notification == null && config.showNotification) {
+        if (notification == null && config.showNotification && !desktopOnly) {
             notification = DariNotification(context)
         }
         notification?.show()
@@ -269,7 +273,7 @@ object Dari {
             val intent = Intent(context, DariActivity::class.java).apply {
                 action = Intent.ACTION_VIEW
             }
-            val shortcut = ShortcutInfoCompat.Builder(context, "open_dari")
+            val shortcut = ShortcutInfoCompat.Builder(context, SHORTCUT_ID)
                 .setShortLabel("Open Dari")
                 .setLongLabel("Open Dari")
                 .setIcon(IconCompat.createWithResource(context, R.drawable.ic_dari))
@@ -282,5 +286,15 @@ object Dari {
         }
     }
 
+    // Dynamic shortcuts survive app updates, so one added by an earlier build is removed here.
+    private fun removeDynamicShortcut() {
+        try {
+            ShortcutManagerCompat.removeDynamicShortcuts(context, listOf(SHORTCUT_ID))
+        } catch (_: Exception) {
+            // Same as addDynamicShortcut: may fail in test or non-launcher contexts
+        }
+    }
+
     private const val PREFS_FILE_NAME = "dari_preferences.preferences_pb"
+    private const val SHORTCUT_ID = "open_dari"
 }
