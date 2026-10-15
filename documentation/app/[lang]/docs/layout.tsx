@@ -18,7 +18,7 @@ export default async function Layout({
   return (
     <DocsLayout
       tree={tree}
-      {...baseOptions}
+      {...baseOptions(lang)}
       sidebar={{ footer: <LanguageSwitcher /> }}
     >
       {children}
