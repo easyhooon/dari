@@ -6,11 +6,23 @@ import java.nio.charset.StandardCharsets
 
 /** Version and platform details for bug reports. No device, app or message data. */
 object IssueReport {
-    fun environment(appVersion: String): String = listOf(
-        "Dari desktop: $appVersion",
-        "OS: ${System.getProperty("os.name")} ${System.getProperty("os.version")} (${System.getProperty("os.arch")})",
-        "Java: ${System.getProperty("java.runtime.version") ?: System.getProperty("java.version")}",
-    ).joinToString("\n")
+    fun environment(appVersion: String): String = with(platform()) {
+        listOf("Dari desktop: $appVersion", "OS: $osName $osVersion ($arch)", "Java: $java").joinToString("\n")
+    }
+
+    /** The same details as [environment], as tags for crash reports. */
+    fun environmentTags(): Map<String, String> = with(platform()) {
+        mapOf("os" to "$osName $osVersion", "arch" to arch, "java" to java)
+    }
+
+    private class Platform(val osName: String, val osVersion: String, val arch: String, val java: String)
+
+    private fun platform() = Platform(
+        System.getProperty("os.name"),
+        System.getProperty("os.version"),
+        System.getProperty("os.arch"),
+        System.getProperty("java.runtime.version") ?: System.getProperty("java.version"),
+    )
 
     /** Opens the feature request form; nothing about the user's setup is needed there. */
     fun featureRequestUrl(): URI = URI("https://github.com/easyhooon/dari/issues/new?template=feature_request.yml")

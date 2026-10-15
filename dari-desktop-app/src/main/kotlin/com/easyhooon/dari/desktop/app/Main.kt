@@ -31,8 +31,10 @@ import com.easyhooon.dari.desktop.app.ui.handleCloseWindowShortcut
 import com.easyhooon.dari.desktop.app.ui.handleSettingsWindowShortcut
 import com.easyhooon.dari.desktop.app.update.ReleaseSource
 import com.easyhooon.dari.desktop.app.update.Updater
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.withContext
 import java.awt.Desktop
 import java.awt.GraphicsEnvironment
 import java.awt.Rectangle
@@ -62,6 +64,9 @@ fun main() {
         return
     }
     AppLog.info("Dari $APP_VERSION started")
+    val desktopSettings = DesktopSettings()
+    // Before any window, so startup crashes are reported too.
+    applyCrashReporting(desktopSettings.crashReportsEnabled)
     val icon = loadAppIcon()
     // Dock icon while running unpackaged (`./gradlew run`); packaged apps use the bundle icon.
     icon?.let { image ->
@@ -72,7 +77,7 @@ fun main() {
 
     application {
         val scope = rememberCoroutineScope()
-        val settings = remember { DesktopSettings() }
+        val settings = remember { desktopSettings }
         val controller = remember {
             // ANDROID_SERIAL picks the device first, as it does for adb itself.
             InspectorController(
@@ -104,6 +109,10 @@ fun main() {
                         )
                     }
                 }
+        }
+        LaunchedEffect(settings) {
+            snapshotFlow { settings.crashReportsEnabled }
+                .collect { enabled -> withContext(Dispatchers.IO) { applyCrashReporting(enabled) } }
         }
         LaunchedEffect(Unit) {
             controller.start()
@@ -231,6 +240,12 @@ fun main() {
             App(controller, settings, updater, installUpdate)
         }
     }
+}
+
+private fun applyCrashReporting(optedIn: Boolean) {
+    val wasRunning = CrashReporting.isRunning
+    val running = CrashReporting.update(optedIn, APP_VERSION)
+    if (running != wasRunning) AppLog.info(if (running) "Crash reporting on" else "Crash reporting off")
 }
 
 private fun loadAppIcon(): BufferedImage? =

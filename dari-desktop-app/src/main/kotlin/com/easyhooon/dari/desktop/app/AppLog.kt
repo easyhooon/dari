@@ -24,11 +24,12 @@ object AppLog {
         write("ERROR", listOfNotNull(message, trace).joinToString("\n"))
     }
 
-    /** Logs any uncaught exception before the default handling (which may end the app). */
+    /** Logs (and, when opted in, reports) any uncaught exception before the default handling, which may end the app. */
     fun installCrashHandler() {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             error("Uncaught exception on ${thread.name}", error)
+            CrashReporting.capture(thread, error)
             previous?.uncaughtException(thread, error) ?: error.printStackTrace()
         }
     }

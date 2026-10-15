@@ -23,6 +23,7 @@ class DesktopSettingsTest {
         assertEquals(Appearance.SYSTEM, settings.appearance)
         assertTrue(settings.jsonFoldingEnabled)
         assertTrue(settings.showTags)
+        assertFalse(settings.crashReportsEnabled)
     }
 
     @Test
@@ -31,12 +32,14 @@ class DesktopSettingsTest {
             updateAppearance(Appearance.DARK)
             updateJsonFolding(false)
             updateShowTags(false)
+            updateCrashReports(true)
         }
 
         val reloaded = DesktopSettings(node)
         assertEquals(Appearance.DARK, reloaded.appearance)
         assertFalse(reloaded.jsonFoldingEnabled)
         assertFalse(reloaded.showTags)
+        assertTrue(reloaded.crashReportsEnabled)
     }
 
     @Test
