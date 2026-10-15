@@ -27,6 +27,7 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
 import com.easyhooon.dari.desktop.app.Appearance
 import com.easyhooon.dari.desktop.app.ConnectionState
+import com.easyhooon.dari.desktop.app.CrashReporting
 import com.easyhooon.dari.desktop.app.DesktopSettings
 import com.easyhooon.dari.desktop.app.InspectorController
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
@@ -43,7 +44,7 @@ fun SettingsWindow(settings: DesktopSettings, controller: InspectorController, o
         state = rememberWindowState(
             position = WindowPosition.Aligned(Alignment.Center),
             width = 380.dp,
-            height = 330.dp,
+            height = 440.dp,
         ),
     ) {
         CloseWindowMenu(onClose)
@@ -89,6 +90,22 @@ fun SettingsWindow(settings: DesktopSettings, controller: InspectorController, o
                     "Hides tokens, passwords and cookies before they leave the device."
                 }
                 Text(note, style = Dari.type.caption, color = Dari.colors.textSecondary)
+                SectionTitle("Privacy", Modifier.padding(top = 12.dp))
+                OptionRow(
+                    label = "Send crash reports",
+                    selected = settings.crashReportsEnabled,
+                    checkbox = true,
+                    onClick = { settings.updateCrashReports(!settings.crashReportsEnabled) },
+                )
+                Text(
+                    if (CrashReporting.isAvailable) {
+                        "Sends only the error type, stack trace and OS and Java versions, never messages."
+                    } else {
+                        "Not available in this build."
+                    },
+                    style = Dari.type.caption,
+                    color = Dari.colors.textSecondary,
+                )
             }
         }
     }
