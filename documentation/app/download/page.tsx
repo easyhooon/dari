@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { DownloadButtons } from './download-buttons';
+import { DownloadPageContent } from './download-page';
 
 export const metadata: Metadata = {
   title: 'Download Dari for desktop',
@@ -8,79 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function DownloadPage() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-10 bg-white px-4 py-16 text-center dark:bg-neutral-950">
-      <div className="flex flex-col items-center gap-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/dari/logo.png" alt="Dari logo" width={120} height={120} className="rounded-2xl" />
-        <h1 className="text-5xl font-bold tracking-tight">Dari for desktop</h1>
-        <p className="max-w-xl text-lg text-gray-500 dark:text-gray-400">
-          Watch WebView bridge messages from a connected debug build, live on your computer. It needs no
-          proxy, certificate or port setup, only adb.
-        </p>
-      </div>
-
-      <DownloadButtons />
-
-      <div className="flex w-full max-w-xl flex-col gap-2 text-left">
-        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Or install on macOS from Terminal</p>
-        <pre className="overflow-x-auto rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs dark:border-gray-800 dark:bg-neutral-900">
-          <code>{'curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install-desktop.sh | bash'}</code>
-        </pre>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Verifies the SHA-256 checksum before installing.
-        </p>
-      </div>
-
-      <div className="flex w-full max-w-xl flex-col gap-2 text-left">
-        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No adb yet?</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Android Studio already includes it. Without Android Studio, install SDK Platform-Tools. On macOS:
-        </p>
-        <pre className="overflow-x-auto rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs dark:border-gray-800 dark:bg-neutral-900">
-          <code>brew install android-platform-tools</code>
-        </pre>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          On Windows, download{' '}
-          <a
-            href="https://developer.android.com/tools/releases/platform-tools"
-            className="underline underline-offset-4 hover:text-gray-900 dark:hover:text-gray-100"
-          >
-            SDK Platform-Tools
-          </a>
-          , unzip it and add the <code>platform-tools</code> folder to <code>PATH</code>. Then reopen Dari.
-        </p>
-      </div>
-
-      <div className="flex max-w-xl flex-col gap-2 text-sm text-gray-500 dark:text-gray-400">
-        <p>
-          Requires <code>dari</code> 2.0.0 or later in your app&apos;s debug build, and <code>adb</code> on your
-          computer. macOS 10.15 or later.
-        </p>
-        <p>
-          Installing, connecting a device and privacy: see the{' '}
-          <Link href="/docs/desktop" className="underline underline-offset-4 hover:text-gray-900 dark:hover:text-gray-100">
-            Desktop App guide
-          </Link>
-          .
-        </p>
-      </div>
-
-      <figure className="flex w-full max-w-3xl flex-col gap-3">
-        <video
-          src="/dari/desktop-demo.mp4"
-          poster="/dari/desktop-demo-poster.jpg"
-          autoPlay
-          muted
-          loop
-          playsInline
-          controls
-          className="w-full rounded-xl border border-gray-200 dark:border-gray-800"
-        />
-        <figcaption className="text-xs text-gray-500 dark:text-gray-400">
-          The sample app on a phone, its bridge messages live in Dari.
-        </figcaption>
-      </figure>
-    </main>
-  );
+  return <DownloadPageContent lang="en" />;
 }
