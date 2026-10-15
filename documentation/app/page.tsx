@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Download, Github } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -18,16 +19,18 @@ export default function HomePage() {
         </Link>
         <Link
           href="/download"
-          className="rounded-xl border border-gray-300 px-10 py-4 text-base font-semibold transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-8 py-4 text-base font-semibold transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
         >
+          <Download className="size-5" />
           Download
         </Link>
         <Link
           href="https://github.com/easyhooon/dari"
-          className="rounded-xl border border-gray-300 px-10 py-4 text-base font-semibold transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-8 py-4 text-base font-semibold transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
           target="_blank"
           rel="noopener noreferrer"
         >
+          <Github className="size-5" />
           GitHub
         </Link>
       </div>
