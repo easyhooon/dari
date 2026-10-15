@@ -8,9 +8,9 @@ import { i18n } from '@/lib/i18n';
 import { GithubIcon } from '@/components/github-icon';
 import { LanguageSwitcher } from '@/components/language-switcher';
 
-const labels: Record<string, { theme: string; language: string }> = {
-  en: { theme: 'Theme', language: 'Language' },
-  ko: { theme: '테마', language: '언어' },
+const labels: Record<string, { theme: string; language: string; useful: string; star: string }> = {
+  en: { theme: 'Theme', language: 'Language', useful: 'Found Dari useful?', star: '⭐ Star on GitHub' },
+  ko: { theme: '테마', language: '언어', useful: 'Dari가 도움이 됐나요?', star: '⭐ GitHub에서 Star 주기' },
 };
 
 const rowClass = 'flex items-center gap-2 rounded-lg px-2 py-1.5 text-fd-muted-foreground [&>svg]:size-4';
@@ -46,6 +46,17 @@ export function SidebarFooter() {
       <Row icon={<Globe />} label={t.language}>
         <LanguageSwitcher showIcon={false} />
       </Row>
+      <p className="flex flex-wrap items-center gap-x-1.5 px-2 pt-2 text-xs text-fd-muted-foreground">
+        <span>{t.useful}</span>
+        <a
+          href="https://github.com/easyhooon/dari"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium underline-offset-4 hover:text-fd-foreground hover:underline"
+        >
+          {t.star}
+        </a>
+      </p>
     </div>
   );
 }

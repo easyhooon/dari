@@ -18,6 +18,7 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation(libs.kotlinx.coroutines.swing)
+    implementation(libs.sentry)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)
@@ -62,6 +63,18 @@ dependencies {
     }
 }
 configurations.runtimeClasspath { attributes.attribute(skikoStripped, true) }
+
+// Opt-in crash reports need a DSN: -PdariSentryDsn or DARI_SENTRY_DSN. Without one (local, fork builds) they stay off.
+val generateCrashReportingConfig by tasks.registering(WriteProperties::class) {
+    destinationFile = layout.buildDirectory.file("generated/crash-reporting/dari-crash-reporting.properties")
+    property(
+        "dsn",
+        providers.gradleProperty("dariSentryDsn").orElse(providers.environmentVariable("DARI_SENTRY_DSN")).orElse(""),
+    )
+}
+sourceSets.main {
+    resources.srcDir(generateCrashReportingConfig.map { it.destinationFile.get().asFile.parentFile })
+}
 
 compose.desktop {
     application {
