@@ -104,6 +104,12 @@
         <span>A nested trip search request and a polished response with days, activities, and reservations</span>
     </button>
 
+    <div class="section">Masking (Sensitive Data)</div>
+    <button class="btn btn-purple" onclick="signIn()">
+        Sign In with Sensitive Data
+        <span>Tokens, a password, card details and a Bearer header to check Mask sensitive values</span>
+    </button>
+
     <div class="section">Large Payload (Truncation Test)</div>
     <button class="btn btn-red" onclick="fetchLargeData()">
         Fetch Truncated Data (~2MB)
@@ -223,6 +229,25 @@
             });
             log('→ sendWithNullFields', 'req');
             Android.onBridgeRequest('sendWithNullFields', id, data);
+        }
+
+        function signIn() {
+            var id = createRequestId();
+            // Covers each masking rule; `pinned` and `holder` must stay visible.
+            var data = JSON.stringify({
+                username: "test_user",
+                password: "hunter2",
+                device: { pin: "1234", pinned: true },
+                headers: {
+                    Authorization: "Bearer eyJhbGciOiJIUzI1NiJ9.sample.signature",
+                    "X-Api-Key": "sk_test_sample"
+                },
+                payment: { cardNumber: "4111 1111 1111 1111", cvv: "123", holder: "Test User" },
+                redirect: "https://example.com/callback?code=abc&session_id=s-42&state=xyz",
+                meta: JSON.stringify({ refresh_token: "r-1", locale: "ko-KR" })
+            });
+            log('→ signIn (sensitive data)', 'req');
+            Android.onBridgeRequest('signIn', id, data);
         }
 
         function fetchLargeData() {
