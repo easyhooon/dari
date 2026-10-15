@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -43,6 +44,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -50,6 +53,7 @@ import com.easyhooon.dari.BuildConfig
 import com.easyhooon.dari.ui.theme.Blue500
 
 private const val GITHUB_URL = "https://github.com/easyhooon/dari"
+private const val MAX_SHEET_HEIGHT_FRACTION = 0.75f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,6 +73,11 @@ internal fun SettingsBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
+    // Taller content would push the sheet up to the status bar, hiding the scrim and drag handle.
+    // Capped on the content, not the sheet: the sheet's position is computed from its content height.
+    val maxSheetHeight = with(LocalDensity.current) {
+        (LocalWindowInfo.current.containerSize.height * MAX_SHEET_HEIGHT_FRACTION).toDp()
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -78,6 +87,7 @@ internal fun SettingsBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(max = maxSheetHeight)
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 24.dp),
         ) {
