@@ -10,7 +10,7 @@ const toggleLabels: Record<string, string> = {
   ko: '한국어',
 };
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ showIcon = true }: { showIcon?: boolean }) {
   const params = useParams();
   const pathname = usePathname();
   const currentLang = (params.lang as string) || i18n.defaultLanguage;
@@ -35,14 +35,14 @@ export function LanguageSwitcher() {
 
   return (
     <div className="flex items-center gap-1.5 text-fd-muted-foreground">
-      <Globe className="size-4" />
+      {showIcon && <Globe className="size-4" />}
       <div role="group" aria-label="Language" className="flex rounded-md border p-0.5">
         {i18n.languages.map((lang) => (
           <Link
             key={lang}
             href={getLocalePath(lang)}
             aria-current={lang === currentLang ? 'true' : undefined}
-            className={`rounded px-2 py-0.5 text-xs transition-colors ${
+            className={`rounded px-2 py-1 text-xs transition-colors ${
               lang === currentLang
                 ? 'bg-fd-accent font-medium text-fd-foreground'
                 : 'hover:text-fd-foreground'
