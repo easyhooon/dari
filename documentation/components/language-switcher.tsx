@@ -1,27 +1,19 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
 import { useParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { i18n, languageNames } from '@/lib/i18n';
+import { i18n } from '@/lib/i18n';
 import { Globe } from 'lucide-react';
 
+const toggleLabels: Record<string, string> = {
+  en: 'EN',
+  ko: '한국어',
+};
+
 export function LanguageSwitcher() {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const params = useParams();
   const pathname = usePathname();
   const currentLang = (params.lang as string) || i18n.defaultLanguage;
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const getLocalePath = (locale: string) => {
     let path = pathname;
@@ -42,30 +34,24 @@ export function LanguageSwitcher() {
   if (i18n.languages.length <= 1) return null;
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-fd-accent text-fd-muted-foreground hover:text-fd-foreground transition-colors"
-      >
-        <Globe className="size-4" />
-        <span className="text-sm">{languageNames[currentLang] || currentLang}</span>
-      </button>
-      {isOpen && (
-        <div className="absolute left-0 bottom-full mb-1 bg-fd-popover border rounded-md shadow-lg min-w-[120px] z-50">
-          {i18n.languages.map((lang) => (
-            <Link
-              key={lang}
-              href={getLocalePath(lang)}
-              className={`block px-3 py-2 text-sm hover:bg-fd-accent transition-colors ${
-                lang === currentLang ? 'font-medium text-fd-primary' : 'text-fd-muted-foreground'
-              }`}
-              onClick={() => setIsOpen(false)}
-            >
-              {languageNames[lang] || lang}
-            </Link>
-          ))}
-        </div>
-      )}
+    <div className="flex items-center gap-1.5 text-fd-muted-foreground">
+      <Globe className="size-4" />
+      <div role="group" aria-label="Language" className="flex rounded-md border p-0.5">
+        {i18n.languages.map((lang) => (
+          <Link
+            key={lang}
+            href={getLocalePath(lang)}
+            aria-current={lang === currentLang ? 'true' : undefined}
+            className={`rounded px-2 py-0.5 text-xs transition-colors ${
+              lang === currentLang
+                ? 'bg-fd-accent font-medium text-fd-foreground'
+                : 'hover:text-fd-foreground'
+            }`}
+          >
+            {toggleLabels[lang] || lang}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
