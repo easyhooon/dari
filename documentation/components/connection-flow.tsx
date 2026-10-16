@@ -153,6 +153,11 @@ const STEPS: Record<'en' | 'ko', Step[]> = {
   ],
 };
 
+const NODE_LABELS = {
+  en: ['Desktop app', 'adb tunnel', 'Android app'],
+  ko: ['데스크톱 앱', 'adb 터널', 'Android 앱'],
+};
+
 const LABELS = {
   en: { prev: 'Previous', next: 'Next', replay: 'Replay', pause: 'Pause', play: 'Autoplay', request: 'Desktop → app', response: 'App → desktop', adb: 'adb command' },
   ko: { prev: '이전', next: '다음', replay: '다시 재생', pause: '자동 재생 끄기', play: '자동 재생', request: '데스크톱 → 앱', response: '앱 → 데스크톱', adb: 'adb 명령' },
@@ -219,7 +224,7 @@ export function ConnectionFlow({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
               className={node === 'A' ? 'fill-transparent stroke-fd-border' : 'fill-fd-muted stroke-fd-border'}
             />
             <text x={X[node]} y={76} textAnchor="middle" dominantBaseline="central" fontSize={14} fontWeight={500} className="fill-fd-foreground">
-              {['Desktop app', 'adb tunnel', 'Android app'][i]}
+              {NODE_LABELS[lang][i]}
             </text>
             <text x={X[node]} y={96} textAnchor="middle" dominantBaseline="central" fontSize={12} className="fill-fd-muted-foreground">
               {['java.net.Socket', 'USB', 'LocalServerSocket'][i]}
