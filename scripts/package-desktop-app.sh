@@ -69,21 +69,23 @@ if sys.argv[2] != "0" or status != "Accepted":
 PY
     }
 
-    # Stapling fetches the ticket from Apple's CDN, which drops connections now and then
-    # (NSURLErrorDomain -1005, "Error 68"). It is idempotent, so retry with growing waits.
-    staple() {
+    # Stapling and validating both reach Apple's ticket service, which drops connections now and then
+    # (NSURLErrorDomain -1005, "Error 68"). Both are idempotent; retry each on its own with growing
+    # waits, so a dropped validate doesn't use up the attempts or redo a staple that worked.
+    retry_ticket() {
       local attempt
       for attempt in 1 2 3 4 5; do
-        if xcrun stapler staple "$1" && xcrun stapler validate "$1"; then
-          return 0
-        fi
+        "$@" && return 0
         if [ "$attempt" -lt 5 ]; then
-          echo "Stapling $1 failed (attempt $attempt of 5); retrying." >&2
+          echo "$* failed (attempt $attempt of 5); retrying." >&2
           sleep $((attempt * ${STAPLE_RETRY_DELAY:-15}))
         fi
       done
-      echo "Stapling $1 failed after 5 attempts." >&2
+      echo "$* failed after 5 attempts." >&2
       return 1
+    }
+    staple() {
+      retry_ticket xcrun stapler staple "$1" && retry_ticket xcrun stapler validate "$1"
     }
 
     # Staple the app before placing it in the DMG, including for offline in-app updates.
