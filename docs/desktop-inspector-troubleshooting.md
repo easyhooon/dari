@@ -105,6 +105,40 @@ Related: [design](desktop-inspector-design.md), [FAQ](desktop-inspector-faq.md).
 
 ## Desktop app
 
+### Stuck on "Waiting for app · app is in the background" while the app is in front
+
+- **Symptom**: in 2.2.1, with several Dari apps on one phone, the status stayed on "Waiting for app ·
+  app is in the background" for minutes after the picked app came to the front. Messages still
+  loaded, and nothing reconnected.
+- **Investigation**:
+  - `adb forward --list` showed one stable forward. A thread dump showed one live
+    `dari-inspector-reader`. A hand-written ClientHello probe got an instant `ServerHello` from the
+    app, so the app side was healthy.
+  - A heap dump of the stuck process (`jcmd <pid> GC.heap_dump`) showed the real state. The connect job
+    was suspended in `runSession`'s observe loop, so it was connected, with 60 messages. Yet `state`
+    held `Connecting("app is in the background")`, written after the session came up.
+- **Cause**:
+  1. While Dari waits on a frozen app A, `open()` blocks for up to the 5 s handshake timeout.
+  2. Picking app B cancels that job and starts a new one, and B connects at once.
+  3. A's handshake then times out. `withContext` drops a cancelled caller's *result* but still
+     rethrows the block's *exception*. So the cancelled job's `catch (IOException)` ran anyway and
+     overwrote B's `Connected` with A's reason.
+  4. The same rule leaked connections: if `open()` succeeded after the cancel, nobody closed the
+     returned socket, forward and reader thread.
+- **Reproduce** (no phone interaction needed):
+  1. Wait until app A shows `isFrozen=true` in `adb shell dumpsys activity processes <A>`.
+  2. Make sure app B is running and not frozen.
+  3. In Dari, pick A, then pick B within five seconds.
+  4. Before the fix, B shows Connected and about four seconds later turns to "Waiting · app is in
+     the background".
+- **Fix**: a cancelled connect job writes no state. It runs `ensureActive()` before writing the
+  failure reason. The opened connection is kept outside `withContext`'s result and closed in
+  `finally`, and `InspectorConnection.close()` became idempotent. Unit tests use a fake app socket
+  for both the stale write and the leak. (2.2.2)
+- **Lesson**: after `withContext`, a cancelled coroutine can still land in a non-cancellation
+  `catch`. Check that the job is active before writing shared state, and never let a resource
+  returned by `withContext` be lost.
+
 ### Title bar pickers and buttons ignored clicks
 
 - **Cause**: `WindowDraggableArea` wrapped the whole title bar row. Its drag detector consumed the
