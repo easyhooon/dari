@@ -1,7 +1,7 @@
 [versions]
 dari = "2.2.1"
 # Desktop app; matches dari except after a desktop-only release (see /release).
-dariDesktop = "2.2.2"
+dariDesktop = "2.2.3"
 agp = "9.0.0"
 coreKtx = "1.13.1"
 junit = "4.13.2"
