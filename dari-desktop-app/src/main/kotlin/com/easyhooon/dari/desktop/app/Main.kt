@@ -36,6 +36,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.withContext
 import java.awt.Desktop
+import java.awt.Dimension
 import java.awt.GraphicsEnvironment
 import java.awt.Rectangle
 import java.awt.Taskbar
@@ -148,6 +149,8 @@ fun main() {
             icon = iconPainter,
             state = windowState,
         ) {
+            // Without a floor the window can shrink to a bare title bar (seen as 80×28), which looks like no window at all.
+            LaunchedEffect(window) { window.minimumSize = Dimension(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT) }
             if (isMacOs) {
                 // Draw content under a transparent title bar, like native macOS apps.
                 window.rootPane.putClientProperty("apple.awt.fullWindowContent", true)
