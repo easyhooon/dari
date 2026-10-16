@@ -36,9 +36,9 @@ git diff --name-only "$base" "$ref" | while IFS= read -r path; do
   [ -n "$path" ] && echo "$path" >> "$areas_dir/$(classify "$path")"
 done
 
-# Version-only edits to the catalog (the release bump itself) don't count as a change.
+# Version-only and comment edits to the catalog (the release bump itself) don't count as a change.
 catalog_other="$(git diff -U0 "$base" "$ref" -- gradle/libs.versions.toml \
-  | grep -E '^[+-][^+-]' | grep -vE '^[+-](dari|dariDesktop) *= *"' || true)"
+  | grep -E '^[+-][^+-]' | grep -vE '^[+-][[:space:]]*#' | grep -vE '^[+-](dari|dariDesktop) *= *"' || true)"
 if [ -n "$catalog_other" ]; then echo "gradle/libs.versions.toml (dependency versions)" >> "$areas_dir/shared-build"; fi
 
 protocol_version_change="$(git diff "$base" "$ref" -- dari-inspector-protocol \
@@ -59,13 +59,14 @@ for area in library protocol desktop desktop-tooling shared-build test no-releas
   [ -n "$list" ] || continue
   count="$(printf '%s\n' "$list" | grep -c .)"
   echo "## $area ($count files)"
-  printf '%s\n' "$list" | head -n 8 | sed 's/^/  /'
+  printf '%s\n' "$list" | sed -n '1,8s/^/  /p'
   [ "$count" -le 8 ] || echo "  … $((count - 8)) more"
 done
 echo
 
 echo "## Commits (no merges)"
-git log --no-merges --format='  %h %s' "$base..$ref" | head -n 40
+# -n instead of `| head`: head exiting early kills git log with SIGPIPE, which pipefail turns into an exit.
+git log --no-merges -n 40 --format='  %h %s' "$base..$ref"
 echo
 
 if [ -n "$(files library)" ] || [ -n "$(files protocol)" ]; then
@@ -92,6 +93,7 @@ if [ -n "$protocol_version_change" ]; then
   printf '%s\n' "$protocol_version_change" | sed 's/^/  /'
   echo "  Apps and the desktop app must both update; say so under Behavior changes."
 fi
-if git log --no-merges --format='%s' "$base..$ref" | grep -qiE '^feat(\(|:|!)'; then
+# No grep -q for the same reason: it stops reading at the first match.
+if git log --no-merges --format='%s' "$base..$ref" | grep -iE '^feat(\(|:|!)' > /dev/null; then
   echo "Note: feat commits present; consider a minor bump instead of a patch."
 fi
