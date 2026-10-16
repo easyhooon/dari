@@ -90,7 +90,7 @@ Copy times are from an Apple M2, mounting the DMG and copying the app out with `
 Dari checks the releases page on launch and every six hours. When a newer version exists, an **Update to &lt;version&gt;** button appears in the title bar, and **Help → Install Dari &lt;version&gt;** does the same.
 
 - **macOS**: Dari downloads the new image, checks its `.sha256`, bundle ID, version and code signature, then quits and relaunches as the new version. If anything fails, the installed version is kept. This works when Dari sits in a folder you can write to, such as **Applications**; otherwise Dari tells you to move it to **Applications** and open it from there.
-- **Windows**: the button opens the download page. Run the new `.exe` or `.msi`; either upgrades the installed copy.
+- **Windows**: the button opens the download page. Quit Dari, then run the new `.exe` or `.msi`; either upgrades the installed copy. If Dari is still open, the installer stops with Error 1306 on `dari.lock`: quit Dari and click **Retry**.
 
 ### Versions
 
