@@ -13,20 +13,29 @@ data class AdbDevice(val serial: String, val model: String, val name: String? = 
 }
 
 /** Thin wrapper around the `adb` binary; every call blocks, so run it off the UI thread. */
-class Adb(private val executable: String) {
+class Adb internal constructor(private val runner: (List<String>) -> String) {
 
-    fun devices(): List<AdbDevice> = run("devices", "-l").lineSequence()
-        .drop(1)
-        .map { it.trim().split(Regex("\\s+")) }
-        .filter { it.size >= 2 && it[1] == "device" }
-        .map { parts ->
+    constructor(executable: String) : this({ args -> runProcess(executable, args) })
+
+    fun devices(): List<AdbDevice> {
+        val attached = run("devices", "-l").lineSequence()
+            .drop(1)
+            .map { it.trim().split(Regex("\\s+")) }
+            .filter { it.size >= 2 && it[1] == "device" }
+            .toList()
+        // A detached serial can come back as another device, e.g. a different AVD on emulator-5554.
+        details.keys.retainAll(attached.map { it[0] }.toSet())
+        return attached.map { parts ->
             val model = parts.firstOrNull { it.startsWith("model:") }?.removePrefix("model:")?.replace('_', ' ')
-            val details = details.getOrPut(parts[0]) { readDetails(parts[0]) }
-            AdbDevice(serial = parts[0], model = details.model ?: model ?: parts[0], name = details.name)
+            val info = details[parts[0]] ?: readDetails(parts[0]).also {
+                // Retry next poll when getprop failed, e.g. right after attach.
+                if (it.model != null) details[parts[0]] = it
+            }
+            AdbDevice(serial = parts[0], model = info.model ?: model ?: parts[0], name = info.name)
         }
-        .toList()
+    }
 
-    // Read once per device: name and model don't change while it stays attached.
+    // Read once per attach: name and model don't change while the device stays attached.
     private val details = ConcurrentHashMap<String, DeviceDetails>()
 
     private data class DeviceDetails(val name: String?, val model: String?)
@@ -61,26 +70,28 @@ class Adb(private val executable: String) {
         }
     }
 
-    private fun run(vararg args: String): String {
-        val process = ProcessBuilder(listOf(executable) + args).redirectErrorStream(true).start()
-        // Drain output on another thread: reading it here would block until adb exits, so a hung adb
-        // (e.g. an unauthorized device) would never reach the timeout below.
-        val output = StringBuilder()
-        val reader = thread(isDaemon = true) {
-            runCatching { output.append(process.inputStream.bufferedReader(Charsets.UTF_8).readText()) }
-        }
-        if (!process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-            process.destroyForcibly()
-            throw IOException("adb ${args.joinToString(" ")} timed out")
-        }
-        reader.join(TimeUnit.SECONDS.toMillis(TIMEOUT_SECONDS))
-        val text = output.toString()
-        if (process.exitValue() != 0) throw IOException(text.trim().ifEmpty { "adb exited with ${process.exitValue()}" })
-        return text
-    }
+    private fun run(vararg args: String): String = runner(args.toList())
 
     companion object {
         private const val TIMEOUT_SECONDS = 10L
+
+        private fun runProcess(executable: String, args: List<String>): String {
+            val process = ProcessBuilder(listOf(executable) + args).redirectErrorStream(true).start()
+            // Drain output on another thread: reading it here would block until adb exits, so a hung adb
+            // (e.g. an unauthorized device) would never reach the timeout below.
+            val output = StringBuilder()
+            val reader = thread(isDaemon = true) {
+                runCatching { output.append(process.inputStream.bufferedReader(Charsets.UTF_8).readText()) }
+            }
+            if (!process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                process.destroyForcibly()
+                throw IOException("adb ${args.joinToString(" ")} timed out")
+            }
+            reader.join(TimeUnit.SECONDS.toMillis(TIMEOUT_SECONDS))
+            val text = output.toString()
+            if (process.exitValue() != 0) throw IOException(text.trim().ifEmpty { "adb exited with ${process.exitValue()}" })
+            return text
+        }
 
         // Homebrew's `android-platform-tools`; apps opened from Finder don't inherit the shell's PATH.
         // macOS only: on Windows `/opt/...` maps to `C:\opt\...`, which any user can create.
