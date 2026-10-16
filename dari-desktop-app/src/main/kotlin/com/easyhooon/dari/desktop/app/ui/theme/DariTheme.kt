@@ -121,12 +121,15 @@ object Dari {
 }
 
 @Composable
+fun isDark(appearance: Appearance): Boolean = when (appearance) {
+    Appearance.SYSTEM -> isSystemInDarkTheme()
+    Appearance.LIGHT -> false
+    Appearance.DARK -> true
+}
+
+@Composable
 fun DariTheme(appearance: Appearance = Appearance.SYSTEM, content: @Composable () -> Unit) {
-    val dark = when (appearance) {
-        Appearance.SYSTEM -> isSystemInDarkTheme()
-        Appearance.LIGHT -> false
-        Appearance.DARK -> true
-    }
+    val dark = isDark(appearance)
     val colors = if (dark) DarkColors else LightColors
     // Material components (menus, text selection) pick up the same neutrals.
     val material = if (dark) {

@@ -32,6 +32,7 @@ fun NoticesWindow(appearance: Appearance, onClose: () -> Unit) {
         state = rememberWindowState(position = WindowPosition.Aligned(Alignment.Center), width = 560.dp, height = 480.dp),
     ) {
         CloseWindowMenu(onClose)
+        WindowChrome(appearance)
         DariTheme(appearance) {
             SelectionContainer {
                 Text(

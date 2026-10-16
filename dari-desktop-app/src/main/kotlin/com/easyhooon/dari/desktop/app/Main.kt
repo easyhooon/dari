@@ -25,6 +25,7 @@ import com.easyhooon.dari.desktop.app.ui.AboutWindow
 import com.easyhooon.dari.desktop.app.ui.App
 import com.easyhooon.dari.desktop.app.ui.NoticesWindow
 import com.easyhooon.dari.desktop.app.ui.SettingsWindow
+import com.easyhooon.dari.desktop.app.ui.WindowChrome
 import com.easyhooon.dari.desktop.app.ui.appearanceLabel
 import com.easyhooon.dari.desktop.app.ui.chooseExportFile
 import com.easyhooon.dari.desktop.app.ui.handleCloseWindowShortcut
@@ -240,6 +241,7 @@ fun main() {
                     }
                 }
             }
+            WindowChrome(settings.appearance)
             App(controller, settings, updater, installUpdate)
         }
     }

@@ -19,6 +19,7 @@ dependencies {
     implementation(compose.material3)
     implementation(libs.kotlinx.coroutines.swing)
     implementation(libs.sentry)
+    implementation(libs.jna)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)
