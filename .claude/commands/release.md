@@ -1,7 +1,7 @@
 You are releasing a new version of dari. Arguments: $ARGUMENTS
 - `<version>` (e.g. `2.3.0`): a full release. The library goes to Maven Central and the desktop app ships with the same number.
 - `desktop <version>` (e.g. `desktop 2.2.2`): a desktop-only release. Nothing goes to Maven Central.
-- No version: read it from `gradle/libs.versions.toml`.
+- No version: read it from `gradle/libs.versions.toml`, using `dari` for a full release and `dariDesktop` for `desktop`.
 
 Both releases share one number line, set in `gradle/libs.versions.toml`: `dari` is the library, `dariDesktop` is the desktop app. They differ only after a desktop-only release.
 The desktop updater, `install-desktop.sh` and the download page all read GitHub's `/releases/latest`, so every GitHub release needs the desktop installers, a plain semver tag, and must not be a draft or prerelease. Apps keep working on any library version from 2.0.0 because compatibility is decided by `InspectorProtocol.VERSION`, not by these numbers.

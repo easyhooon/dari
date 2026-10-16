@@ -11,10 +11,6 @@
 - Do NOT use fully-qualified names (FQN) inline in Kotlin code. Always add a proper `import` statement at the top of the file and reference the type by its simple name. This applies to both production and test code.
 - **Keep comments compact.** Explain non-obvious intent in one or two lines. No multi-paragraph KDoc unless the API is genuinely complex. Skip comments that just restate the code.
 
-## Code Style
-
-- Do NOT use fully-qualified names (FQN) inline in Kotlin code. Always add a proper `import` statement at the top of the file and reference the type by its simple name. This applies to both production and test code.
-
 ## Issues
 
 - Write all issues in **English**.
@@ -30,4 +26,4 @@
 
 - Code review follow-up: use the `/resolve-coderabbit-review` skill to triage and apply CodeRabbit comments on the current PR.
 - Release scope: run `/release-scope` before `/release` to decide whether to bump `dari`, `dariDesktop`, both or neither.
-- Release: use the `/release` skill to publish to Maven Central and draft GitHub release notes.
+- Release: use the `/release` skill to draft GitHub release notes and ship the desktop app. Only full releases publish to Maven Central; `/release desktop` skips it.

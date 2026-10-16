@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { DemoVideo } from './demo-video';
 import { DownloadButtons } from './download-buttons';
 
 export type DownloadLang = 'en' | 'ko';
@@ -130,16 +131,7 @@ export function DownloadPageContent({ lang }: { lang: DownloadLang }) {
       </div>
 
       <figure className="flex w-full max-w-3xl flex-col gap-3">
-        <video
-          src="/dari/desktop-demo.mp4"
-          poster="/dari/desktop-demo-poster.jpg"
-          autoPlay
-          muted
-          loop
-          playsInline
-          controls
-          className="w-full rounded-xl border border-gray-200 dark:border-gray-800"
-        />
+        <DemoVideo />
         <figcaption className="text-xs text-gray-500 dark:text-gray-400">{t.videoCaption}</figcaption>
       </figure>
     </main>

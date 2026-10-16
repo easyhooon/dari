@@ -6,8 +6,3 @@ export const i18n = defineI18n({
   hideLocale: 'default-locale',
   parser: 'dir',
 });
-
-export const languageNames: Record<string, string> = {
-  en: 'English',
-  ko: '한국어',
-};
