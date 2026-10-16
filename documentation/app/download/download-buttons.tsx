@@ -13,6 +13,8 @@ interface Installer {
   label: string;
   detail: string;
   pattern: RegExp;
+  // Secondary installer linked under the button, e.g. the .msi for managed rollouts.
+  msi?: RegExp;
   preview?: boolean;
 }
 
@@ -20,7 +22,7 @@ interface Installer {
 const INSTALLERS: Installer[] = [
   { target: 'mac-arm64', label: 'macOS', detail: 'Apple Silicon', pattern: /-arm64\.dmg$/ },
   { target: 'mac-x64', label: 'macOS', detail: 'Intel', pattern: /-x64\.dmg$/ },
-  { target: 'windows', label: 'Windows', detail: 'x64', pattern: /-x64\.msi$/, preview: true },
+  { target: 'windows', label: 'Windows', detail: 'x64', pattern: /-x64\.exe$/, msi: /-x64\.msi$/, preview: true },
 ];
 
 interface Asset {
@@ -63,6 +65,7 @@ const strings = {
     releasesPage: 'Releases page',
     comingSoon: 'Coming soon',
     allReleases: 'All releases',
+    msi: 'MSI for managed installs',
   },
   ko: {
     downloadFor: (name: string) => `${name}용 다운로드`,
@@ -72,6 +75,7 @@ const strings = {
     releasesPage: '릴리스 페이지',
     comingSoon: '준비 중',
     allReleases: '모든 릴리스',
+    msi: '일괄 배포용 MSI',
   },
 };
 
@@ -93,12 +97,15 @@ export function DownloadButtons({ lang }: { lang: DownloadLang }) {
       .catch(() => setFailed(true));
   }, []);
 
-  const assetFor = (installer: Installer) => release?.assets.find((asset) => installer.pattern.test(asset.name));
+  const find = (pattern?: RegExp) => (pattern ? release?.assets.find((asset) => pattern.test(asset.name)) : undefined);
+  // Releases before 2.3.0 ship only the .msi.
+  const assetFor = (installer: Installer) => find(installer.pattern) ?? find(installer.msi);
   const checksumFor = (asset: Asset) => release?.assets.find((other) => other.name === `${asset.name}.sha256`);
 
   const primary = INSTALLERS.find((installer) => installer.target === target) ?? INSTALLERS[0];
   const others = INSTALLERS.filter((installer) => installer !== primary);
   const primaryAsset = assetFor(primary);
+  const msiAsset = find(primary.msi);
 
   return (
     <div className="flex w-full max-w-xl flex-col items-center gap-6">
@@ -151,6 +158,14 @@ export function DownloadButtons({ lang }: { lang: DownloadLang }) {
           <>
             <a href={checksumFor(primaryAsset)?.browser_download_url} className="underline underline-offset-4">
               SHA-256
+            </a>
+            {' · '}
+          </>
+        ) : null}
+        {msiAsset && msiAsset !== primaryAsset ? (
+          <>
+            <a href={msiAsset.browser_download_url} className="underline underline-offset-4">
+              {t.msi}
             </a>
             {' · '}
           </>

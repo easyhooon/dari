@@ -42,7 +42,7 @@ The desktop updater, `install-desktop.sh` and the download page all read GitHub'
 
 ## Step 4: Attach the desktop installers
 - Run `gh workflow run desktop-release.yml -f tag=<version>` and wait for it with `gh run watch`.
-- Run `gh release view <version> --json assets` and confirm the `.dmg`, `.msi` and `.sha256` files are there. Until they are, `/releases/latest` points installed apps at a release they can't download.
+- Run `gh release view <version> --json assets` and confirm the `.dmg`, `.exe`, `.msi` and `.sha256` files are there. Until they are, `/releases/latest` points installed apps at a release they can't download.
 
 ## Step 5: Report
 - Print the release URL and confirm completion.

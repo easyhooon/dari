@@ -30,9 +30,11 @@ Dari는 Developer ID로 서명되고 Apple 공증을 받았기 때문에 보안 
 
 ### Windows (preview)
 
-1. [릴리스 페이지](https://github.com/easyhooon/dari/releases)에서 `Dari-<version>-x64.msi`를 내려받아 실행합니다. 현재 사용자 계정에만 설치됩니다.
+1. [다운로드 페이지](/ko/download)나 [릴리스 페이지](https://github.com/easyhooon/dari/releases)에서 `Dari-<version>-x64.exe`를 내려받아 실행합니다. 현재 사용자 계정에만 설치됩니다.
 2. 설치 파일에 코드 서명이 없어서 처음 실행할 때 SmartScreen 경고가 뜰 수 있습니다. **추가 정보 → 실행**을 누릅니다.
-3. 필요하면 `certutil -hashfile Dari-<version>-x64.msi SHA256` 결과를 같은 릴리스의 `.sha256` 파일과 비교합니다.
+3. 필요하면 `certutil -hashfile Dari-<version>-x64.exe SHA256` 결과를 같은 릴리스의 `.sha256` 파일과 비교합니다.
+
+그룹 정책이나 Intune으로 일괄 배포할 때는 같은 릴리스의 `Dari-<version>-x64.msi`를 씁니다. 두 파일은 같은 앱을 설치하고, 이미 설치된 앱은 그 자리에서 업그레이드합니다. 2.3.0 이전 릴리스에는 `.msi`만 있습니다.
 
 ### 다운로드 크기
 
@@ -43,6 +45,8 @@ Dari는 Developer ID로 서명되고 Apple 공증을 받았기 때문에 보안 
 | 압축 전 | 119.3 MB | 127.1 MB |
 | 압축 방식 | `MSZIP` | `UDZO` (zlib 레벨 1) |
 | 다운로드 | 59.6 MB | 70.7 MB |
+
+Windows `.exe`는 같은 MSI를 감싼 파일이라 약 0.6MB만 더 큽니다.
 
 두 설치 파일에는 같은 앱이 들어 있습니다. jlink로 줄인 Java 런타임, 앱 jar, 그리고 Compose가 화면을 그릴 때 쓰는 Skia 네이티브 라이브러리 Skiko입니다. 압축도 둘 다 Deflate를 씁니다. Deflate는 zip과 gzip이 쓰는 알고리즘으로, LZ77로 반복되는 바이트를 줄이고 Huffman 코딩으로 한 번 더 줄입니다.
 
@@ -85,7 +89,7 @@ hdiutil create -srcfolder Dari.app -format UDZO -imagekey zlib-level=9 Dari-leve
 Dari는 실행할 때와 6시간마다 릴리스 페이지를 확인합니다. 새 버전이 있으면 타이틀 바에 **Update to &lt;version&gt;** 버튼이 나타나고, **Help → Install Dari &lt;version&gt;** 메뉴도 같은 동작을 합니다.
 
 - **macOS**: 새 이미지를 내려받아 `.sha256`, 번들 ID, 버전, 코드 서명을 확인한 뒤 앱을 종료하고 새 버전으로 다시 엽니다. 중간에 실패하면 설치된 버전을 그대로 둡니다. **응용 프로그램**처럼 쓰기 권한이 있는 폴더에 설치된 경우에만 동작하고, 그 외에는 Dari를 **응용 프로그램** 폴더로 옮겨 그곳에서 열라고 안내합니다.
-- **Windows**: 버튼이 다운로드 페이지를 엽니다. 새 `.msi`를 실행하면 설치된 앱이 업그레이드됩니다.
+- **Windows**: 버튼이 다운로드 페이지를 엽니다. 새 `.exe`나 `.msi`를 실행하면 설치된 앱이 업그레이드됩니다.
 
 ### 버전
 

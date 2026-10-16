@@ -101,7 +101,7 @@ compose.desktop {
         }
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb)
             packageName = "Dari"
             // -PdariDesktopVersion=1.9.0 packages an older version to test the in-app updater.
             packageVersion = (findProperty("dariDesktopVersion") as String?) ?: libs.versions.dariDesktop.get()

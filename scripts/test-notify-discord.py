@@ -17,6 +17,7 @@ RELEASES = [
     {"tag_name": "2.1.3", "draft": False, "assets": [
         {"name": "Dari-2.1.3-arm64.dmg", "download_count": 2},
         {"name": "Dari-2.1.3-arm64.dmg.sha256", "download_count": 2},
+        {"name": "Dari-2.1.3-x64.exe", "download_count": 1},
         {"name": "Dari-2.1.3-x64.msi", "download_count": 1},
     ]},
     {"tag_name": "2.1.2", "draft": False, "assets": [{"name": "Dari-2.1.2-arm64.dmg", "download_count": 3}]},
@@ -33,7 +34,7 @@ class NotifyDiscordTest(unittest.TestCase):
         self.now = dt.datetime(2026, 10, 15, 0, 7, tzinfo=dt.timezone.utc)
 
     def test_installer_counts_skip_checksums_and_drafts(self):
-        self.assertEqual(module.installer_counts(RELEASES), (6, ("2.1.3", 3)))
+        self.assertEqual(module.installer_counts(RELEASES), (7, ("2.1.3", 4)))
 
     def test_first_run_has_no_baseline(self):
         message = module.run(self.now, self.scarf, self.stats, (35, 6, ("2.1.3", 3)), None)
