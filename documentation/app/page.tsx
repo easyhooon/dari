@@ -4,16 +4,7 @@ import { GithubIcon } from '@/components/github-icon';
 
 export default function HomePage() {
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center gap-8 bg-white px-4 text-center dark:bg-neutral-950">
-      <a
-        href="https://github.com/easyhooon/dari"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm text-fd-muted-foreground transition-colors hover:bg-fd-accent hover:text-fd-foreground"
-      >
-        <GithubIcon className="size-4" />
-        GitHub
-      </a>
+    <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-white px-4 text-center dark:bg-neutral-950">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/dari/logo.png" alt="Dari logo" width={280} height={280} className="rounded-3xl" />
       <h1 className="text-7xl font-bold tracking-tight">Dari</h1>
