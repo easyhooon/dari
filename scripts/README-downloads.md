@@ -32,7 +32,7 @@ Run `python3 scripts/test-update-downloads.py` for offline validation.
 
 After sampling, `scripts/notify-discord.py` posts one message to the
 `DISCORD_WEBHOOK_URL` secret: the Scarf 30-day total and its change since the
-previous observed date, GitHub stars, and cumulative `.dmg`/`.msi` downloads
+previous observed date, GitHub stars, and cumulative `.dmg`/`.exe`/`.msi` downloads
 from GitHub Releases (checksum files excluded; in-app updater fetches
 included). Stars and installer totals are appended to
 `docs/repo-stats-daily.csv` on `dari-downloads-data` so the next run can show

@@ -19,3 +19,8 @@
 # integrations reference libraries Dari does not ship.
 -keep class io.sentry.** { *; }
 -dontwarn io.sentry.**
+
+# JNA binds the Windows DWM call (dark title bar) through a proxy of this interface and its own reflection.
+-keep class com.sun.jna.** { *; }
+-keep interface com.easyhooon.dari.desktop.app.WindowsChrome$* { *; }
+-dontwarn com.sun.jna.**

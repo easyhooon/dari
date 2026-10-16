@@ -196,7 +196,9 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
                     .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                if (value.isEmpty()) Text(placeholder, style = Dari.type.label, color = Dari.colors.textTertiary)
+                if (value.isEmpty()) {
+                    Text(placeholder, style = Dari.type.label, color = Dari.colors.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
                 inner()
             }
         },

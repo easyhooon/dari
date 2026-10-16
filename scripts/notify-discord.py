@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REPO = "easyhooon/dari"
 HEADER = ["observed_utc", "stars", "installer_downloads"]
-INSTALLER_SUFFIXES = (".dmg", ".msi")
+INSTALLER_SUFFIXES = (".dmg", ".exe", ".msi")
 KST = dt.timezone(dt.timedelta(hours=9))
 USER_AGENT = "dari-daily-stats/1.0"
 
@@ -33,7 +33,7 @@ def github_get(path: str, token: str | None):
 
 
 def installer_counts(releases):
-    """Total .dmg/.msi downloads, plus the newest release that has installers."""
+    """Total .dmg/.exe/.msi downloads, plus the newest release that has installers."""
     total, latest = 0, None
     for release in releases:
         if release.get("draft"):
@@ -131,7 +131,7 @@ def build_message(now, scarf_rows, stats_rows, latest):
     lines += [
         "",
         "_Scarf 수치는 POM·메타데이터·자동 도구 요청이 섞인 30일 이동 합계로, 사용자 수가 아니며 약 1주 늦게 반영됩니다. "
-        "변화량은 그날 다운로드 수가 아닙니다. 설치 파일 횟수는 .dmg/.msi 기준이며 인앱 업데이터·재다운로드를 포함합니다._",
+        "변화량은 그날 다운로드 수가 아닙니다. 설치 파일 횟수는 .dmg/.exe/.msi 기준이며 인앱 업데이터·재다운로드를 포함합니다._",
     ]
     return "\n".join(lines)
 

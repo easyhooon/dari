@@ -12,9 +12,14 @@ object SingleInstance {
     // Held for the life of the process; the OS releases it when Dari exits, even on a crash.
     private var lock: FileLock? = null
 
-    fun acquire(directory: File = AppLog.directory): Boolean {
+    fun acquire(directory: File = lockDirectory()): Boolean {
         directory.mkdirs()
         lock = runCatching { RandomAccessFile(File(directory, "dari.lock"), "rw").channel.tryLock() }.getOrNull()
         return lock != null
     }
+
+    // On Windows the lock stays in the install folder on purpose: the MSI can't remove a held lock, so upgrading a
+    // running Dari stops at "close other applications, then Retry" before it replaces files the app has open.
+    private fun lockDirectory(): File =
+        System.getProperty("jpackage.app-path")?.takeIf { isWindows }?.let { File(it).parentFile } ?: AppLog.directory
 }

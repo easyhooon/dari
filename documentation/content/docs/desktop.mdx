@@ -31,9 +31,11 @@ Dari is signed with a Developer ID and notarized by Apple, so it opens without a
 
 ### Windows (preview)
 
-1. Download `Dari-<version>-x64.msi` from the [releases page](https://github.com/easyhooon/dari/releases) and run it. It installs for the current user only.
+1. Download `Dari-<version>-x64.exe` from the [download page](/download) or the [releases page](https://github.com/easyhooon/dari/releases) and run it. It installs for the current user only.
 2. The installer isn't code-signed, so SmartScreen may warn on first run. Click **More info → Run anyway**.
-3. Optionally, compare `certutil -hashfile Dari-<version>-x64.msi SHA256` with the `.sha256` file from the same release.
+3. Optionally, compare `certutil -hashfile Dari-<version>-x64.exe SHA256` with the `.sha256` file from the same release.
+
+For managed rollouts (Group Policy, Intune), use `Dari-<version>-x64.msi` from the same release instead. Both install the same app and upgrade an existing install in place. Releases before 2.3.0 have only the `.msi`.
 
 ### Download size
 
@@ -44,6 +46,8 @@ Measured on 2.2.0, the macOS download is about 11 MB larger than the Windows one
 | Unpacked | 119.3 MB | 127.1 MB |
 | Compression | `MSZIP` | `UDZO` (zlib level 1) |
 | Download | 59.6 MB | 70.7 MB |
+
+The Windows `.exe` wraps the same MSI, so it is only about 0.6 MB larger.
 
 Both hold the same app: a Java runtime trimmed by jlink, the app's jars, and Skiko, the native Skia library that Compose draws with. Both also compress with Deflate, the LZ77 + Huffman coding algorithm behind zip and gzip:
 
@@ -86,7 +90,7 @@ Copy times are from an Apple M2, mounting the DMG and copying the app out with `
 Dari checks the releases page on launch and every six hours. When a newer version exists, an **Update to &lt;version&gt;** button appears in the title bar, and **Help → Install Dari &lt;version&gt;** does the same.
 
 - **macOS**: Dari downloads the new image, checks its `.sha256`, bundle ID, version and code signature, then quits and relaunches as the new version. If anything fails, the installed version is kept. This works when Dari sits in a folder you can write to, such as **Applications**; otherwise Dari tells you to move it to **Applications** and open it from there.
-- **Windows**: the button opens the download page. Run the new `.msi`; it upgrades the installed copy.
+- **Windows**: the button opens the download page. Quit Dari, then run the new `.exe` or `.msi`; either upgrades the installed copy. If Dari is still open, the installer stops with Error 1306 on `dari.lock`: quit Dari and click **Retry**.
 
 ### Versions
 
@@ -168,12 +172,12 @@ A non-debuggable build needs `ALLOW_NON_DEBUGGABLE` above as well; otherwise not
 | App is in the background | Android pauses background apps. Bring the app to the foreground and Dari reconnects. |
 | Not running Dari | Check that the app is a debuggable build using `dari` 2.0.0 or later. |
 
-To report a problem, use **Help → Report an Issue…**. It opens the bug form with your Dari version and OS filled in; **Help → Suggest a Feature…** opens the feature request form. **Help → Show Log File** opens the folder with `dari.log` (`~/Library/Logs/Dari` on macOS, `%LOCALAPPDATA%\Dari\logs` on Windows). The log records the version at startup, crash-report setting changes and failures, never message contents.
+To report a problem, use **Help → Report an Issue…**. It opens the bug form with your Dari version and OS filled in; **Help → Suggest a Feature…** opens the feature request form. **Help → Show Log File** opens the folder with `dari.log` (`~/Library/Logs/Dari` on macOS, `%LOCALAPPDATA%\easyhooon\Dari\logs` on Windows). The log records the version at startup, crash-report setting changes and failures, never message contents.
 
 ## Uninstall
 
 - **macOS**: quit Dari and move `/Applications/Dari.app` to the Trash. To remove its settings and log too, delete `~/Library/Logs/Dari` and `~/Library/Preferences/io.github.easyhooon.plist`.
-- **Windows**: **Settings → Apps → Installed apps → Dari → Uninstall**. Settings live in the registry under `HKEY_CURRENT_USER\Software\JavaSoft\Prefs\io\github\easyhooon`, and the log in `%LOCALAPPDATA%\Dari`.
+- **Windows**: **Settings → Apps → Installed apps → Dari → Uninstall**. Settings live in the registry under `HKEY_CURRENT_USER\Software\JavaSoft\Prefs\io\github\easyhooon`, and the log in `%LOCALAPPDATA%\easyhooon\Dari`, which uninstalling leaves behind.
 
 ## Build from source
 

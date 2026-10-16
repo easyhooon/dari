@@ -44,7 +44,7 @@ Two parts are native:
 - **Rendering.** Compose draws through Skia (Skiko), a native library with a binary per OS and CPU.
 - **The bundled runtime.** Each installer ships a JRE for its own OS, so users don't install Java.
 
-So the code is written once and packaged per OS: `.dmg` on macOS, `.msi` on Windows, `.deb` on
+So the code is written once and packaged per OS: `.dmg` on macOS, `.exe` and `.msi` on Windows, `.deb` on
 Linux.
 
 ### How does it compare with Electron, Tauri and native?

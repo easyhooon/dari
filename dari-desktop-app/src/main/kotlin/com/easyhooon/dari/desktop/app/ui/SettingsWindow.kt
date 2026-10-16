@@ -48,6 +48,7 @@ fun SettingsWindow(settings: DesktopSettings, controller: InspectorController, o
         ),
     ) {
         CloseWindowMenu(onClose)
+        WindowChrome(settings.appearance)
         DariTheme(settings.appearance) {
             Column(
                 Modifier.fillMaxSize().background(Dari.colors.background).padding(20.dp),

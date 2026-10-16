@@ -2,7 +2,7 @@
 # Packages the desktop app for the OS it runs on, plus a SHA-256 file for each artifact.
 #   macOS:   Developer ID signed, notarized, stapled Dari.app and arm64/x64 DMG
 #   Linux:   dari_<version>_<amd64|arm64>.deb
-#   Windows: Dari-<version>-x64.msi (unsigned; run from Git Bash)
+#   Windows: Dari-<version>-x64.exe and Dari-<version>-x64.msi (unsigned; run from Git Bash)
 # Output: dari-desktop-app/build/release/
 set -euo pipefail
 
@@ -115,11 +115,14 @@ PY
     checksum "$name"
     ;;
   MINGW* | MSYS* | CYGWIN*)
-    ./gradlew -PskipPublicationSigning :dari-desktop-app:packageReleaseMsi
-    msi="$(find "$binaries/msi" -name '*.msi' | head -n 1)"
-    name="Dari-$version-x64.msi"
-    cp "$msi" "$out/$name"
-    checksum "$name"
+    # The .exe is for people installing by hand; the .msi stays for managed rollouts (GPO, Intune).
+    ./gradlew -PskipPublicationSigning :dari-desktop-app:packageReleaseExe :dari-desktop-app:packageReleaseMsi
+    for format in exe msi; do
+      installer="$(find "$binaries/$format" -name "*.$format" | head -n 1)"
+      name="Dari-$version-x64.$format"
+      cp "$installer" "$out/$name"
+      checksum "$name"
+    done
     ;;
   *)
     echo "Unsupported OS: $(uname -s)" >&2

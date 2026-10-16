@@ -55,6 +55,9 @@ private val DurationWidth = 72.dp
 private val SizeWidth = 72.dp
 private val COMPACT_WIDTH = 640.dp
 
+// Below this, the fixed columns alone (about 330 dp) would squeeze Handler to nothing.
+private val NARROW_WIDTH = 460.dp
+
 /** Newest-first table. ↑/↓ moves the selection, Esc closes the detail. */
 @Composable
 fun MessageTable(
@@ -72,6 +75,8 @@ fun MessageTable(
         // Narrow table: drop Tag and Size so the handler name keeps its room.
         val compact = maxWidth < COMPACT_WIDTH
         val tagColumn = showTags && !compact
+        // Narrower still, e.g. the minimum window with the detail open: the detail header has both.
+        val narrow = maxWidth < NARROW_WIDTH
         Column(
             Modifier.fillMaxSize().focusRequester(focus).focusable().onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -83,7 +88,7 @@ fun MessageTable(
                 }
             },
         ) {
-            HeaderRow(compact, tagColumn)
+            HeaderRow(compact, narrow, tagColumn)
             if (messages.isEmpty()) {
                 EmptyState(emptyHint.first, emptyHint.second, Modifier.fillMaxSize())
                 return@Column
@@ -101,6 +106,7 @@ fun MessageTable(
                     MessageRow(
                         message = message,
                         compact = compact,
+                        narrow = narrow,
                         tagColumn = tagColumn,
                         selected = message.id == selectedId,
                         onClick = {
@@ -115,7 +121,7 @@ fun MessageTable(
 }
 
 @Composable
-private fun HeaderRow(compact: Boolean, tagColumn: Boolean) {
+private fun HeaderRow(compact: Boolean, narrow: Boolean, tagColumn: Boolean) {
     val border = Dari.colors.border
     Row(
         Modifier.fillMaxWidth().height(DariMetrics.rowHeight)
@@ -123,12 +129,12 @@ private fun HeaderRow(compact: Boolean, tagColumn: Boolean) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         HeaderCell("Status", StatusWidth)
-        HeaderCell("Direction", DirectionWidth)
+        if (!narrow) HeaderCell("Direction", DirectionWidth)
         HeaderCell("Handler", null)
         if (tagColumn) HeaderCell("Tag", TagWidth)
         // Clock times read left to right; only the measured columns (duration, size) align right.
         HeaderCell("Time", TimeWidth)
-        HeaderCell("Duration", DurationWidth, TextAlign.End)
+        if (!narrow) HeaderCell("Duration", DurationWidth, TextAlign.End)
         if (!compact) HeaderCell("Size", SizeWidth, TextAlign.End)
     }
 }
@@ -140,6 +146,8 @@ private fun RowScope.HeaderCell(text: String, width: Dp?, align: TextAlign = Tex
         style = Dari.type.caption,
         color = Dari.colors.textTertiary,
         textAlign = align,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         modifier = cell(width),
     )
 }
@@ -148,6 +156,7 @@ private fun RowScope.HeaderCell(text: String, width: Dp?, align: TextAlign = Tex
 private fun MessageRow(
     message: WireMessageSummary,
     compact: Boolean,
+    narrow: Boolean,
     tagColumn: Boolean,
     selected: Boolean,
     onClick: () -> Unit,
@@ -170,12 +179,14 @@ private fun MessageRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(cell(StatusWidth)) { StatusMark(message.status) }
-        Text(
-            directionLabel(message.direction),
-            style = Dari.type.codeCaption,
-            color = Dari.colors.textSecondary,
-            modifier = cell(DirectionWidth),
-        )
+        if (!narrow) {
+            Text(
+                directionLabel(message.direction),
+                style = Dari.type.codeCaption,
+                color = Dari.colors.textSecondary,
+                modifier = cell(DirectionWidth),
+            )
+        }
         Row(cell(null), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 message.displayName ?: message.handlerName,
@@ -198,7 +209,7 @@ private fun MessageRow(
         }
         if (tagColumn) Box(cell(TagWidth)) { message.tag?.let { Badge(it) } }
         NumericCell(formatTime(message.requestTimestamp), TimeWidth, TextAlign.Start)
-        NumericCell(durationLabel(message), DurationWidth)
+        if (!narrow) NumericCell(durationLabel(message), DurationWidth)
         if (!compact) NumericCell(formatBytes(message.requestSizeBytes + message.responseSizeBytes), SizeWidth)
     }
 }
