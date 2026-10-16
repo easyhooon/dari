@@ -172,12 +172,12 @@ A non-debuggable build needs `ALLOW_NON_DEBUGGABLE` above as well; otherwise not
 | App is in the background | Android pauses background apps. Bring the app to the foreground and Dari reconnects. |
 | Not running Dari | Check that the app is a debuggable build using `dari` 2.0.0 or later. |
 
-To report a problem, use **Help → Report an Issue…**. It opens the bug form with your Dari version and OS filled in; **Help → Suggest a Feature…** opens the feature request form. **Help → Show Log File** opens the folder with `dari.log` (`~/Library/Logs/Dari` on macOS, `%LOCALAPPDATA%\Dari\logs` on Windows). The log records the version at startup, crash-report setting changes and failures, never message contents.
+To report a problem, use **Help → Report an Issue…**. It opens the bug form with your Dari version and OS filled in; **Help → Suggest a Feature…** opens the feature request form. **Help → Show Log File** opens the folder with `dari.log` (`~/Library/Logs/Dari` on macOS, `%LOCALAPPDATA%\easyhooon\Dari\logs` on Windows). The log records the version at startup, crash-report setting changes and failures, never message contents.
 
 ## Uninstall
 
 - **macOS**: quit Dari and move `/Applications/Dari.app` to the Trash. To remove its settings and log too, delete `~/Library/Logs/Dari` and `~/Library/Preferences/io.github.easyhooon.plist`.
-- **Windows**: **Settings → Apps → Installed apps → Dari → Uninstall**. Settings live in the registry under `HKEY_CURRENT_USER\Software\JavaSoft\Prefs\io\github\easyhooon`, and the log in `%LOCALAPPDATA%\Dari`.
+- **Windows**: **Settings → Apps → Installed apps → Dari → Uninstall**. Settings live in the registry under `HKEY_CURRENT_USER\Software\JavaSoft\Prefs\io\github\easyhooon`, and the log in `%LOCALAPPDATA%\easyhooon\Dari`, which uninstalling leaves behind.
 
 ## Build from source
 

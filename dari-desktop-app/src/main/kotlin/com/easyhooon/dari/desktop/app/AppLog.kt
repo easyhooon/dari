@@ -49,7 +49,8 @@ object AppLog {
         val os = System.getProperty("os.name")
         return when {
             os.startsWith("Mac") -> File(home, "Library/Logs/Dari")
-            os.startsWith("Windows") -> File(System.getenv("LOCALAPPDATA") ?: home, "Dari/logs")
+            // Outside the install folder (%LOCALAPPDATA%\Dari), which the MSI clears on upgrade.
+            os.startsWith("Windows") -> File(System.getenv("LOCALAPPDATA") ?: home, "easyhooon/Dari/logs")
             else -> File(System.getenv("XDG_STATE_HOME") ?: "$home/.local/state", "dari")
         }
     }
