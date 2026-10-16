@@ -42,6 +42,21 @@ class CrashReportingTest {
     }
 
     @Test
+    fun `a failed start leaves reporting off`() {
+        val failingStart: (String, String) -> Unit = { _, _ -> throw IllegalStateException("init failed") }
+        assertFalse(CrashReporting.update(optedIn = true, release = "2.2.1", dsn = DSN, start = failingStart))
+        assertFalse(CrashReporting.isRunning)
+    }
+
+    @Test
+    fun `a failed stop leaves reporting on`() {
+        assertTrue(CrashReporting.update(optedIn = true, release = "2.2.1", dsn = DSN))
+        val failingStop: () -> Unit = { throw IllegalStateException("close failed") }
+        assertTrue(CrashReporting.update(optedIn = false, release = "2.2.1", dsn = DSN, stop = failingStop))
+        assertTrue(CrashReporting.isRunning)
+    }
+
+    @Test
     fun `capture is a no-op while off`() {
         CrashReporting.capture(Thread.currentThread(), RuntimeException("boom"))
         assertFalse(Sentry.isEnabled())

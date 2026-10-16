@@ -7,8 +7,8 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /**
- * A plain-text log users can attach to bug reports. It records crashes and failures only, never
- * message contents. One file, rotated to `dari.log.1` at 1 MB.
+ * A plain-text log users can attach to bug reports. It records the version at startup, crash-report
+ * setting changes and failures, never message contents. One file, rotated to `dari.log.1` at 1 MB.
  */
 object AppLog {
     private const val MAX_BYTES = 1L * 1024 * 1024

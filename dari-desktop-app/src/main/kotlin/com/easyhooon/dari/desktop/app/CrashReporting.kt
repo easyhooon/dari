@@ -28,10 +28,16 @@ object CrashReporting {
     fun update(optedIn: Boolean, release: String): Boolean = update(optedIn, release, dsn)
 
     @Synchronized
-    internal fun update(optedIn: Boolean, release: String, dsn: String?): Boolean {
+    internal fun update(
+        optedIn: Boolean,
+        release: String,
+        dsn: String?,
+        start: (dsn: String, release: String) -> Unit = SentryReporter::start,
+        stop: () -> Unit = SentryReporter::stop,
+    ): Boolean {
         val run = optedIn && !dsn.isNullOrBlank()
         if (run == isRunning) return run
-        runCatching { if (run) SentryReporter.start(dsn!!, release) else SentryReporter.stop() }
+        runCatching { if (run) start(dsn!!, release) else stop() }
             .onSuccess { isRunning = run }
             .onFailure { AppLog.error("Could not ${if (run) "start" else "stop"} crash reporting", it) }
         return isRunning
