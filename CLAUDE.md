@@ -28,4 +28,5 @@
 ## Skills
 
 - Code review follow-up: use the `/resolve-coderabbit-review` skill to triage and apply CodeRabbit comments on the current PR.
+- Release scope: run `/release-scope` before `/release` to decide whether to bump `dari`, `dariDesktop`, both or neither.
 - Release: use the `/release` skill to publish to Maven Central and draft GitHub release notes.
