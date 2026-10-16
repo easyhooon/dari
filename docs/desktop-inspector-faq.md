@@ -94,6 +94,13 @@ flowchart LR
    - Android Studio's debugger connects to the JDWP port that every debuggable app opens.
    - Dari's desktop app connects to the `dari_<applicationId>` socket that the `dari` library opens.
 
+### What is a daemon?
+
+A daemon is a background process with no terminal that stays running and serves requests; the
+trailing `d` in `adbd`, `usbmuxd` and `sshd` stands for it. Each `adb ...` command is a short-lived
+client that hands its request to the long-running adb server (a daemon on the computer), which
+passes it to `adbd` (the daemon on the phone).
+
 ### What is JDWP?
 
 JDWP (Java Debug Wire Protocol) is the protocol a debugger uses to talk to a running VM. Through it
