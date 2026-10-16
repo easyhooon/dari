@@ -43,9 +43,9 @@ jobs:
           TAG: ${{ inputs.tag }}
         run: |
           # Installers are named after the catalog version, so a mismatch would mislabel them.
-          version="$(sed -n 's/^dari = "\(.*\)"/\1/p' gradle/libs.versions.toml)"
+          version="$(sed -n 's/^dariDesktop = "\(.*\)"/\1/p' gradle/libs.versions.toml)"
           if [ "$TAG" != "$version" ]; then
-            echo "Tag $TAG does not match the version $version in gradle/libs.versions.toml" >&2
+            echo "Tag $TAG does not match dariDesktop $version in gradle/libs.versions.toml" >&2
             exit 1
           fi
       - name: Smoke test

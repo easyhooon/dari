@@ -85,6 +85,12 @@ Dari는 실행할 때와 6시간마다 릴리스 페이지를 확인합니다. �
 - **macOS**: 새 이미지를 내려받아 `.sha256`, 번들 ID, 버전, 코드 서명을 확인한 뒤 앱을 종료하고 새 버전으로 다시 엽니다. 중간에 실패하면 설치된 버전을 그대로 둡니다. **응용 프로그램**처럼 쓰기 권한이 있는 폴더에 설치된 경우에만 동작하고, 그 외에는 Dari를 **응용 프로그램** 폴더로 옮겨 그곳에서 열라고 안내합니다.
 - **Windows**: 버튼이 다운로드 페이지를 엽니다. 새 `.msi`를 실행하면 설치된 앱이 업그레이드됩니다.
 
+### 버전
+
+데스크톱 앱과 라이브러리는 같은 버전 번호를 쓰지만, 데스크톱 앱만 따로 릴리스할 수 있습니다. 데스크톱 버그 수정처럼 제목에 **Desktop only**가 붙은 릴리스는 데스크톱 앱만 올리고 라이브러리는 그대로 둡니다. 그래서 그 버전은 Maven Central에 없습니다.
+
+Desktop only 릴리스 때문에 앱의 `dari`를 올릴 필요는 없습니다.
+
 ## 연결
 
 1. `adb`를 쓸 수 있게 합니다. Android Studio를 기본 위치에 설치했다면 이미 들어 있고, Dari는 `ANDROID_HOME`도 확인합니다. Android Studio가 없다면 [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools)를 설치합니다. macOS는 `brew install android-platform-tools`, Windows는 압축을 푼 뒤 `platform-tools` 폴더를 `PATH`에 추가합니다.

@@ -96,7 +96,7 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "Dari"
             // -PdariDesktopVersion=1.9.0 packages an older version to test the in-app updater.
-            packageVersion = (findProperty("dariDesktopVersion") as String?) ?: libs.versions.dari.get()
+            packageVersion = (findProperty("dariDesktopVersion") as String?) ?: libs.versions.dariDesktop.get()
             description = "Desktop inspector for Dari WebView bridge messages"
             vendor = "easyhooon"
             copyright = "© 2026 easyhooon. Apache License 2.0."
