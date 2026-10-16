@@ -14,3 +14,8 @@
 -keepclassmembers class com.easyhooon.dari.** {
     *** Companion;
 }
+
+# Sentry (crash reports) loads options, integrations and serializers reflectively; optional
+# integrations reference libraries Dari does not ship.
+-keep class io.sentry.** { *; }
+-dontwarn io.sentry.**
