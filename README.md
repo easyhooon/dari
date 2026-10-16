@@ -293,6 +293,10 @@ tokens, personal data, or other sensitive values, so avoid sharing exported
 messages without reviewing them first. Use `dari-noop` in release builds to
 keep the same API surface without storing or displaying bridge messages.
 
+The desktop app sends crash reports to Sentry by default: the exception type, stack trace, and OS,
+architecture and Java versions. Exception messages, bridge messages, host names and IP addresses
+are never sent. Turn it off in Settings → Privacy → **Send crash reports**.
+
 ## API Reference
 
 ### Dari

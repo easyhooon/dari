@@ -64,7 +64,7 @@ dependencies {
 }
 configurations.runtimeClasspath { attributes.attribute(skikoStripped, true) }
 
-// Opt-in crash reports need a DSN: -PdariSentryDsn or DARI_SENTRY_DSN. Without one (local, fork builds) they stay off.
+// Crash reports need a DSN: -PdariSentryDsn or DARI_SENTRY_DSN. Without one (local, fork builds) they stay off.
 val generateCrashReportingConfig by tasks.registering(WriteProperties::class) {
     destinationFile = layout.buildDirectory.file("generated/crash-reporting/dari-crash-reporting.properties")
     property(
