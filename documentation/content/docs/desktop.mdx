@@ -86,6 +86,12 @@ Dari checks the releases page on launch and every six hours. When a newer versio
 - **macOS**: Dari downloads the new image, checks its `.sha256`, bundle ID, version and code signature, then quits and relaunches as the new version. If anything fails, the installed version is kept. This works when Dari sits in a folder you can write to, such as **Applications**; otherwise Dari tells you to move it to **Applications** and open it from there.
 - **Windows**: the button opens the download page. Run the new `.msi`; it upgrades the installed copy.
 
+### Versions
+
+The desktop app and the library share one version line, but the desktop app can ship on its own. A release titled **Desktop only**, such as a desktop fix, updates the desktop app and leaves the library where it was, so that version doesn't exist on Maven Central.
+
+A Desktop only release never requires updating `dari` in your app.
+
 ## Connect
 
 1. Keep `adb` available. Android Studio in its default location already includes it, and Dari also checks `ANDROID_HOME`. Without Android Studio, install [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools): `brew install android-platform-tools` on macOS, or on Windows unzip it and add the `platform-tools` folder to `PATH`.

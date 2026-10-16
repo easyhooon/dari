@@ -9,7 +9,7 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
-version="$(sed -n 's/^dari = "\(.*\)"/\1/p' gradle/libs.versions.toml)"
+version="$(sed -n 's/^dariDesktop = "\(.*\)"/\1/p' gradle/libs.versions.toml)"
 binaries="dari-desktop-app/build/compose/binaries/main-release"
 out="dari-desktop-app/build/release"
 mkdir -p "$out"

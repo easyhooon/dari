@@ -131,7 +131,7 @@ class MacOSPackagingTest(unittest.TestCase):
         (self.root / "gradle").mkdir()
         (self.root / "dari-desktop-app/packaging").mkdir(parents=True)
         self.restore_entitlements()
-        (self.root / "gradle/libs.versions.toml").write_text('dari = "2.1.1"\n')
+        (self.root / "gradle/libs.versions.toml").write_text('dari = "2.1.0"\ndariDesktop = "2.1.1"\n')
         for name in ("package-desktop-app.sh", "verify-macos-signature.sh", "setup-macos-signing.sh"):
             shutil.copy2(ROOT / "scripts" / name, self.root / "scripts" / name)
         self.bin = self.root / "bin"
