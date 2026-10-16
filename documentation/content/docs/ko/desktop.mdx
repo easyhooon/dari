@@ -69,14 +69,14 @@ hdiutil create -srcfolder Dari.app -format UDZO -imagekey zlib-level=9 Dari-leve
 
 `du -h`는 MiB 단위라서 121M은 127MB입니다. 같은 `Dari.app`을 다른 DMG 형식으로 묶은 결과입니다.
 
-| 형식 | 알고리즘 | 지원 macOS | 크기 |
-| --- | --- | --- | --- |
-| `UDZO`, 레벨 1 (`hdiutil` 기본값) | zlib (Deflate) | 모든 버전 | 70.8 MB |
-| `UDZO`, 레벨 9 | zlib (Deflate) | 모든 버전 | 67.3 MB |
-| `ULFO` | LZFSE: Apple이 만든 LZ77 + 유한 상태 엔트로피 코딩. 압축 해제가 빠름 | 10.11 이상 | 67.3 MB |
-| `ULMO` (2.2.0 이후 릴리스) | LZMA: 큰 사전을 쓰는 LZ77 + 범위 코딩. 7-Zip, xz와 같은 방식 | 10.15 이상 | 59.5 MB |
+| 형식 | 알고리즘 | 지원 macOS | 크기 | `Dari.app` 복사 시간 |
+| --- | --- | --- | --- | --- |
+| `UDZO`, 레벨 1 (`hdiutil` 기본값) | zlib (Deflate) | 모든 버전 | 70.8 MB | 2~4초 |
+| `UDZO`, 레벨 9 | zlib (Deflate) | 모든 버전 | 67.3 MB | |
+| `ULFO` (2.2.1 이후) | LZFSE: Apple이 만든 LZ77 + 유한 상태 엔트로피 코딩. 압축 해제가 빠름 | 10.11 이상 | 67.3 MB | 4~5초 |
+| `ULMO` (2.2.0) | LZMA: 큰 사전을 쓰는 LZ77 + 범위 코딩. 7-Zip, xz와 같은 방식 | 10.15 이상 | 59.5 MB | 약 15초 |
 
-2.2.0 이후 릴리스는 `ULMO`를 써서 DMG 크기를 Windows와 비슷하게 줄였습니다. `ULMO`는 macOS 10.15 이상에서만 열리므로 Dari도 10.15 이상을 요구합니다. Apple Silicon Mac은 처음부터 macOS 11 이상이라 영향이 없습니다.
+복사 시간은 Apple M2에서 설치나 업데이트와 같은 방식으로, DMG를 마운트하고 `ditto`로 앱을 꺼낸 시간입니다. `ULMO`가 가장 작지만 macOS가 커널 밖에서 압축을 풀기 때문에, 설치와 인앱 업데이트가 매번 약 10초 더 걸립니다. 그래서 2.2.1부터는 몇 MB를 더 쓰는 대신 설치가 약 3배 빠른 `ULFO`를 씁니다. Dari는 macOS 10.15 이상을 지원합니다.
 
 ### 업데이트
 

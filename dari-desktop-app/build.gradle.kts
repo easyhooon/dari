@@ -1,4 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -21,6 +24,46 @@ dependencies {
     testImplementation(libs.junit)
 }
 
+// Skiko's macOS runtime jars carry both the arm64 and x64 dylibs. Compose extracts only the host
+// one and leaves the other inside the packaged jar (~9 MB compressed), so drop it before packaging.
+abstract class StripForeignSkikoDylib : TransformAction<TransformParameters.None> {
+    @get:InputArtifact
+    abstract val inputArtifact: Provider<FileSystemLocation>
+
+    override fun transform(outputs: TransformOutputs) {
+        val jar = inputArtifact.get().asFile
+        val prefix = "skiko-awt-runtime-macos-"
+        if (!jar.name.startsWith(prefix)) {
+            outputs.file(jar)
+            return
+        }
+        // Keep the file name: Compose finds the jar to unpack by its skiko-awt-runtime-<os>-<arch> prefix.
+        val keep = "libskiko-macos-" + jar.name.removePrefix(prefix).substringBefore('-') + "."
+        ZipInputStream(jar.inputStream().buffered()).use { input ->
+            ZipOutputStream(outputs.file(jar.name).outputStream().buffered()).use { output ->
+                generateSequence { input.nextEntry }
+                    .filter { !it.name.startsWith("libskiko-macos-") || it.name.startsWith(keep) }
+                    .forEach { entry ->
+                        output.putNextEntry(ZipEntry(entry.name))
+                        input.copyTo(output)
+                        output.closeEntry()
+                    }
+            }
+        }
+    }
+}
+
+val skikoStripped = Attribute.of("dari.skikoStripped", Boolean::class.javaObjectType)
+dependencies {
+    attributesSchema { attribute(skikoStripped) }
+    artifactTypes.getByName("jar").attributes.attribute(skikoStripped, false)
+    registerTransform(StripForeignSkikoDylib::class) {
+        from.attribute(skikoStripped, false).attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, "jar")
+        to.attribute(skikoStripped, true).attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, "jar")
+    }
+}
+configurations.runtimeClasspath { attributes.attribute(skikoStripped, true) }
+
 // Crash reports need a DSN: -PdariSentryDsn or DARI_SENTRY_DSN. Without one (local, fork builds) they stay off.
 val generateCrashReportingConfig by tasks.registering(WriteProperties::class) {
     destinationFile = layout.buildDirectory.file("generated/crash-reporting/dari-crash-reporting.properties")
@@ -42,6 +85,13 @@ compose.desktop {
         // Dock name for `run`; packaged apps take it from packageName. The flag exists only on macOS JVMs.
         if (System.getProperty("os.name").startsWith("Mac")) jvmArgs += "-Xdock:name=Dari"
 
+        // Release tasks (createReleaseDistributable, packageRelease*) shrink the jars with ProGuard.
+        // Obfuscation stays off so log and issue-report stack traces remain readable.
+        buildTypes.release.proguard {
+            obfuscate.set(false)
+            configurationFiles.from(project.file("compose-desktop.pro"))
+        }
+
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "Dari"
@@ -57,7 +107,7 @@ compose.desktop {
             macOS {
                 bundleID = "io.github.easyhooon.dari.desktop"
                 appCategory = "public.app-category.developer-tools"
-                // The DMG is ULMO (LZMA), which macOS can mount only from 10.15.
+                // Raised for the ULMO DMG in 2.2.0; kept although the ULFO DMG opens from 10.11.
                 minimumSystemVersion = "10.15"
                 iconFile.set(project.file("icons/dari.icns"))
                 // Compose also re-signs the runtime after jpackage; retain JDK 17's JVM entitlements.

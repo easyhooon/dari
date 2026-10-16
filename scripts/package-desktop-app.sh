@@ -10,7 +10,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
 version="$(sed -n 's/^dari = "\(.*\)"/\1/p' gradle/libs.versions.toml)"
-binaries="dari-desktop-app/build/compose/binaries/main"
+binaries="dari-desktop-app/build/compose/binaries/main-release"
 out="dari-desktop-app/build/release"
 mkdir -p "$out"
 
@@ -34,7 +34,7 @@ case "$(uname -s)" in
     stage="$(mktemp -d)"
     trap 'rm -rf "$stage"' EXIT
     export DARI_MACOS_SIGN=true
-    ./gradlew -PskipPublicationSigning :dari-desktop-app:createDistributable
+    ./gradlew -PskipPublicationSigning :dari-desktop-app:createReleaseDistributable
     app="$binaries/app/Dari.app"
     [ "$(plutil -extract CFBundleShortVersionString raw -o - "$app/Contents/Info.plist")" = "$version" ] || {
       echo "The packaged app version does not match the release version." >&2; exit 1;
@@ -105,7 +105,7 @@ PY
     checksum "$name"
     ;;
   Linux)
-    ./gradlew -PskipPublicationSigning :dari-desktop-app:packageDeb
+    ./gradlew -PskipPublicationSigning :dari-desktop-app:packageReleaseDeb
     deb="$(find "$binaries/deb" -name '*.deb' | head -n 1)"
     arch="$(dpkg --print-architecture)"
     name="dari_${version}_$arch.deb"
@@ -113,7 +113,7 @@ PY
     checksum "$name"
     ;;
   MINGW* | MSYS* | CYGWIN*)
-    ./gradlew -PskipPublicationSigning :dari-desktop-app:packageMsi
+    ./gradlew -PskipPublicationSigning :dari-desktop-app:packageReleaseMsi
     msi="$(find "$binaries/msi" -name '*.msi' | head -n 1)"
     name="Dari-$version-x64.msi"
     cp "$msi" "$out/$name"
