@@ -181,18 +181,21 @@ class InspectorControllerConnectTest {
 
     @Test
     fun `a masking change failing after a disconnect does not reconnect`(): Unit = runBlocking(dispatcher) {
+        app.messages = listOf(MESSAGE)
         val controller = sessionController()
         controller.connect()
-        controller.awaitState { it is ConnectionState.Connected }
+        awaitUntil { controller.detail != null }
 
         app.holdNextSettings.set(true)
         controller.onMaskingChanged()
         awaitUntil { app.settingsHeld.get() }
         // Closing the socket fails the pending request once the session is already gone.
         controller.disconnectByUser()
-        awaitUntil { controller.notice != null }
+        // Disconnecting keeps the detail, so its drop shows the failure was handled.
+        awaitUntil { controller.detail == null }
 
         delay(300)
+        assertNull(controller.notice)
         assertEquals(ConnectionState.Idle, controller.state)
         assertEquals(1, opens.get())
     }
