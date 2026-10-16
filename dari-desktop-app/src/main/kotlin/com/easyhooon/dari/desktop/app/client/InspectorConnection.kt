@@ -32,6 +32,7 @@ import java.io.IOException
 import java.net.Socket
 import java.net.SocketTimeoutException
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.thread
 
@@ -40,16 +41,15 @@ class InspectorException(val error: InspectorError) : IOException("${error.code}
 /** One session with a Dari app. Requests are matched to results by request id. */
 class InspectorConnection private constructor(
     private val socket: Socket,
-    private val adb: Adb,
-    private val serial: String,
-    private val localPort: Int,
     val app: AppInfo,
+    private val onClose: () -> Unit,
 ) : Closeable {
     private val reader = FrameReader(socket.getInputStream())
     private val writer = FrameWriter(socket.getOutputStream())
     private val pending = ConcurrentHashMap<String, CompletableDeferred<InspectorFrame.Result>>()
     private val streams = ConcurrentHashMap<String, Channel<ObserveEvent>>()
     private val nextId = AtomicLong()
+    private val closed = AtomicBoolean()
 
     /** Completes when the app or the cable goes away. */
     val disconnected = CompletableDeferred<Unit>()
@@ -87,9 +87,11 @@ class InspectorConnection private constructor(
         false
     }
 
+    // Idempotent: the connect job and InspectorController.disconnect() may both close it.
     override fun close() {
+        if (!closed.compareAndSet(false, true)) return
         runCatching { socket.close() }
-        adb.removeForward(serial, localPort)
+        onClose()
     }
 
     private suspend fun <I, O> call(op: String, inputSerializer: KSerializer<I>, input: I, outputSerializer: KSerializer<O>): O {
@@ -158,7 +160,17 @@ class InspectorConnection private constructor(
         /** Blocking: forwards the port, connects and completes the handshake. */
         fun open(adb: Adb, serial: String, applicationId: String, clientVersion: String): InspectorConnection {
             val port = adb.forward(serial, applicationId)
-            val socket = Socket("127.0.0.1", port)
+            val removeForward = { adb.removeForward(serial, port) }
+            return try {
+                handshake(Socket("127.0.0.1", port), applicationId, clientVersion, onClose = removeForward)
+            } catch (e: IOException) {
+                removeForward()
+                throw e
+            }
+        }
+
+        /** Blocking: completes the handshake on [socket]. [onClose] runs once, when the connection closes. */
+        internal fun handshake(socket: Socket, applicationId: String, clientVersion: String, onClose: () -> Unit): InspectorConnection {
             try {
                 socket.soTimeout = HANDSHAKE_TIMEOUT_MS
                 FrameWriter(socket.getOutputStream()).write(
@@ -176,10 +188,9 @@ class InspectorConnection private constructor(
                 socket.soTimeout = 0
                 // An IOException keeps the cleanup below; requireNotNull would leak the socket and forward.
                 val app = hello.app ?: throw IOException("Handshake is missing app info")
-                return InspectorConnection(socket, adb, serial, port, app)
+                return InspectorConnection(socket, app, onClose)
             } catch (e: IOException) {
                 runCatching { socket.close() }
-                adb.removeForward(serial, port)
                 throw e
             }
         }

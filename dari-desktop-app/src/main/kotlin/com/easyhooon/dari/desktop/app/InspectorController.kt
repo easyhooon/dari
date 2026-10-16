@@ -13,8 +13,10 @@ import com.easyhooon.dari.inspector.protocol.WireMessageSummary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -37,6 +39,9 @@ class InspectorController(
     private val clientVersion: String,
     preferredSerial: String? = null,
     private val maskingEnabled: () -> Boolean = { false },
+    // Blocking; replaced in tests so sessions run without a device.
+    private val openConnection: ((serial: String, applicationId: String) -> InspectorConnection)? =
+        adb?.let { adb -> { serial, applicationId -> InspectorConnection.open(adb, serial, applicationId, clientVersion) } },
 ) {
     var devices by mutableStateOf<List<AdbDevice>>(emptyList())
         private set
@@ -117,27 +122,42 @@ class InspectorController(
     fun connect() {
         val serial = selectedSerial ?: return
         val appId = applicationId.trim().ifEmpty { return }
-        val adb = adb ?: return
+        val open = openConnection ?: return
         disconnect()
         connectJob = scope.launch {
             while (isActive) {
                 state = ConnectionState.Connecting(state.reasonOrNull())
-                try {
-                    val conn = withContext(Dispatchers.IO) { InspectorConnection.open(adb, serial, appId, clientVersion) }
-                    connection = conn
-                    runSession(conn)
+                val reason = try {
+                    openAndRunSession(open, serial, appId)
+                    null
                 } catch (e: IOException) {
-                    state = ConnectionState.Connecting(e.message)
+                    e.message
                 } catch (_: TimeoutCancellationException) {
                     // A request timeout, not this job's cancellation: keep retrying.
-                    state = ConnectionState.Connecting("the app did not respond in time")
+                    "the app did not respond in time"
                 } catch (e: SerializationException) {
-                    state = ConnectionState.Connecting("unexpected data from the app: ${e.message}")
-                } finally {
-                    connection?.let { conn -> withContext(Dispatchers.IO) { conn.close() } }
-                    connection = null
+                    "unexpected data from the app: ${e.message}"
                 }
+                // withContext still rethrows open()'s IOException after a cancel (e.g. a frozen app's handshake
+                // timeout), so a replaced job would otherwise overwrite the newer session's state.
+                ensureActive()
+                reason?.let { state = ConnectionState.Connecting(it) }
                 delay(POLL_INTERVAL_MS)
+            }
+        }
+    }
+
+    private suspend fun openAndRunSession(open: (String, String) -> InspectorConnection, serial: String, appId: String) {
+        var opened: InspectorConnection? = null
+        try {
+            // Kept outside withContext's result, which is dropped when this job is cancelled while open() blocks.
+            val conn = withContext(Dispatchers.IO) { open(serial, appId).also { opened = it } }
+            connection = conn
+            runSession(conn)
+        } finally {
+            opened?.let { conn ->
+                if (connection === conn) connection = null
+                withContext(NonCancellable + Dispatchers.IO) { conn.close() }
             }
         }
     }
