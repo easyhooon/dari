@@ -24,6 +24,14 @@ dependencies {
     testImplementation(libs.junit)
 }
 
+// Failure-path tests write to AppLog; keep that out of the developer's real dari.log.
+tasks.test {
+    val logHome = temporaryDir.absolutePath
+    systemProperty("user.home", logHome)
+    environment("XDG_STATE_HOME", logHome)
+    environment("LOCALAPPDATA", logHome)
+}
+
 // Skiko's macOS runtime jars carry both the arm64 and x64 dylibs. Compose extracts only the host
 // one and leaves the other inside the packaged jar (~9 MB compressed), so drop it before packaging.
 abstract class StripForeignSkikoDylib : TransformAction<TransformParameters.None> {
