@@ -190,11 +190,13 @@ class InspectorController(
                 }
                 .onFailure {
                     AppLog.error("Changing masking failed", it)
-                    // The app may still send under the old setting; a new session applies the saved one.
-                    showNotice("Couldn't change masking, reconnecting")
                     maskingGeneration++
                     detail = null
-                    if (connection === conn) connect()
+                    // Session already gone (e.g. user disconnected): the next one applies the saved setting.
+                    if (connection !== conn) return@onFailure
+                    // The app may still send under the old setting; a new session applies the saved one.
+                    showNotice("Couldn't change masking, reconnecting")
+                    connect()
                 }
         }
     }
