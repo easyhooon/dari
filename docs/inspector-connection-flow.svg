@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 300" width="680" height="300" role="img" aria-label="Dari desktop inspector connection flow">
+<style>
+text{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif}
+.t{font-size:14px;font-weight:600}.s{font-size:12px}
+.fg{fill:#24292f}.mut{fill:#57606a}
+.box{fill:#f6f8fa;stroke:#d0d7de;stroke-width:.75}.tun{fill:none;stroke:#d0d7de;stroke-width:.75;stroke-dasharray:4 4}.lane{stroke:#d0d7de;stroke-width:.75;stroke-dasharray:2 4}
+@media (prefers-color-scheme:dark){.fg{fill:#e6edf3}.mut{fill:#8d96a0}.box{fill:#161b22;stroke:#30363d}.tun,.lane{stroke:#30363d}}
+@keyframes p0{0%,0.000%{opacity:0;transform:translateX(125px)}0.288%,3.058%{opacity:1}3.597%,100%{opacity:0;transform:translateX(555px)}}#p0{animation:p0 27.800000000000008s linear infinite}
+@keyframes p1{0%,4.676%{opacity:0;transform:translateX(555px)}4.964%,7.734%{opacity:1}8.273%,100%{opacity:0;transform:translateX(125px)}}#p1{animation:p1 27.800000000000008s linear infinite}
+@keyframes p2{0%,12.950%{opacity:0;transform:translateX(125px)}13.237%,16.007%{opacity:1}16.547%,100%{opacity:0;transform:translateX(340px)}}#p2{animation:p2 27.800000000000008s linear infinite}
+@keyframes p3{0%,17.626%{opacity:0;transform:translateX(340px)}17.914%,20.683%{opacity:1}21.223%,100%{opacity:0;transform:translateX(125px)}}#p3{animation:p3 27.800000000000008s linear infinite}
+@keyframes p4{0%,25.899%{opacity:0;transform:translateX(125px)}26.187%,28.957%{opacity:1}29.496%,100%{opacity:0;transform:translateX(555px)}}#p4{animation:p4 27.800000000000008s linear infinite}
+@keyframes p5{0%,34.173%{opacity:0;transform:translateX(125px)}34.460%,37.230%{opacity:1}37.770%,100%{opacity:0;transform:translateX(555px)}}#p5{animation:p5 27.800000000000008s linear infinite}
+@keyframes p6{0%,38.849%{opacity:0;transform:translateX(555px)}39.137%,41.906%{opacity:1}42.446%,100%{opacity:0;transform:translateX(125px)}}#p6{animation:p6 27.800000000000008s linear infinite}
+@keyframes p7{0%,47.122%{opacity:0;transform:translateX(125px)}47.410%,50.180%{opacity:1}50.719%,100%{opacity:0;transform:translateX(555px)}}#p7{animation:p7 27.800000000000008s linear infinite}
+@keyframes p8{0%,51.799%{opacity:0;transform:translateX(555px)}52.086%,54.856%{opacity:1}55.396%,100%{opacity:0;transform:translateX(125px)}}#p8{animation:p8 27.800000000000008s linear infinite}
+@keyframes p9{0%,56.475%{opacity:0;transform:translateX(555px)}56.763%,59.532%{opacity:1}60.072%,100%{opacity:0;transform:translateX(125px)}}#p9{animation:p9 27.800000000000008s linear infinite}
+@keyframes p10{0%,64.748%{opacity:0;transform:translateX(125px)}65.036%,67.806%{opacity:1}68.345%,100%{opacity:0;transform:translateX(555px)}}#p10{animation:p10 27.800000000000008s linear infinite}
+@keyframes p11{0%,69.424%{opacity:0;transform:translateX(555px)}69.712%,72.482%{opacity:1}73.022%,100%{opacity:0;transform:translateX(125px)}}#p11{animation:p11 27.800000000000008s linear infinite}
+@keyframes p12{0%,74.101%{opacity:0;transform:translateX(555px)}74.388%,77.158%{opacity:1}77.698%,100%{opacity:0;transform:translateX(125px)}}#p12{animation:p12 27.800000000000008s linear infinite}
+@keyframes p13{0%,82.374%{opacity:0;transform:translateX(125px)}82.662%,85.432%{opacity:1}85.971%,100%{opacity:0;transform:translateX(555px)}}#p13{animation:p13 27.800000000000008s linear infinite}
+@keyframes p14{0%,87.050%{opacity:0;transform:translateX(125px)}87.338%,90.108%{opacity:1}90.647%,100%{opacity:0;transform:translateX(555px)}}#p14{animation:p14 27.800000000000008s linear infinite}
+@keyframes p15{0%,91.727%{opacity:0;transform:translateX(125px)}92.014%,94.784%{opacity:1}95.324%,100%{opacity:0;transform:translateX(340px)}}#p15{animation:p15 27.800000000000008s linear infinite}
+@keyframes c0{0%,12.914%{opacity:1}12.950%,100%{opacity:0}}#c0{animation:c0 27.800000000000008s step-end infinite}
+@keyframes c1{0%,12.914%{opacity:0}12.950%,25.863%{opacity:1}25.899%,100%{opacity:0}}#c1{animation:c1 27.800000000000008s step-end infinite}
+@keyframes c2{0%,25.863%{opacity:0}25.899%,34.137%{opacity:1}34.173%,100%{opacity:0}}#c2{animation:c2 27.800000000000008s step-end infinite}
+@keyframes c3{0%,34.137%{opacity:0}34.173%,47.086%{opacity:1}47.122%,100%{opacity:0}}#c3{animation:c3 27.800000000000008s step-end infinite}
+@keyframes c4{0%,47.086%{opacity:0}47.122%,64.712%{opacity:1}64.748%,100%{opacity:0}}#c4{animation:c4 27.800000000000008s step-end infinite}
+@keyframes c5{0%,64.712%{opacity:0}64.748%,82.338%{opacity:1}82.374%,100%{opacity:0}}#c5{animation:c5 27.800000000000008s step-end infinite}
+@keyframes c6{0%,82.338%{opacity:0}82.374%,99.964%{opacity:1}100.000%,100%{opacity:0}}#c6{animation:c6 27.800000000000008s step-end infinite}
+</style>
+<rect x="40" y="50" width="170" height="170" rx="12" class="box"/><text class="t fg" x="125" y="76" text-anchor="middle" dominant-baseline="central">Desktop app</text><text class="s mut" x="125" y="96" text-anchor="middle" dominant-baseline="central">java.net.Socket</text>
+<rect x="255" y="50" width="170" height="170" rx="12" class="tun"/><text class="t fg" x="340" y="76" text-anchor="middle" dominant-baseline="central">adb tunnel</text><text class="s mut" x="340" y="96" text-anchor="middle" dominant-baseline="central">USB</text>
+<rect x="470" y="50" width="170" height="170" rx="12" class="box"/><text class="t fg" x="555" y="76" text-anchor="middle" dominant-baseline="central">Android app</text><text class="s mut" x="555" y="96" text-anchor="middle" dominant-baseline="central">LocalServerSocket</text>
+<line class="lane" x1="210" y1="175" x2="470" y2="175"/>
+<g id="p0" opacity="0"><rect x="-74.8" y="161" width="149.6" height="28" rx="6" fill="#888780" fill-opacity=".18" stroke="#888780" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">cat /proc/net/unix</text></g>
+<g id="p1" opacity="0"><rect x="-71.2" y="161" width="142.4" height="28" rx="6" fill="#888780" fill-opacity=".18" stroke="#888780" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">@dari_com.example</text></g>
+<g id="p2" opacity="0"><rect x="-56.800000000000004" y="161" width="113.60000000000001" height="28" rx="6" fill="#888780" fill-opacity=".18" stroke="#888780" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">forward tcp:0</text></g>
+<g id="p3" opacity="0"><rect x="-35" y="161" width="70" height="28" rx="6" fill="#888780" fill-opacity=".18" stroke="#888780" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">51234</text></g>
+<g id="p4" opacity="0"><rect x="-42.4" y="161" width="84.8" height="28" rx="6" fill="#7F77DD" fill-opacity=".18" stroke="#7F77DD" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">connect()</text></g>
+<g id="p5" opacity="0"><rect x="-60.4" y="161" width="120.8" height="28" rx="6" fill="#7F77DD" fill-opacity=".18" stroke="#7F77DD" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">ClientHello v1</text></g>
+<g id="p6" opacity="0"><rect x="-60.4" y="161" width="120.8" height="28" rx="6" fill="#1D9E75" fill-opacity=".18" stroke="#1D9E75" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">ServerHello ok</text></g>
+<g id="p7" opacity="0"><rect x="-71.2" y="161" width="142.4" height="28" rx="6" fill="#7F77DD" fill-opacity=".18" stroke="#7F77DD" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">Invoke #1 observe</text></g>
+<g id="p8" opacity="0"><rect x="-64" y="161" width="128" height="28" rx="6" fill="#1D9E75" fill-opacity=".18" stroke="#1D9E75" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">Result #1 added</text></g>
+<g id="p9" opacity="0"><rect x="-71.2" y="161" width="142.4" height="28" rx="6" fill="#1D9E75" fill-opacity=".18" stroke="#1D9E75" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">Result #1 updated</text></g>
+<g id="p10" opacity="0"><rect x="-60.4" y="161" width="120.8" height="28" rx="6" fill="#7F77DD" fill-opacity=".18" stroke="#7F77DD" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">Invoke #2 list</text></g>
+<g id="p11" opacity="0"><rect x="-64" y="161" width="128" height="28" rx="6" fill="#1D9E75" fill-opacity=".18" stroke="#1D9E75" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">Result #1 added</text></g>
+<g id="p12" opacity="0"><rect x="-42.4" y="161" width="84.8" height="28" rx="6" fill="#1D9E75" fill-opacity=".18" stroke="#1D9E75" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">Result #2</text></g>
+<g id="p13" opacity="0"><rect x="-42.4" y="161" width="84.8" height="28" rx="6" fill="#7F77DD" fill-opacity=".18" stroke="#7F77DD" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">Cancel #1</text></g>
+<g id="p14" opacity="0"><rect x="-35.2" y="161" width="70.4" height="28" rx="6" fill="#7F77DD" fill-opacity=".18" stroke="#7F77DD" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">close()</text></g>
+<g id="p15" opacity="0"><rect x="-67.6" y="161" width="135.2" height="28" rx="6" fill="#888780" fill-opacity=".18" stroke="#888780" stroke-width=".75"/><text class="s fg" x="0" y="175" text-anchor="middle" dominant-baseline="central">forward --remove</text></g>
+<g id="c0" opacity="0"><text class="t fg" x="40" y="252" dominant-baseline="central">1. Find the app</text><text class="s mut" x="40" y="274" dominant-baseline="central">adb shell cat /proc/net/unix lists dari_* sockets</text></g>
+<g id="c1" opacity="0"><text class="t fg" x="40" y="252" dominant-baseline="central">2. Open the tunnel</text><text class="s mut" x="40" y="274" dominant-baseline="central">adb forward tcp:0 localabstract:dari_&lt;applicationId&gt;</text></g>
+<g id="c2" opacity="0"><text class="t fg" x="40" y="252" dominant-baseline="central">3. Connect</text><text class="s mut" x="40" y="274" dominant-baseline="central">The app accepts only uid 2000 (adb shell) or 0 (root)</text></g>
+<g id="c3" opacity="0"><text class="t fg" x="40" y="252" dominant-baseline="central">4. Handshake</text><text class="s mut" x="40" y="274" dominant-baseline="central">Frames are a 4-byte length followed by JSON</text></g>
+<g id="c4" opacity="0"><text class="t fg" x="40" y="252" dominant-baseline="central">5. Observe</text><text class="s mut" x="40" y="274" dominant-baseline="central">One Invoke, many Results with isFinal = false</text></g>
+<g id="c5" opacity="0"><text class="t fg" x="40" y="252" dominant-baseline="central">6. Request and response</text><text class="s mut" x="40" y="274" dominant-baseline="central">Results are matched to requests by id</text></g>
+<g id="c6" opacity="0"><text class="t fg" x="40" y="252" dominant-baseline="central">7. Disconnect</text><text class="s mut" x="40" y="274" dominant-baseline="central">Cancel the stream, close, and remove the tunnel</text></g>
+</svg>

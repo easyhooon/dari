@@ -3,6 +3,8 @@ title: Desktop App
 description: Inspect bridge messages from your computer over adb
 ---
 
+import { ConnectionFlow } from '@/components/connection-flow';
+
 The Dari desktop app shows the bridge messages of a connected debug build on your computer: a live list, the request and response side by side, and foldable JSON. It needs `dari` 2.0.0 or later and works with real devices and emulators. It runs on macOS 10.15 or later and, in preview, Windows; a Linux build is planned.
 
 ## Install
@@ -111,6 +113,8 @@ There is nothing to configure: no proxy, certificate, Wi-Fi or port.
 3. The desktop app talks to `127.0.0.1:<port>`, and adb carries the data to your app.
 
 Tunnels are removed when the desktop app disconnects or quits. `adb forward --list` shows any open ones.
+
+<ConnectionFlow lang="en" />
 
 ## Privacy
 

@@ -128,6 +128,11 @@ Desktop app ──TCP──► 127.0.0.1:56778 ══ adb over USB ══► @da
 tunnels stay behind (harmless, just clutter), so it also removes every `localabstract:dari_*`
 forward when it starts and when the JVM exits. Emulators are adb devices too, so they work the same.
 
+One session end to end, from discovery to disconnect (loops; a step-through version is on the
+[Desktop App docs page](https://easyhooon.github.io/dari/docs/desktop#how-it-connects)):
+
+![Dari desktop inspector connection flow](inspector-connection-flow.svg)
+
 **Nothing to configure.** Compared with an HTTP proxy such as Charles:
 
 | | Charles | Dari |
