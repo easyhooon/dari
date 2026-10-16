@@ -90,6 +90,12 @@ elif tool == "xcrun":
         kind = "dmg" if args[-1].endswith(".dmg") else "app"
         if os.environ.get("FAIL_VALIDATE") == kind:
             sys.exit(1)
+        # FLAKY_VALIDATE=N fails the first N validate calls, like a dropped connection to Apple.
+        flaky = pathlib.Path(os.environ["TOOL_LOG"] + ".flaky-validate")
+        failures = int(flaky.read_text()) if flaky.exists() else 0
+        if failures < int(os.environ.get("FLAKY_VALIDATE", "0")):
+            flaky.write_text(str(failures + 1))
+            sys.exit(68)
     elif args[:2] == ["notarytool", "store-credentials"]:
         if os.environ.get("FAIL_AUTH") == "1":
             print("Error: HTTP status code: 401 for " + os.environ["APPLE_ID"] + " " +
@@ -233,6 +239,18 @@ class MacOSPackagingTest(unittest.TestCase):
         # Two failed attempts on the app, then one success each for the app and the DMG.
         self.assertEqual(len(staples), 4)
         self.assertTrue(staples[-1][-1].endswith(".dmg"))
+        self.assertEqual(len([path for path in self.artifacts() if path.suffix == ".dmg"]), 1)
+
+    def test_transient_validate_failures_retry_only_validate(self):
+        # 2.2.1's release run: the staple went through, then validate lost the connection.
+        result = self.run_script(FLAKY_VALIDATE="4")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        events = self.events()
+        staples = [event for event in events if event[:3] == ["xcrun", "stapler", "staple"]]
+        validates = [event for event in events if event[:3] == ["xcrun", "stapler", "validate"]]
+        # One staple each for the app and the DMG; the app's validate succeeds on its fifth try.
+        self.assertEqual(len(staples), 2)
+        self.assertEqual(len(validates), 6)
         self.assertEqual(len([path for path in self.artifacts() if path.suffix == ".dmg"]), 1)
 
     def test_staple_validation_and_gatekeeper_failures_never_publish(self):
