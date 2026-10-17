@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -57,6 +58,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -65,12 +67,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.Dari
+import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessageStatus
 import com.easyhooon.dari.export.DariExporter
 import com.easyhooon.dari.export.ExportFormat
 import com.easyhooon.dari.masking.maskedIf
-import com.easyhooon.dari.matchesHandlerQuery
+import com.easyhooon.dari.matchesFilters
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.easyhooon.dari.ui.components.MessageListItem
 import com.easyhooon.dari.ui.components.SettingsBottomSheet
@@ -78,6 +81,7 @@ import com.easyhooon.dari.ui.theme.ApplyDariSystemBars
 import com.easyhooon.dari.ui.theme.Blue500
 import com.easyhooon.dari.ui.theme.DariTheme
 import com.easyhooon.dari.ui.theme.DariTopBarColors
+import com.easyhooon.dari.ui.theme.Green500
 import com.easyhooon.dari.ui.theme.palette
 
 /**
@@ -169,6 +173,7 @@ class DariActivity : ComponentActivity() {
                 var searchQuery by rememberSaveable { mutableStateOf("") }
                 var selectedTag by rememberSaveable { mutableStateOf<String?>(null) }
                 var selectedStatus by rememberSaveable { mutableStateOf<MessageStatus?>(null) }
+                var selectedDirection by rememberSaveable { mutableStateOf<MessageDirection?>(null) }
                 var showClearDialog by rememberSaveable { mutableStateOf(false) }
                 var exportMenuExpanded by remember { mutableStateOf(false) }
                 var showSettingsSheet by rememberSaveable { mutableStateOf(false) }
@@ -190,15 +195,11 @@ class DariActivity : ComponentActivity() {
 
                 val availableTags = entries.mapNotNull { it.tag }.distinct()
 
-                val filteredEntries = entries.reversed().filter { entry ->
-                    val matchesSearch = searchQuery.isBlank() ||
-                        entry.matchesHandlerQuery(searchQuery)
-                    val matchesTag = selectedTag == null || entry.tag == selectedTag
-                    val matchesStatus = selectedStatus == null || entry.status == selectedStatus
-                    matchesSearch && matchesTag && matchesStatus
+                val filteredEntries = entries.reversed().filter {
+                    it.matchesFilters(searchQuery, selectedTag, selectedStatus, selectedDirection)
                 }
-                val hasActiveFilters =
-                    searchQuery.isNotBlank() || selectedTag != null || selectedStatus != null
+                val hasActiveFilters = searchQuery.isNotBlank() || selectedTag != null ||
+                    selectedStatus != null || selectedDirection != null
 
                 Scaffold(
                     topBar = {
@@ -370,6 +371,18 @@ class DariActivity : ComponentActivity() {
                                     selectedContent = statusPalette.onContainer,
                                 )
                             }
+                            ChipRowDivider()
+                            MessageDirection.entries.forEach { direction ->
+                                FilterChip(
+                                    label = direction.displayLabel(),
+                                    selected = selectedDirection == direction,
+                                    onClick = {
+                                        selectedDirection = if (selectedDirection == direction) null else direction
+                                    },
+                                    selectedBackground = direction.color,
+                                    selectedContent = Color.White,
+                                )
+                            }
                         }
                         if (filteredEntries.isEmpty()) {
                             Column(
@@ -500,6 +513,26 @@ private fun MessageStatus.displayLabel(): String = when (this) {
     MessageStatus.ERROR -> "Error"
 }
 
+private fun MessageDirection.displayLabel(): String = when (this) {
+    MessageDirection.WEB_TO_APP -> "Web → App"
+    MessageDirection.APP_TO_WEB -> "App → Web"
+}
+
+private val MessageDirection.color: Color
+    get() = when (this) {
+        MessageDirection.WEB_TO_APP -> Blue500
+        MessageDirection.APP_TO_WEB -> Green500
+    }
+
+@Composable
+private fun ChipRowDivider() {
+    Box(
+        modifier = Modifier
+            .size(width = 1.dp, height = 20.dp)
+            .background(MaterialTheme.colorScheme.outlineVariant),
+    )
+}
+
 @Composable
 private fun FilterChipRow(content: @Composable () -> Unit) {
     Row(
@@ -508,6 +541,7 @@ private fun FilterChipRow(content: @Composable () -> Unit) {
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         content()
     }

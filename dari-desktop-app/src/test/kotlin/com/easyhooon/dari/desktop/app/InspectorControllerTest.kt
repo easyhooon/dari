@@ -10,10 +10,16 @@ import kotlin.test.assertEquals
 class InspectorControllerTest {
     private val controller = InspectorController(CoroutineScope(Dispatchers.Unconfined), adb = null, clientVersion = "test")
 
-    private fun message(id: Long, direction: String = "WEB_TO_APP", status: String = "SUCCESS") = WireMessageSummary(
+    private fun message(
+        id: Long,
+        direction: String = "WEB_TO_APP",
+        status: String = "SUCCESS",
+        tag: String? = null,
+    ) = WireMessageSummary(
         id = id,
         handlerName = "handler$id",
         direction = direction,
+        tag = tag,
         status = status,
         requestTimestamp = id,
         requestSizeBytes = 0,
@@ -75,5 +81,16 @@ class InspectorControllerTest {
         addAll(3)
         controller.apply(ObserveEvent.Cleared)
         assertEquals(0, newerCount())
+    }
+
+    @Test
+    fun `tag filter keeps only that tag and lists tags in first-seen order`() {
+        listOf(1L to "checkout", 2L to null, 3L to "main", 4L to "checkout").forEach { (id, tag) ->
+            controller.apply(ObserveEvent.Added(message(id, tag = tag)))
+        }
+        assertEquals(listOf("checkout", "main"), controller.availableTags)
+
+        controller.tagFilter = "checkout"
+        assertEquals(listOf(4L, 1L), controller.visibleMessages().map { it.id })
     }
 }
