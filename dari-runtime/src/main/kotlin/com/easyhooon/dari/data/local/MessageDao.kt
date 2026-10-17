@@ -10,7 +10,7 @@ import com.easyhooon.dari.MessageStatus
 @Dao
 internal interface MessageDao {
 
-    @Query("SELECT * FROM messages ORDER BY requestTimestamp ASC")
+    @Query("SELECT * FROM messages ORDER BY requestTimestamp ASC, id ASC")
     suspend fun getAll(): List<MessageEntity>
 
     @Insert
@@ -35,7 +35,7 @@ internal interface MessageDao {
     )
 
     @Query(
-        "DELETE FROM messages WHERE id NOT IN (SELECT id FROM messages ORDER BY requestTimestamp DESC LIMIT :maxEntries)"
+        "DELETE FROM messages WHERE id NOT IN (SELECT id FROM messages ORDER BY requestTimestamp DESC, id DESC LIMIT :maxEntries)"
     )
     suspend fun trimOldEntries(maxEntries: Int)
 
