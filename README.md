@@ -112,6 +112,7 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
 - **Tag support** for identifying message sources in multi-WebView/Activity environments
 - **Message status tracking** — `IN_PROGRESS`, `SUCCESS`, `ERROR` with color-coded indicators
 - **Status filtering** — filter messages by status via chips
+- **Response time stats** — call count, average, min, and max duration per handler, with slow handlers highlighted
 - Chucker-style persistent notification showing recent bridge activity
 - Message list UI with search, filter by handler name, and **tag-based filtering**
 - Detail view with Overview / Request / Response tabs

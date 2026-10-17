@@ -113,6 +113,7 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
 - 여러 WebView/Activity 환경에서 메시지 출처를 구분하는 **태그 지원**
 - **메시지 상태 추적** — `IN_PROGRESS`, `SUCCESS`, `ERROR`를 색상으로 구분
 - **상태 필터링** — 칩으로 상태별 메시지 필터링
+- **응답 시간 통계** — 핸들러별 호출 수, 평균·최소·최대 응답 시간, 느린 핸들러 강조
 - 최근 브릿지 활동을 보여 주는 Chucker 스타일 상시 알림
 - 검색, 핸들러 이름 필터, **태그 기반 필터링**을 지원하는 메시지 목록 UI
 - 개요 / 요청 / 응답 탭으로 구성된 상세 화면

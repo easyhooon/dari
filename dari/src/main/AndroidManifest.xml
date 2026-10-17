@@ -27,6 +27,11 @@
             android:exported="false"
             android:taskAffinity="com.easyhooon.dari"
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity
+            android:name=".ui.DariStatsActivity"
+            android:exported="false"
+            android:taskAffinity="com.easyhooon.dari"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
         <provider
             android:name=".export.DariFileProvider"
             android:authorities="${applicationId}.dari.fileprovider"
