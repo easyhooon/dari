@@ -13,11 +13,17 @@ Chucker가 HTTP 트래픽을 가로채 보여 주듯, Dari는 웹 콘텐츠와 �
 
 📖 **[문서](https://easyhooon.github.io/dari/ko/docs)** — 설정 가이드, 구성 레퍼런스, API 문서.
 
+## 데모
+
+**📱 기기에서: 브릿지 호출 → 알림 → 메시지 상세**
+
 <p align="center">
-  <img src="screenshots/list_v2.jpeg" width="240" alt="브릿지 메시지 목록" />
-  <img src="screenshots/request_v2.jpeg" width="240" alt="요청 페이로드 상세" />
-  <img src="screenshots/notification.jpeg" width="240" alt="실시간 알림" />
+  <img src="screenshots/demo.gif" width="300" alt="Dari 데모: 브릿지 호출, 알림, 메시지 상세" />
 </p>
+
+**🖥️ 컴퓨터에서: adb로 연결하는 데스크톱 앱**
+
+https://github.com/user-attachments/assets/b7332358-953b-4391-9f68-4e547efcb9e7
 
 ## 왜 Dari인가요?
 
@@ -50,8 +56,6 @@ interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
 ## 데스크톱 앱
 
 연결된 디버그 빌드의 브릿지 메시지를 컴퓨터의 큰 화면에서 확인하세요. adb만 있으면 되고, 프록시·인증서·포트 설정이 필요 없습니다.
-
-https://github.com/user-attachments/assets/b7332358-953b-4391-9f68-4e547efcb9e7
 
 - USB로 연결한 기기나 에뮬레이터의 실시간 메시지, 요청과 응답을 나란히 표시
 - 모두 펼치기 / 모두 접기와 원클릭 복사를 지원하는 접이식 JSON, 텍스트·JSON 내보내기

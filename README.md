@@ -13,11 +13,17 @@ Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualiz
 
 📖 **[Documentation](https://easyhooon.github.io/dari)** — Setup guide, configuration reference, and API docs.
 
+## Demo
+
+**📱 On device: bridge calls → notification → message detail**
+
 <p align="center">
-  <img src="screenshots/list_v2.jpeg" width="240" alt="Bridge message list" />
-  <img src="screenshots/request_v2.jpeg" width="240" alt="Request payload detail" />
-  <img src="screenshots/notification.jpeg" width="240" alt="Live notification" />
+  <img src="screenshots/demo.gif" width="300" alt="Dari demo: bridge calls, notification, message detail" />
 </p>
+
+**🖥️ On your computer: the Desktop App over adb**
+
+https://github.com/user-attachments/assets/b7332358-953b-4391-9f68-4e547efcb9e7
 
 ## Why Dari?
 
@@ -49,8 +55,6 @@ Run the app, trigger a bridge call, and tap the Dari notification. See [Setup](#
 ## Desktop App
 
 See the bridge messages of a connected debug build on your computer, on a bigger screen. It needs only adb: no proxy, certificate or port setup.
-
-https://github.com/user-attachments/assets/b7332358-953b-4391-9f68-4e547efcb9e7
 
 - Live messages from a USB-connected device or emulator, with the request and response side by side
 - Foldable JSON with Expand all / Collapse all and one-click Copy, plus text and JSON export
