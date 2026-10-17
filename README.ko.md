@@ -13,6 +13,40 @@ Chucker가 HTTP 트래픽을 가로채 보여 주듯, Dari는 웹 콘텐츠와 �
 
 📖 **[문서](https://easyhooon.github.io/dari/ko/docs)** — 설정 가이드, 구성 레퍼런스, API 문서.
 
+<p align="center">
+  <img src="screenshots/list_v2.jpeg" width="240" alt="브릿지 메시지 목록" />
+  <img src="screenshots/request_v2.jpeg" width="240" alt="요청 페이로드 상세" />
+  <img src="screenshots/notification.jpeg" width="240" alt="실시간 알림" />
+</p>
+
+## 왜 Dari인가요?
+
+하이브리드 앱을 디버깅하다 보면 `@JavascriptInterface` 메서드마다 `Log.d`를 심고, Logcat을 스크롤하며 요청과 응답을 직접 짝지어야 합니다. Dari를 쓰면:
+
+- 모든 Web ↔ App 브릿지 호출을 한 목록에서 보고, 요청과 응답이 `requestId`로 짝지어 표시됩니다
+- JSON 페이로드 정렬 표시, 상태(`IN_PROGRESS` / `SUCCESS` / `ERROR`), 소요 시간을 확인할 수 있습니다
+- 실시간 알림과 흔들어 열기로, 테스트 중에도 탭 한 번이면 인스펙터를 열 수 있습니다
+- 릴리스 빌드에는 no-op 아티팩트를 쓰므로 프로덕션에는 아무것도 포함되지 않습니다
+
+## 빠른 시작
+
+```kotlin
+// build.gradle.kts
+debugImplementation("io.github.easyhooon:dari:<latest-version>")
+releaseImplementation("io.github.easyhooon:dari-noop:<latest-version>")
+```
+
+```kotlin
+// 브릿지 레이어에서
+val interceptor = Dari.createInterceptor()
+
+interceptor?.onWebToAppRequest(handlerName, requestId, data)
+interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
+```
+
+앱을 실행하고 브릿지 호출을 일으킨 뒤 Dari 알림을 탭하세요. App-to-Web 메시지, 태그, Protocol Buffers는 [설정](#설정)을 참고하세요.
+
+
 ## 데스크톱 앱
 
 연결된 디버그 빌드의 브릿지 메시지를 컴퓨터의 큰 화면에서 확인하세요. adb만 있으면 되고, 프록시·인증서·포트 설정이 필요 없습니다.
@@ -33,27 +67,6 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
 ```
 
 요구 사항과 문제 해결은 [데스크톱 앱 가이드](https://easyhooon.github.io/dari/ko/docs/desktop)를 참고하세요.
-
-## Star History
-
-`easyhooon/dari`의 GitHub 스타 추이입니다. 이 실시간 차트는 라이브러리 다운로드 수가 아니라 저장소 스타 수를 보여 줍니다.
-
-<a href="https://www.star-history.com/#easyhooon/dari&amp;Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=easyhooon%2Fdari&amp;type=Date&amp;theme=dark" />
-    <img alt="Dari GitHub star history" src="https://api.star-history.com/svg?repos=easyhooon%2Fdari&amp;type=Date" />
-  </picture>
-</a>
-
-## 다운로드 추이
-
-[![Scarf downloads for Dari](https://api.scarf.sh/v2/packages/Easyhooon/829e32f5-20a5-45b8-b758-fe71daf64cac/downloads-badge)](https://app.scarf.sh/packages/Easyhooon/repository-jvm/io.github.easyhooon%2Fdari)
-
-![Observed Dari rolling 30-day downloads](https://raw.githubusercontent.com/easyhooon/dari/dari-downloads-data/docs/downloads-30d-observed.svg)
-
-각 점은 단일 Maven Central 아티팩트 `io.github.easyhooon:dari`에 대한 [Scarf 공개 월간 다운로드 배지](https://api.scarf.sh/v2/packages/Easyhooon/829e32f5-20a5-45b8-b758-fe71daf64cac/downloads-badge)를 하루에 한 번 관측한 값입니다. 그날의 다운로드 수나 고유 사용자 수가 아니라 **직전 30일 누적값**입니다. 차트는 2026년 10월 13일부터 시작하며, 그 이전 값은 이 배지로 복원할 수 없습니다. 예약된 GitHub Action이 매일 공개 수치를 기록하고 SVG를 갱신합니다. 그래프에는 관측 기간과 마지막 갱신 시각이 표시됩니다.
-
-이 범위에는 `dari-core`, `dari-noop`, 플랫폼 아티팩트, Ding, 그 밖의 Easyhooon 네임스페이스가 포함되지 않습니다. 한 번의 빌드가 여러 아티팩트를 함께 받을 수 있으므로 수치를 합산해도 사용자 수 추정치가 되지 않습니다. [Scarf에 따르면](https://docs.scarf.sh/package-registry-integrations-maven-central/) Maven Central 데이터는 보통 다운로드 후 약 일주일 뒤에 반영됩니다.
 
 ## 스크린샷
 
@@ -380,6 +393,27 @@ interface DariInterceptor {
     )
 }
 ```
+
+## 프로젝트 통계
+
+### Star History
+
+`easyhooon/dari`의 GitHub 스타 추이입니다. 이 실시간 차트는 라이브러리 다운로드 수가 아니라 저장소 스타 수를 보여 줍니다.
+
+<a href="https://www.star-history.com/#easyhooon/dari&amp;Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=easyhooon%2Fdari&amp;type=Date&amp;theme=dark" />
+    <img alt="Dari GitHub star history" src="https://api.star-history.com/svg?repos=easyhooon%2Fdari&amp;type=Date" />
+  </picture>
+</a>
+
+### 다운로드 추이
+
+[![Scarf downloads for Dari](https://api.scarf.sh/v2/packages/Easyhooon/829e32f5-20a5-45b8-b758-fe71daf64cac/downloads-badge)](https://app.scarf.sh/packages/Easyhooon/repository-jvm/io.github.easyhooon%2Fdari)
+
+![Observed Dari rolling 30-day downloads](https://raw.githubusercontent.com/easyhooon/dari/dari-downloads-data/docs/downloads-30d-observed.svg)
+
+Scarf로 매일 관측한 `io.github.easyhooon:dari`의 직전 30일 Maven Central 요청 수입니다. [측정 방식](scripts/README-downloads.md)을 참고하세요.
 
 ## 후원
 
