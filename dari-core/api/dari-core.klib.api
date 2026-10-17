@@ -1,0 +1,271 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dari:dari-core>
+open annotation class com.easyhooon.dari.interceptor/ProtobufDecoderDsl : kotlin/Annotation { // com.easyhooon.dari.interceptor/ProtobufDecoderDsl|null[0]
+    constructor <init>() // com.easyhooon.dari.interceptor/ProtobufDecoderDsl.<init>|<init>(){}[0]
+}
+
+final enum class com.easyhooon.dari.interceptor/PayloadPart : kotlin/Enum<com.easyhooon.dari.interceptor/PayloadPart> { // com.easyhooon.dari.interceptor/PayloadPart|null[0]
+    enum entry REQUEST // com.easyhooon.dari.interceptor/PayloadPart.REQUEST|null[0]
+    enum entry RESPONSE // com.easyhooon.dari.interceptor/PayloadPart.RESPONSE|null[0]
+
+    final val entries // com.easyhooon.dari.interceptor/PayloadPart.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<com.easyhooon.dari.interceptor/PayloadPart> // com.easyhooon.dari.interceptor/PayloadPart.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): com.easyhooon.dari.interceptor/PayloadPart // com.easyhooon.dari.interceptor/PayloadPart.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<com.easyhooon.dari.interceptor/PayloadPart> // com.easyhooon.dari.interceptor/PayloadPart.values|values#static(){}[0]
+}
+
+final enum class com.easyhooon.dari/MessageDirection : kotlin/Enum<com.easyhooon.dari/MessageDirection> { // com.easyhooon.dari/MessageDirection|null[0]
+    enum entry APP_TO_WEB // com.easyhooon.dari/MessageDirection.APP_TO_WEB|null[0]
+    enum entry WEB_TO_APP // com.easyhooon.dari/MessageDirection.WEB_TO_APP|null[0]
+
+    final val entries // com.easyhooon.dari/MessageDirection.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<com.easyhooon.dari/MessageDirection> // com.easyhooon.dari/MessageDirection.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): com.easyhooon.dari/MessageDirection // com.easyhooon.dari/MessageDirection.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<com.easyhooon.dari/MessageDirection> // com.easyhooon.dari/MessageDirection.values|values#static(){}[0]
+}
+
+final enum class com.easyhooon.dari/MessageStatus : kotlin/Enum<com.easyhooon.dari/MessageStatus> { // com.easyhooon.dari/MessageStatus|null[0]
+    enum entry ERROR // com.easyhooon.dari/MessageStatus.ERROR|null[0]
+    enum entry IN_PROGRESS // com.easyhooon.dari/MessageStatus.IN_PROGRESS|null[0]
+    enum entry SUCCESS // com.easyhooon.dari/MessageStatus.SUCCESS|null[0]
+
+    final val entries // com.easyhooon.dari/MessageStatus.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<com.easyhooon.dari/MessageStatus> // com.easyhooon.dari/MessageStatus.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): com.easyhooon.dari/MessageStatus // com.easyhooon.dari/MessageStatus.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<com.easyhooon.dari/MessageStatus> // com.easyhooon.dari/MessageStatus.values|values#static(){}[0]
+}
+
+final enum class com.easyhooon.dari/PayloadContentType : kotlin/Enum<com.easyhooon.dari/PayloadContentType> { // com.easyhooon.dari/PayloadContentType|null[0]
+    enum entry PROTOBUF // com.easyhooon.dari/PayloadContentType.PROTOBUF|null[0]
+
+    final val entries // com.easyhooon.dari/PayloadContentType.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<com.easyhooon.dari/PayloadContentType> // com.easyhooon.dari/PayloadContentType.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): com.easyhooon.dari/PayloadContentType // com.easyhooon.dari/PayloadContentType.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<com.easyhooon.dari/PayloadContentType> // com.easyhooon.dari/PayloadContentType.values|values#static(){}[0]
+}
+
+final enum class com.easyhooon.dari/PayloadDecodeStatus : kotlin/Enum<com.easyhooon.dari/PayloadDecodeStatus> { // com.easyhooon.dari/PayloadDecodeStatus|null[0]
+    enum entry DECODED // com.easyhooon.dari/PayloadDecodeStatus.DECODED|null[0]
+    enum entry DECODER_UNAVAILABLE // com.easyhooon.dari/PayloadDecodeStatus.DECODER_UNAVAILABLE|null[0]
+    enum entry FAILED // com.easyhooon.dari/PayloadDecodeStatus.FAILED|null[0]
+
+    final val entries // com.easyhooon.dari/PayloadDecodeStatus.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<com.easyhooon.dari/PayloadDecodeStatus> // com.easyhooon.dari/PayloadDecodeStatus.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): com.easyhooon.dari/PayloadDecodeStatus // com.easyhooon.dari/PayloadDecodeStatus.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<com.easyhooon.dari/PayloadDecodeStatus> // com.easyhooon.dari/PayloadDecodeStatus.values|values#static(){}[0]
+}
+
+abstract fun interface com.easyhooon.dari.interceptor/ProtobufPayloadDecoder { // com.easyhooon.dari.interceptor/ProtobufPayloadDecoder|null[0]
+    abstract fun decode(kotlin/ByteArray, com.easyhooon.dari.interceptor/ProtobufDecodeContext): kotlin/String? // com.easyhooon.dari.interceptor/ProtobufPayloadDecoder.decode|decode(kotlin.ByteArray;com.easyhooon.dari.interceptor.ProtobufDecodeContext){}[0]
+}
+
+abstract fun interface com.easyhooon.dari/DariPayloadRedactor { // com.easyhooon.dari/DariPayloadRedactor|null[0]
+    abstract fun redact(com.easyhooon.dari/MessageEntry): com.easyhooon.dari/MessageEntry // com.easyhooon.dari/DariPayloadRedactor.redact|redact(com.easyhooon.dari.MessageEntry){}[0]
+}
+
+abstract interface com.easyhooon.dari.interceptor/DariInterceptor { // com.easyhooon.dari.interceptor/DariInterceptor|null[0]
+    open val tag // com.easyhooon.dari.interceptor/DariInterceptor.tag|{}tag[0]
+        open fun <get-tag>(): kotlin/String? // com.easyhooon.dari.interceptor/DariInterceptor.tag.<get-tag>|<get-tag>(){}[0]
+
+    abstract fun onAppToWebRequest(kotlin/String, kotlin/String?, kotlin/String?, kotlin/Boolean? = ...) // com.easyhooon.dari.interceptor/DariInterceptor.onAppToWebRequest|onAppToWebRequest(kotlin.String;kotlin.String?;kotlin.String?;kotlin.Boolean?){}[0]
+    abstract fun onAppToWebResponse(kotlin/String?, kotlin/Boolean, kotlin/String?) // com.easyhooon.dari.interceptor/DariInterceptor.onAppToWebResponse|onAppToWebResponse(kotlin.String?;kotlin.Boolean;kotlin.String?){}[0]
+    abstract fun onWebToAppRequest(kotlin/String, kotlin/String?, kotlin/String?, kotlin/Boolean? = ...) // com.easyhooon.dari.interceptor/DariInterceptor.onWebToAppRequest|onWebToAppRequest(kotlin.String;kotlin.String?;kotlin.String?;kotlin.Boolean?){}[0]
+    abstract fun onWebToAppResponse(kotlin/String, kotlin/String?, kotlin/String?, kotlin/Boolean) // com.easyhooon.dari.interceptor/DariInterceptor.onWebToAppResponse|onWebToAppResponse(kotlin.String;kotlin.String?;kotlin.String?;kotlin.Boolean){}[0]
+    open fun onAppToWebRequest(kotlin/String, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/Boolean? = ...) // com.easyhooon.dari.interceptor/DariInterceptor.onAppToWebRequest|onAppToWebRequest(kotlin.String;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.Boolean?){}[0]
+    open fun onWebToAppRequest(kotlin/String, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/Boolean? = ...) // com.easyhooon.dari.interceptor/DariInterceptor.onWebToAppRequest|onWebToAppRequest(kotlin.String;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.Boolean?){}[0]
+}
+
+abstract interface com.easyhooon.dari.interceptor/ProtobufDariInterceptor : com.easyhooon.dari.interceptor/DariInterceptor { // com.easyhooon.dari.interceptor/ProtobufDariInterceptor|null[0]
+    abstract fun onAppToWebProtobufRequest(kotlin/String, kotlin/String?, kotlin/ByteArray, kotlin/Boolean? = ...) // com.easyhooon.dari.interceptor/ProtobufDariInterceptor.onAppToWebProtobufRequest|onAppToWebProtobufRequest(kotlin.String;kotlin.String?;kotlin.ByteArray;kotlin.Boolean?){}[0]
+    abstract fun onAppToWebProtobufResponse(kotlin/String?, kotlin/Boolean, kotlin/ByteArray) // com.easyhooon.dari.interceptor/ProtobufDariInterceptor.onAppToWebProtobufResponse|onAppToWebProtobufResponse(kotlin.String?;kotlin.Boolean;kotlin.ByteArray){}[0]
+    abstract fun onWebToAppProtobufRequest(kotlin/String, kotlin/String?, kotlin/ByteArray, kotlin/Boolean? = ...) // com.easyhooon.dari.interceptor/ProtobufDariInterceptor.onWebToAppProtobufRequest|onWebToAppProtobufRequest(kotlin.String;kotlin.String?;kotlin.ByteArray;kotlin.Boolean?){}[0]
+    abstract fun onWebToAppProtobufResponse(kotlin/String, kotlin/String?, kotlin/ByteArray, kotlin/Boolean) // com.easyhooon.dari.interceptor/ProtobufDariInterceptor.onWebToAppProtobufResponse|onWebToAppProtobufResponse(kotlin.String;kotlin.String?;kotlin.ByteArray;kotlin.Boolean){}[0]
+    open fun onAppToWebProtobufRequest(kotlin/String, kotlin/String?, kotlin/String?, kotlin/ByteArray, kotlin/Boolean? = ...) // com.easyhooon.dari.interceptor/ProtobufDariInterceptor.onAppToWebProtobufRequest|onAppToWebProtobufRequest(kotlin.String;kotlin.String?;kotlin.String?;kotlin.ByteArray;kotlin.Boolean?){}[0]
+    open fun onWebToAppProtobufRequest(kotlin/String, kotlin/String?, kotlin/String?, kotlin/ByteArray, kotlin/Boolean? = ...) // com.easyhooon.dari.interceptor/ProtobufDariInterceptor.onWebToAppProtobufRequest|onWebToAppProtobufRequest(kotlin.String;kotlin.String?;kotlin.String?;kotlin.ByteArray;kotlin.Boolean?){}[0]
+}
+
+final class com.easyhooon.dari.interceptor/ProtobufDecodeContext { // com.easyhooon.dari.interceptor/ProtobufDecodeContext|null[0]
+    constructor <init>(kotlin/String, com.easyhooon.dari/MessageDirection, com.easyhooon.dari.interceptor/PayloadPart) // com.easyhooon.dari.interceptor/ProtobufDecodeContext.<init>|<init>(kotlin.String;com.easyhooon.dari.MessageDirection;com.easyhooon.dari.interceptor.PayloadPart){}[0]
+
+    final val direction // com.easyhooon.dari.interceptor/ProtobufDecodeContext.direction|{}direction[0]
+        final fun <get-direction>(): com.easyhooon.dari/MessageDirection // com.easyhooon.dari.interceptor/ProtobufDecodeContext.direction.<get-direction>|<get-direction>(){}[0]
+    final val handlerName // com.easyhooon.dari.interceptor/ProtobufDecodeContext.handlerName|{}handlerName[0]
+        final fun <get-handlerName>(): kotlin/String // com.easyhooon.dari.interceptor/ProtobufDecodeContext.handlerName.<get-handlerName>|<get-handlerName>(){}[0]
+    final val part // com.easyhooon.dari.interceptor/ProtobufDecodeContext.part|{}part[0]
+        final fun <get-part>(): com.easyhooon.dari.interceptor/PayloadPart // com.easyhooon.dari.interceptor/ProtobufDecodeContext.part.<get-part>|<get-part>(){}[0]
+
+    final fun component1(): kotlin/String // com.easyhooon.dari.interceptor/ProtobufDecodeContext.component1|component1(){}[0]
+    final fun component2(): com.easyhooon.dari/MessageDirection // com.easyhooon.dari.interceptor/ProtobufDecodeContext.component2|component2(){}[0]
+    final fun component3(): com.easyhooon.dari.interceptor/PayloadPart // com.easyhooon.dari.interceptor/ProtobufDecodeContext.component3|component3(){}[0]
+    final fun copy(kotlin/String = ..., com.easyhooon.dari/MessageDirection = ..., com.easyhooon.dari.interceptor/PayloadPart = ...): com.easyhooon.dari.interceptor/ProtobufDecodeContext // com.easyhooon.dari.interceptor/ProtobufDecodeContext.copy|copy(kotlin.String;com.easyhooon.dari.MessageDirection;com.easyhooon.dari.interceptor.PayloadPart){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.easyhooon.dari.interceptor/ProtobufDecodeContext.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.easyhooon.dari.interceptor/ProtobufDecodeContext.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.easyhooon.dari.interceptor/ProtobufDecodeContext.toString|toString(){}[0]
+}
+
+final class com.easyhooon.dari.interceptor/ProtobufDecoderRegistry { // com.easyhooon.dari.interceptor/ProtobufDecoderRegistry|null[0]
+    final fun appToWeb(kotlin/String, kotlin/Function1<com.easyhooon.dari.interceptor/ProtobufHandlerDecoders, kotlin/Unit>) // com.easyhooon.dari.interceptor/ProtobufDecoderRegistry.appToWeb|appToWeb(kotlin.String;kotlin.Function1<com.easyhooon.dari.interceptor.ProtobufHandlerDecoders,kotlin.Unit>){}[0]
+    final fun webToApp(kotlin/String, kotlin/Function1<com.easyhooon.dari.interceptor/ProtobufHandlerDecoders, kotlin/Unit>) // com.easyhooon.dari.interceptor/ProtobufDecoderRegistry.webToApp|webToApp(kotlin.String;kotlin.Function1<com.easyhooon.dari.interceptor.ProtobufHandlerDecoders,kotlin.Unit>){}[0]
+}
+
+final class com.easyhooon.dari.interceptor/ProtobufHandlerDecoders { // com.easyhooon.dari.interceptor/ProtobufHandlerDecoders|null[0]
+    final fun request(kotlin/Function1<kotlin/ByteArray, kotlin/String?>) // com.easyhooon.dari.interceptor/ProtobufHandlerDecoders.request|request(kotlin.Function1<kotlin.ByteArray,kotlin.String?>){}[0]
+    final fun response(kotlin/Function1<kotlin/ByteArray, kotlin/String?>) // com.easyhooon.dari.interceptor/ProtobufHandlerDecoders.response|response(kotlin.Function1<kotlin.ByteArray,kotlin.String?>){}[0]
+}
+
+final class com.easyhooon.dari/DariConfig { // com.easyhooon.dari/DariConfig|null[0]
+    constructor <init>(kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin.time/Duration? = ..., kotlin/Boolean = ...) // com.easyhooon.dari/DariConfig.<init>|<init>(kotlin.Int;kotlin.Boolean;kotlin.Int;kotlin.Boolean;kotlin.time.Duration?;kotlin.Boolean){}[0]
+
+    final val fireAndForget // com.easyhooon.dari/DariConfig.fireAndForget|{}fireAndForget[0]
+        final fun <get-fireAndForget>(): kotlin/Boolean // com.easyhooon.dari/DariConfig.fireAndForget.<get-fireAndForget>|<get-fireAndForget>(){}[0]
+    final val maxContentLength // com.easyhooon.dari/DariConfig.maxContentLength|{}maxContentLength[0]
+        final fun <get-maxContentLength>(): kotlin/Int // com.easyhooon.dari/DariConfig.maxContentLength.<get-maxContentLength>|<get-maxContentLength>(){}[0]
+    final val maxEntries // com.easyhooon.dari/DariConfig.maxEntries|{}maxEntries[0]
+        final fun <get-maxEntries>(): kotlin/Int // com.easyhooon.dari/DariConfig.maxEntries.<get-maxEntries>|<get-maxEntries>(){}[0]
+    final val retentionPeriod // com.easyhooon.dari/DariConfig.retentionPeriod|{}retentionPeriod[0]
+        final fun <get-retentionPeriod>(): kotlin.time/Duration? // com.easyhooon.dari/DariConfig.retentionPeriod.<get-retentionPeriod>|<get-retentionPeriod>(){}[0]
+    final val shakeToOpen // com.easyhooon.dari/DariConfig.shakeToOpen|{}shakeToOpen[0]
+        final fun <get-shakeToOpen>(): kotlin/Boolean // com.easyhooon.dari/DariConfig.shakeToOpen.<get-shakeToOpen>|<get-shakeToOpen>(){}[0]
+    final val showNotification // com.easyhooon.dari/DariConfig.showNotification|{}showNotification[0]
+        final fun <get-showNotification>(): kotlin/Boolean // com.easyhooon.dari/DariConfig.showNotification.<get-showNotification>|<get-showNotification>(){}[0]
+
+    final fun component1(): kotlin/Int // com.easyhooon.dari/DariConfig.component1|component1(){}[0]
+    final fun component2(): kotlin/Boolean // com.easyhooon.dari/DariConfig.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // com.easyhooon.dari/DariConfig.component3|component3(){}[0]
+    final fun component4(): kotlin/Boolean // com.easyhooon.dari/DariConfig.component4|component4(){}[0]
+    final fun component5(): kotlin.time/Duration? // com.easyhooon.dari/DariConfig.component5|component5(){}[0]
+    final fun component6(): kotlin/Boolean // com.easyhooon.dari/DariConfig.component6|component6(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin.time/Duration? = ..., kotlin/Boolean = ...): com.easyhooon.dari/DariConfig // com.easyhooon.dari/DariConfig.copy|copy(kotlin.Int;kotlin.Boolean;kotlin.Int;kotlin.Boolean;kotlin.time.Duration?;kotlin.Boolean){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.easyhooon.dari/DariConfig.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.easyhooon.dari/DariConfig.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.easyhooon.dari/DariConfig.toString|toString(){}[0]
+
+    final object Companion { // com.easyhooon.dari/DariConfig.Companion|null[0]
+        final const val DEFAULT_MAX_CONTENT_LENGTH // com.easyhooon.dari/DariConfig.Companion.DEFAULT_MAX_CONTENT_LENGTH|{}DEFAULT_MAX_CONTENT_LENGTH[0]
+            final fun <get-DEFAULT_MAX_CONTENT_LENGTH>(): kotlin/Int // com.easyhooon.dari/DariConfig.Companion.DEFAULT_MAX_CONTENT_LENGTH.<get-DEFAULT_MAX_CONTENT_LENGTH>|<get-DEFAULT_MAX_CONTENT_LENGTH>(){}[0]
+    }
+}
+
+final class com.easyhooon.dari/MessageEntry { // com.easyhooon.dari/MessageEntry|null[0]
+    constructor <init>(kotlin/Long = ..., kotlin/String? = ..., kotlin/String, com.easyhooon.dari/MessageDirection, kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., com.easyhooon.dari/MessageStatus = ..., kotlin/Long = ..., kotlin/Long? = ..., com.easyhooon.dari/MessagePayloadMetadata? = ..., com.easyhooon.dari/MessagePayloadMetadata? = ..., kotlin/String? = ...) // com.easyhooon.dari/MessageEntry.<init>|<init>(kotlin.Long;kotlin.String?;kotlin.String;com.easyhooon.dari.MessageDirection;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.Boolean;kotlin.Boolean;com.easyhooon.dari.MessageStatus;kotlin.Long;kotlin.Long?;com.easyhooon.dari.MessagePayloadMetadata?;com.easyhooon.dari.MessagePayloadMetadata?;kotlin.String?){}[0]
+    constructor <init>(kotlin/Long, kotlin/String?, kotlin/String, com.easyhooon.dari/MessageDirection, kotlin/String?, kotlin/String?, com.easyhooon.dari/MessageStatus, kotlin/Long, kotlin/Long?) // com.easyhooon.dari/MessageEntry.<init>|<init>(kotlin.Long;kotlin.String?;kotlin.String;com.easyhooon.dari.MessageDirection;kotlin.String?;kotlin.String?;com.easyhooon.dari.MessageStatus;kotlin.Long;kotlin.Long?){}[0]
+    constructor <init>(kotlin/Long, kotlin/String?, kotlin/String, com.easyhooon.dari/MessageDirection, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/Boolean, kotlin/Boolean, com.easyhooon.dari/MessageStatus, kotlin/Long, kotlin/Long?) // com.easyhooon.dari/MessageEntry.<init>|<init>(kotlin.Long;kotlin.String?;kotlin.String;com.easyhooon.dari.MessageDirection;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.Boolean;kotlin.Boolean;com.easyhooon.dari.MessageStatus;kotlin.Long;kotlin.Long?){}[0]
+    constructor <init>(kotlin/Long, kotlin/String?, kotlin/String, com.easyhooon.dari/MessageDirection, kotlin/String?, kotlin/String?, kotlin/String?, kotlin/Boolean, kotlin/Boolean, com.easyhooon.dari/MessageStatus, kotlin/Long, kotlin/Long?, com.easyhooon.dari/MessagePayloadMetadata?, com.easyhooon.dari/MessagePayloadMetadata?) // com.easyhooon.dari/MessageEntry.<init>|<init>(kotlin.Long;kotlin.String?;kotlin.String;com.easyhooon.dari.MessageDirection;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.Boolean;kotlin.Boolean;com.easyhooon.dari.MessageStatus;kotlin.Long;kotlin.Long?;com.easyhooon.dari.MessagePayloadMetadata?;com.easyhooon.dari.MessagePayloadMetadata?){}[0]
+
+    final val direction // com.easyhooon.dari/MessageEntry.direction|{}direction[0]
+        final fun <get-direction>(): com.easyhooon.dari/MessageDirection // com.easyhooon.dari/MessageEntry.direction.<get-direction>|<get-direction>(){}[0]
+    final val displayName // com.easyhooon.dari/MessageEntry.displayName|{}displayName[0]
+        final fun <get-displayName>(): kotlin/String? // com.easyhooon.dari/MessageEntry.displayName.<get-displayName>|<get-displayName>(){}[0]
+    final val durationMs // com.easyhooon.dari/MessageEntry.durationMs|{}durationMs[0]
+        final fun <get-durationMs>(): kotlin/Long? // com.easyhooon.dari/MessageEntry.durationMs.<get-durationMs>|<get-durationMs>(){}[0]
+    final val handlerName // com.easyhooon.dari/MessageEntry.handlerName|{}handlerName[0]
+        final fun <get-handlerName>(): kotlin/String // com.easyhooon.dari/MessageEntry.handlerName.<get-handlerName>|<get-handlerName>(){}[0]
+    final val id // com.easyhooon.dari/MessageEntry.id|{}id[0]
+        final fun <get-id>(): kotlin/Long // com.easyhooon.dari/MessageEntry.id.<get-id>|<get-id>(){}[0]
+    final val requestData // com.easyhooon.dari/MessageEntry.requestData|{}requestData[0]
+        final fun <get-requestData>(): kotlin/String? // com.easyhooon.dari/MessageEntry.requestData.<get-requestData>|<get-requestData>(){}[0]
+    final val requestDataTruncated // com.easyhooon.dari/MessageEntry.requestDataTruncated|{}requestDataTruncated[0]
+        final fun <get-requestDataTruncated>(): kotlin/Boolean // com.easyhooon.dari/MessageEntry.requestDataTruncated.<get-requestDataTruncated>|<get-requestDataTruncated>(){}[0]
+    final val requestId // com.easyhooon.dari/MessageEntry.requestId|{}requestId[0]
+        final fun <get-requestId>(): kotlin/String? // com.easyhooon.dari/MessageEntry.requestId.<get-requestId>|<get-requestId>(){}[0]
+    final val requestPayloadMetadata // com.easyhooon.dari/MessageEntry.requestPayloadMetadata|{}requestPayloadMetadata[0]
+        final fun <get-requestPayloadMetadata>(): com.easyhooon.dari/MessagePayloadMetadata? // com.easyhooon.dari/MessageEntry.requestPayloadMetadata.<get-requestPayloadMetadata>|<get-requestPayloadMetadata>(){}[0]
+    final val requestSizeBytes // com.easyhooon.dari/MessageEntry.requestSizeBytes|{}requestSizeBytes[0]
+        final fun <get-requestSizeBytes>(): kotlin/Int // com.easyhooon.dari/MessageEntry.requestSizeBytes.<get-requestSizeBytes>|<get-requestSizeBytes>(){}[0]
+    final val requestTimestamp // com.easyhooon.dari/MessageEntry.requestTimestamp|{}requestTimestamp[0]
+        final fun <get-requestTimestamp>(): kotlin/Long // com.easyhooon.dari/MessageEntry.requestTimestamp.<get-requestTimestamp>|<get-requestTimestamp>(){}[0]
+    final val responseData // com.easyhooon.dari/MessageEntry.responseData|{}responseData[0]
+        final fun <get-responseData>(): kotlin/String? // com.easyhooon.dari/MessageEntry.responseData.<get-responseData>|<get-responseData>(){}[0]
+    final val responseDataTruncated // com.easyhooon.dari/MessageEntry.responseDataTruncated|{}responseDataTruncated[0]
+        final fun <get-responseDataTruncated>(): kotlin/Boolean // com.easyhooon.dari/MessageEntry.responseDataTruncated.<get-responseDataTruncated>|<get-responseDataTruncated>(){}[0]
+    final val responsePayloadMetadata // com.easyhooon.dari/MessageEntry.responsePayloadMetadata|{}responsePayloadMetadata[0]
+        final fun <get-responsePayloadMetadata>(): com.easyhooon.dari/MessagePayloadMetadata? // com.easyhooon.dari/MessageEntry.responsePayloadMetadata.<get-responsePayloadMetadata>|<get-responsePayloadMetadata>(){}[0]
+    final val responseSizeBytes // com.easyhooon.dari/MessageEntry.responseSizeBytes|{}responseSizeBytes[0]
+        final fun <get-responseSizeBytes>(): kotlin/Int // com.easyhooon.dari/MessageEntry.responseSizeBytes.<get-responseSizeBytes>|<get-responseSizeBytes>(){}[0]
+    final val responseTimestamp // com.easyhooon.dari/MessageEntry.responseTimestamp|{}responseTimestamp[0]
+        final fun <get-responseTimestamp>(): kotlin/Long? // com.easyhooon.dari/MessageEntry.responseTimestamp.<get-responseTimestamp>|<get-responseTimestamp>(){}[0]
+    final val status // com.easyhooon.dari/MessageEntry.status|{}status[0]
+        final fun <get-status>(): com.easyhooon.dari/MessageStatus // com.easyhooon.dari/MessageEntry.status.<get-status>|<get-status>(){}[0]
+    final val tag // com.easyhooon.dari/MessageEntry.tag|{}tag[0]
+        final fun <get-tag>(): kotlin/String? // com.easyhooon.dari/MessageEntry.tag.<get-tag>|<get-tag>(){}[0]
+    final val totalSizeBytes // com.easyhooon.dari/MessageEntry.totalSizeBytes|{}totalSizeBytes[0]
+        final fun <get-totalSizeBytes>(): kotlin/Int // com.easyhooon.dari/MessageEntry.totalSizeBytes.<get-totalSizeBytes>|<get-totalSizeBytes>(){}[0]
+
+    final fun component1(): kotlin/Long // com.easyhooon.dari/MessageEntry.component1|component1(){}[0]
+    final fun component10(): com.easyhooon.dari/MessageStatus // com.easyhooon.dari/MessageEntry.component10|component10(){}[0]
+    final fun component11(): kotlin/Long // com.easyhooon.dari/MessageEntry.component11|component11(){}[0]
+    final fun component12(): kotlin/Long? // com.easyhooon.dari/MessageEntry.component12|component12(){}[0]
+    final fun component13(): com.easyhooon.dari/MessagePayloadMetadata? // com.easyhooon.dari/MessageEntry.component13|component13(){}[0]
+    final fun component14(): com.easyhooon.dari/MessagePayloadMetadata? // com.easyhooon.dari/MessageEntry.component14|component14(){}[0]
+    final fun component15(): kotlin/String? // com.easyhooon.dari/MessageEntry.component15|component15(){}[0]
+    final fun component2(): kotlin/String? // com.easyhooon.dari/MessageEntry.component2|component2(){}[0]
+    final fun component3(): kotlin/String // com.easyhooon.dari/MessageEntry.component3|component3(){}[0]
+    final fun component4(): com.easyhooon.dari/MessageDirection // com.easyhooon.dari/MessageEntry.component4|component4(){}[0]
+    final fun component5(): kotlin/String? // com.easyhooon.dari/MessageEntry.component5|component5(){}[0]
+    final fun component6(): kotlin/String? // com.easyhooon.dari/MessageEntry.component6|component6(){}[0]
+    final fun component7(): kotlin/String? // com.easyhooon.dari/MessageEntry.component7|component7(){}[0]
+    final fun component8(): kotlin/Boolean // com.easyhooon.dari/MessageEntry.component8|component8(){}[0]
+    final fun component9(): kotlin/Boolean // com.easyhooon.dari/MessageEntry.component9|component9(){}[0]
+    final fun copy(kotlin/Long = ..., kotlin/String? = ..., kotlin/String = ..., com.easyhooon.dari/MessageDirection = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., com.easyhooon.dari/MessageStatus = ..., kotlin/Long = ..., kotlin/Long? = ..., com.easyhooon.dari/MessagePayloadMetadata? = ..., com.easyhooon.dari/MessagePayloadMetadata? = ..., kotlin/String? = ...): com.easyhooon.dari/MessageEntry // com.easyhooon.dari/MessageEntry.copy|copy(kotlin.Long;kotlin.String?;kotlin.String;com.easyhooon.dari.MessageDirection;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.Boolean;kotlin.Boolean;com.easyhooon.dari.MessageStatus;kotlin.Long;kotlin.Long?;com.easyhooon.dari.MessagePayloadMetadata?;com.easyhooon.dari.MessagePayloadMetadata?;kotlin.String?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.easyhooon.dari/MessageEntry.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.easyhooon.dari/MessageEntry.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.easyhooon.dari/MessageEntry.toString|toString(){}[0]
+
+    final object Companion { // com.easyhooon.dari/MessageEntry.Companion|null[0]
+        final fun truncateIfNeeded(kotlin/String?, kotlin/Int): kotlin/Pair<kotlin/String?, kotlin/Boolean> // com.easyhooon.dari/MessageEntry.Companion.truncateIfNeeded|truncateIfNeeded(kotlin.String?;kotlin.Int){}[0]
+    }
+}
+
+final class com.easyhooon.dari/MessagePayloadMetadata { // com.easyhooon.dari/MessagePayloadMetadata|null[0]
+    constructor <init>(com.easyhooon.dari/PayloadContentType, kotlin/Int, com.easyhooon.dari/PayloadDecodeStatus, com.easyhooon.dari/RawPayloadPreview? = ...) // com.easyhooon.dari/MessagePayloadMetadata.<init>|<init>(com.easyhooon.dari.PayloadContentType;kotlin.Int;com.easyhooon.dari.PayloadDecodeStatus;com.easyhooon.dari.RawPayloadPreview?){}[0]
+
+    final val contentType // com.easyhooon.dari/MessagePayloadMetadata.contentType|{}contentType[0]
+        final fun <get-contentType>(): com.easyhooon.dari/PayloadContentType // com.easyhooon.dari/MessagePayloadMetadata.contentType.<get-contentType>|<get-contentType>(){}[0]
+    final val decodeStatus // com.easyhooon.dari/MessagePayloadMetadata.decodeStatus|{}decodeStatus[0]
+        final fun <get-decodeStatus>(): com.easyhooon.dari/PayloadDecodeStatus // com.easyhooon.dari/MessagePayloadMetadata.decodeStatus.<get-decodeStatus>|<get-decodeStatus>(){}[0]
+    final val originalSizeBytes // com.easyhooon.dari/MessagePayloadMetadata.originalSizeBytes|{}originalSizeBytes[0]
+        final fun <get-originalSizeBytes>(): kotlin/Int // com.easyhooon.dari/MessagePayloadMetadata.originalSizeBytes.<get-originalSizeBytes>|<get-originalSizeBytes>(){}[0]
+    final val rawPreview // com.easyhooon.dari/MessagePayloadMetadata.rawPreview|{}rawPreview[0]
+        final fun <get-rawPreview>(): com.easyhooon.dari/RawPayloadPreview? // com.easyhooon.dari/MessagePayloadMetadata.rawPreview.<get-rawPreview>|<get-rawPreview>(){}[0]
+
+    final fun component1(): com.easyhooon.dari/PayloadContentType // com.easyhooon.dari/MessagePayloadMetadata.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // com.easyhooon.dari/MessagePayloadMetadata.component2|component2(){}[0]
+    final fun component3(): com.easyhooon.dari/PayloadDecodeStatus // com.easyhooon.dari/MessagePayloadMetadata.component3|component3(){}[0]
+    final fun component4(): com.easyhooon.dari/RawPayloadPreview? // com.easyhooon.dari/MessagePayloadMetadata.component4|component4(){}[0]
+    final fun copy(com.easyhooon.dari/PayloadContentType = ..., kotlin/Int = ..., com.easyhooon.dari/PayloadDecodeStatus = ..., com.easyhooon.dari/RawPayloadPreview? = ...): com.easyhooon.dari/MessagePayloadMetadata // com.easyhooon.dari/MessagePayloadMetadata.copy|copy(com.easyhooon.dari.PayloadContentType;kotlin.Int;com.easyhooon.dari.PayloadDecodeStatus;com.easyhooon.dari.RawPayloadPreview?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.easyhooon.dari/MessagePayloadMetadata.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.easyhooon.dari/MessagePayloadMetadata.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.easyhooon.dari/MessagePayloadMetadata.toString|toString(){}[0]
+}
+
+final class com.easyhooon.dari/RawPayloadPreview { // com.easyhooon.dari/RawPayloadPreview|null[0]
+    constructor <init>(kotlin/String, kotlin/Int, kotlin/Boolean) // com.easyhooon.dari/RawPayloadPreview.<init>|<init>(kotlin.String;kotlin.Int;kotlin.Boolean){}[0]
+
+    final val base64 // com.easyhooon.dari/RawPayloadPreview.base64|{}base64[0]
+        final fun <get-base64>(): kotlin/String // com.easyhooon.dari/RawPayloadPreview.base64.<get-base64>|<get-base64>(){}[0]
+    final val previewSizeBytes // com.easyhooon.dari/RawPayloadPreview.previewSizeBytes|{}previewSizeBytes[0]
+        final fun <get-previewSizeBytes>(): kotlin/Int // com.easyhooon.dari/RawPayloadPreview.previewSizeBytes.<get-previewSizeBytes>|<get-previewSizeBytes>(){}[0]
+    final val truncated // com.easyhooon.dari/RawPayloadPreview.truncated|{}truncated[0]
+        final fun <get-truncated>(): kotlin/Boolean // com.easyhooon.dari/RawPayloadPreview.truncated.<get-truncated>|<get-truncated>(){}[0]
+
+    final fun component1(): kotlin/String // com.easyhooon.dari/RawPayloadPreview.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // com.easyhooon.dari/RawPayloadPreview.component2|component2(){}[0]
+    final fun component3(): kotlin/Boolean // com.easyhooon.dari/RawPayloadPreview.component3|component3(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Int = ..., kotlin/Boolean = ...): com.easyhooon.dari/RawPayloadPreview // com.easyhooon.dari/RawPayloadPreview.copy|copy(kotlin.String;kotlin.Int;kotlin.Boolean){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // com.easyhooon.dari/RawPayloadPreview.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // com.easyhooon.dari/RawPayloadPreview.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // com.easyhooon.dari/RawPayloadPreview.toString|toString(){}[0]
+}
+
+final fun com.easyhooon.dari.interceptor/protobufDecoder(kotlin/Function1<com.easyhooon.dari.interceptor/ProtobufDecoderRegistry, kotlin/Unit>): com.easyhooon.dari.interceptor/ProtobufPayloadDecoder // com.easyhooon.dari.interceptor/protobufDecoder|protobufDecoder(kotlin.Function1<com.easyhooon.dari.interceptor.ProtobufDecoderRegistry,kotlin.Unit>){}[0]

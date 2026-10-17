@@ -1,5 +1,6 @@
 import org.gradle.plugins.signing.Sign
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -19,6 +20,12 @@ tasks.withType<Sign>().configureEach {
 }
 
 kotlin {
+    // Baseline lives in api/; refresh with updateLegacyAbi after an intended API change.
+    @OptIn(ExperimentalAbiValidation::class)
+    abiValidation {
+        enabled.set(true)
+    }
+
     android {
         namespace = "com.easyhooon.dari.core"
         compileSdk = 36
@@ -37,6 +44,16 @@ kotlin {
     sourceSets {
         commonTest.dependencies {
             implementation(kotlin("test"))
+        }
+    }
+}
+
+// Isolated repo for the external consumer check in compat/android-consumer.
+publishing {
+    repositories {
+        maven {
+            name = "compat"
+            url = uri(rootProject.layout.buildDirectory.dir("compat-repo"))
         }
     }
 }
