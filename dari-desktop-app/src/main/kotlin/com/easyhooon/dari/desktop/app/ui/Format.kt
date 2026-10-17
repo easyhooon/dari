@@ -20,9 +20,11 @@ fun directionLabel(direction: String): String = when (direction) {
 
 fun durationLabel(message: WireMessageSummary): String {
     val end = message.responseTimestamp ?: return "…"
-    val ms = end - message.requestTimestamp
-    return if (ms < MILLIS_PER_SECOND) "$ms ms" else String.format(Locale.US, "%.1f s", ms / MILLIS_PER_SECOND.toDouble())
+    return formatMillis(end - message.requestTimestamp)
 }
+
+fun formatMillis(ms: Long): String =
+    if (ms < MILLIS_PER_SECOND) "$ms ms" else String.format(Locale.US, "%.1f s", ms / MILLIS_PER_SECOND.toDouble())
 
 fun formatBytes(bytes: Int): String =
     if (bytes < BYTES_PER_KB) "$bytes B" else String.format(Locale.US, "%.1f kB", bytes / BYTES_PER_KB.toDouble())

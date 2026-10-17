@@ -58,6 +58,7 @@ See the bridge messages of a connected debug build on your computer, on a bigger
 
 - Live messages from a USB-connected device or emulator, with the request and response side by side
 - Foldable JSON with Expand all / Collapse all and one-click Copy, plus text and JSON export
+- Response Time view per handler: calls, errors and avg/min/max, slowest first, with averages of 500 ms or more highlighted
 - Optional masking of tokens, passwords and cookies, applied on the device before data leaves it
 - macOS (signed and notarized, Apple Silicon and Intel), Windows, and Linux (preview), with in-app updates
 

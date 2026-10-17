@@ -25,6 +25,7 @@ import com.easyhooon.dari.desktop.app.ui.AboutWindow
 import com.easyhooon.dari.desktop.app.ui.App
 import com.easyhooon.dari.desktop.app.ui.NoticesWindow
 import com.easyhooon.dari.desktop.app.ui.SettingsWindow
+import com.easyhooon.dari.desktop.app.ui.StatsWindow
 import com.easyhooon.dari.desktop.app.ui.WindowChrome
 import com.easyhooon.dari.desktop.app.ui.appearanceLabel
 import com.easyhooon.dari.desktop.app.ui.chooseExportFile
@@ -98,6 +99,7 @@ fun main() {
         var settingsOpen by remember { mutableStateOf(false) }
         var aboutOpen by remember { mutableStateOf(false) }
         var noticesOpen by remember { mutableStateOf(false) }
+        var statsOpen by remember { mutableStateOf(false) }
         val windowState = remember { mainWindowState(settings.windowBounds) }
         LaunchedEffect(windowState) {
             // Saved as it changes, so ⌘Q and crashes keep the last bounds too.
@@ -129,6 +131,14 @@ fun main() {
         val iconPainter = remember { icon?.let { BitmapPainter(it.toComposeImageBitmap()) } }
         if (settingsOpen) SettingsWindow(settings, controller, onClose = { settingsOpen = false })
         if (noticesOpen) NoticesWindow(settings.appearance, onClose = { noticesOpen = false })
+        if (statsOpen) {
+            StatsWindow(
+                messages = controller.visibleMessages(),
+                totalCount = controller.messages.size,
+                appearance = settings.appearance,
+                onClose = { statsOpen = false },
+            )
+        }
         if (aboutOpen) {
             AboutWindow(
                 version = APP_VERSION,
@@ -181,6 +191,8 @@ fun main() {
                             controller.onMaskingChanged()
                         },
                     )
+                    Separator()
+                    Item("Response Time", onClick = { statsOpen = true })
                     Separator()
                     Item("Settings…", shortcut = shortcut(Key.Comma), onClick = { settingsOpen = true })
                 }
@@ -241,7 +253,7 @@ fun main() {
                 }
             }
             WindowChrome(settings.appearance)
-            App(controller, settings, updater, installUpdate)
+            App(controller, settings, updater, installUpdate, openStats = { statsOpen = true })
         }
     }
 }
