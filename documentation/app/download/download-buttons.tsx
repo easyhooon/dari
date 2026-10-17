@@ -6,15 +6,15 @@ import type { DownloadLang } from './download-page';
 const RELEASES_URL = 'https://github.com/easyhooon/dari/releases/latest';
 const LATEST_API = 'https://api.github.com/repos/easyhooon/dari/releases/latest';
 
-type Target = 'mac-arm64' | 'mac-x64' | 'windows';
+type Target = 'mac-arm64' | 'mac-x64' | 'windows' | 'linux';
 
 interface Installer {
   target: Target;
   label: string;
   detail: string;
   pattern: RegExp;
-  // Secondary installer linked under the button, e.g. the .msi for managed rollouts.
-  msi?: RegExp;
+  // Secondary download linked under the button: the .msi for managed rollouts, the portable tarball.
+  secondary?: { pattern: RegExp; label: 'msi' | 'tarball' };
   preview?: boolean;
 }
 
@@ -22,7 +22,22 @@ interface Installer {
 const INSTALLERS: Installer[] = [
   { target: 'mac-arm64', label: 'macOS', detail: 'Apple Silicon', pattern: /-arm64\.dmg$/ },
   { target: 'mac-x64', label: 'macOS', detail: 'Intel', pattern: /-x64\.dmg$/ },
-  { target: 'windows', label: 'Windows', detail: 'x64', pattern: /-x64\.exe$/, msi: /-x64\.msi$/, preview: true },
+  {
+    target: 'windows',
+    label: 'Windows',
+    detail: 'x64',
+    pattern: /-x64\.exe$/,
+    secondary: { pattern: /-x64\.msi$/, label: 'msi' },
+    preview: true,
+  },
+  {
+    target: 'linux',
+    label: 'Linux',
+    detail: '.deb, x64',
+    pattern: /_amd64\.deb$/,
+    secondary: { pattern: /-linux-x64\.tar\.gz$/, label: 'tarball' },
+    preview: true,
+  },
 ];
 
 interface Asset {
@@ -45,6 +60,7 @@ async function detectTarget(): Promise<Target | null> {
   const uaData = (navigator as Navigator & { userAgentData?: UserAgentData }).userAgentData;
   const ua = navigator.userAgent;
   if (/Windows/i.test(ua)) return 'windows';
+  if (/Linux/i.test(ua) && !/Android/i.test(ua)) return 'linux';
   if (!/Mac OS X|Macintosh/i.test(ua)) return null;
   // Browsers report "Intel" for every Mac; Chromium can tell the real architecture.
   try {
@@ -63,9 +79,9 @@ const strings = {
     opensReleases: 'Opens the releases page',
     finding: 'Finding the latest release…',
     releasesPage: 'Releases page',
-    comingSoon: 'Coming soon',
     allReleases: 'All releases',
     msi: 'MSI for managed installs',
+    tarball: 'Tarball for other distributions',
   },
   ko: {
     downloadFor: (name: string) => `${name}용 다운로드`,
@@ -73,9 +89,9 @@ const strings = {
     opensReleases: '릴리스 페이지로 이동',
     finding: '최신 릴리스를 찾는 중…',
     releasesPage: '릴리스 페이지',
-    comingSoon: '준비 중',
     allReleases: '모든 릴리스',
     msi: '일괄 배포용 MSI',
+    tarball: '다른 배포판용 tarball',
   },
 };
 
@@ -99,13 +115,13 @@ export function DownloadButtons({ lang }: { lang: DownloadLang }) {
 
   const find = (pattern?: RegExp) => (pattern ? release?.assets.find((asset) => pattern.test(asset.name)) : undefined);
   // Releases before 2.3.0 ship only the .msi.
-  const assetFor = (installer: Installer) => find(installer.pattern) ?? find(installer.msi);
+  const assetFor = (installer: Installer) => find(installer.pattern) ?? find(installer.secondary?.pattern);
   const checksumFor = (asset: Asset) => release?.assets.find((other) => other.name === `${asset.name}.sha256`);
 
   const primary = INSTALLERS.find((installer) => installer.target === target) ?? INSTALLERS[0];
   const others = INSTALLERS.filter((installer) => installer !== primary);
   const primaryAsset = assetFor(primary);
-  const msiAsset = find(primary.msi);
+  const secondaryAsset = find(primary.secondary?.pattern);
 
   return (
     <div className="flex w-full max-w-xl flex-col items-center gap-6">
@@ -147,10 +163,6 @@ export function DownloadButtons({ lang }: { lang: DownloadLang }) {
             </a>
           );
         })}
-        <div className="flex items-center justify-between rounded-xl border border-dashed border-gray-200 px-5 py-3 text-sm text-gray-400 dark:border-gray-800">
-          <span className="font-medium">Linux</span>
-          <span>{t.comingSoon}</span>
-        </div>
       </div>
 
       <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -162,10 +174,10 @@ export function DownloadButtons({ lang }: { lang: DownloadLang }) {
             {' · '}
           </>
         ) : null}
-        {msiAsset && msiAsset !== primaryAsset ? (
+        {primary.secondary && secondaryAsset && secondaryAsset !== primaryAsset ? (
           <>
-            <a href={msiAsset.browser_download_url} className="underline underline-offset-4">
-              {t.msi}
+            <a href={secondaryAsset.browser_download_url} className="underline underline-offset-4">
+              {t[primary.secondary.label]}
             </a>
             {' · '}
           </>

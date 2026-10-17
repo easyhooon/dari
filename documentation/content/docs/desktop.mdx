@@ -5,7 +5,7 @@ description: Inspect bridge messages from your computer over adb
 
 import { ConnectionFlow } from '@/components/connection-flow';
 
-The Dari desktop app shows the bridge messages of a connected debug build on your computer: a live list, the request and response side by side, and foldable JSON. It needs `dari` 2.0.0 or later and works with real devices and emulators. It runs on macOS 10.15 or later and, in preview, Windows; a Linux build is planned.
+The Dari desktop app shows the bridge messages of a connected debug build on your computer: a live list, the request and response side by side, and foldable JSON. It needs `dari` 2.0.0 or later and works with real devices and emulators. It runs on macOS 10.15 or later and, in preview, Windows and Linux (x64).
 
 ## Install
 
@@ -36,6 +36,17 @@ Dari is signed with a Developer ID and notarized by Apple, so it opens without a
 3. Optionally, compare `certutil -hashfile Dari-<version>-x64.exe SHA256` with the `.sha256` file from the same release.
 
 For managed rollouts (Group Policy, Intune), use `Dari-<version>-x64.msi` from the same release instead. Both install the same app and upgrade an existing install in place. Releases before 2.3.0 have only the `.msi`.
+
+### Linux (preview)
+
+On Debian 13, Ubuntu 24.04 or later, and distributions based on them:
+
+1. Download `dari_<version>_amd64.deb` from the [releases page](https://github.com/easyhooon/dari/releases).
+2. Install it with `sudo apt install ./dari_<version>_amd64.deb`. Dari appears under **Development** in the app menu and installs to `/opt/dari`.
+
+The `.deb` depends on package names introduced in Debian 13 and Ubuntu 24.04, so it doesn't install on older releases. There, and on other distributions such as Fedora or Arch, use `Dari-<version>-linux-x64.tar.gz` from the same release: it bundles its own Java runtime. Extract it and run `Dari/bin/Dari`.
+
+Optionally, compare `sha256sum <file>` with the `.sha256` file from the same release. Linux builds are x64 only, and tested so far on Debian 13 with Xfce on X11.
 
 ### Download size
 
@@ -91,6 +102,7 @@ Dari checks the releases page on launch and every six hours. When a newer versio
 
 - **macOS**: Dari downloads the new image, checks its `.sha256`, bundle ID, version and code signature, then quits and relaunches as the new version. If anything fails, the installed version is kept. This works when Dari sits in a folder you can write to, such as **Applications**; otherwise Dari tells you to move it to **Applications** and open it from there.
 - **Windows**: the button opens the download page. Quit Dari, then run the new `.exe` or `.msi`; either upgrades the installed copy. If Dari is still open, the installer stops with Error 1306 on `dari.lock`: quit Dari and click **Retry**.
+- **Linux**: the button opens the download page. Install the new `.deb` with `sudo apt install`, which upgrades the installed copy, or extract the new tarball in place of the old one.
 
 ### Versions
 
@@ -100,7 +112,7 @@ A Desktop only release never requires updating `dari` in your app.
 
 ## Connect
 
-1. Keep `adb` available. Android Studio in its default location already includes it, and Dari also checks `ANDROID_HOME`. Without Android Studio, install [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools): `brew install android-platform-tools` on macOS, or on Windows unzip it and add the `platform-tools` folder to `PATH`.
+1. Keep `adb` available. Android Studio in its default location already includes it, and Dari also checks `ANDROID_HOME`. Without Android Studio, install [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools): `brew install android-platform-tools` on macOS, `sudo apt install adb` on Debian or Ubuntu, or on Windows unzip it and add the `platform-tools` folder to `PATH`.
 2. Connect a device with USB debugging on, or start an emulator.
 3. Run a debuggable build of your app that uses `dari` and bring it to the foreground.
 
@@ -172,12 +184,13 @@ A non-debuggable build needs `ALLOW_NON_DEBUGGABLE` above as well; otherwise not
 | App is in the background | Android pauses background apps. Bring the app to the foreground and Dari reconnects. |
 | Not running Dari | Check that the app is a debuggable build using `dari` 2.0.0 or later. |
 
-To report a problem, use **Help → Report an Issue…**. It opens the bug form with your Dari version and OS filled in; **Help → Suggest a Feature…** opens the feature request form. **Help → Show Log File** opens the folder with `dari.log` (`~/Library/Logs/Dari` on macOS, `%LOCALAPPDATA%\easyhooon\Dari\logs` on Windows). The log records the version at startup, crash-report setting changes and failures, never message contents.
+To report a problem, use **Help → Report an Issue…**. It opens the bug form with your Dari version and OS filled in; **Help → Suggest a Feature…** opens the feature request form. **Help → Show Log File** opens the folder with `dari.log` (`~/Library/Logs/Dari` on macOS, `%LOCALAPPDATA%\easyhooon\Dari\logs` on Windows, `~/.local/state/dari` on Linux). The log records the version at startup, crash-report setting changes and failures, never message contents.
 
 ## Uninstall
 
 - **macOS**: quit Dari and move `/Applications/Dari.app` to the Trash. To remove its settings and log too, delete `~/Library/Logs/Dari` and `~/Library/Preferences/io.github.easyhooon.plist`.
 - **Windows**: **Settings → Apps → Installed apps → Dari → Uninstall**. Settings live in the registry under `HKEY_CURRENT_USER\Software\JavaSoft\Prefs\io\github\easyhooon`, and the log in `%LOCALAPPDATA%\easyhooon\Dari`, which uninstalling leaves behind.
+- **Linux**: `sudo apt remove dari`, or delete the extracted `Dari` folder. Settings live in `~/.java/.userPrefs/io/github/easyhooon` and the log in `~/.local/state/dari`; delete them to remove everything.
 
 ## Build from source
 

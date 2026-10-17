@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Packages the desktop app for the OS it runs on, plus a SHA-256 file for each artifact.
 #   macOS:   Developer ID signed, notarized, stapled Dari.app and arm64/x64 DMG
-#   Linux:   dari_<version>_<amd64|arm64>.deb
+#   Linux:   dari_<version>_<amd64|arm64>.deb and Dari-<version>-linux-<x64|arm64>.tar.gz
 #   Windows: Dari-<version>-x64.exe and Dari-<version>-x64.msi (unsigned; run from Git Bash)
 # Output: dari-desktop-app/build/release/
 set -euo pipefail
@@ -107,11 +107,17 @@ PY
     checksum "$name"
     ;;
   Linux)
-    ./gradlew -PskipPublicationSigning :dari-desktop-app:packageReleaseDeb
+    ./gradlew -PskipPublicationSigning :dari-desktop-app:packageReleaseDeb :dari-desktop-app:createReleaseDistributable
     deb="$(find "$binaries/deb" -name '*.deb' | head -n 1)"
     arch="$(dpkg --print-architecture)"
     name="dari_${version}_$arch.deb"
     cp "$deb" "$out/$name"
+    checksum "$name"
+    # The .deb's dependencies use Debian 13 / Ubuntu 24.04 package names; the tarball bundles its
+    # runtime and runs on other glibc distributions too.
+    [ "$arch" = "amd64" ] && arch="x64"
+    name="Dari-$version-linux-$arch.tar.gz"
+    tar -czf "$out/$name" -C "$binaries/app" Dari
     checksum "$name"
     ;;
   MINGW* | MSYS* | CYGWIN*)

@@ -340,8 +340,8 @@ connects, because the runners have no phone and nobody looks at the screen.
 
 - **macOS**: tested by hand; shipped.
 - **Windows**: ships as a preview until the hands-on checklist in #104 passes.
-- **Linux**: builds and launches in CI. A cloud attempt couldn't open a display, so it isn't
-  released until someone tests it on a desktop Linux machine.
+- **Linux**: builds and launches in CI, and was tested by hand on Debian 13 (x86_64, Xfce). See
+  [desktop-linux-test.md](desktop-linux-test.md) for the environment and what is still unverified.
 
 ## 10. Why did CodeRabbit keep hitting its rate limit?
 

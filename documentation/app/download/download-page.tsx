@@ -39,7 +39,7 @@ const copy: Record<DownloadLang, Copy> = {
     adbWindows: (
       <>
         On Windows, download {platformToolsLink}, unzip it and add the <code>platform-tools</code> folder to{' '}
-        <code>PATH</code>. Then reopen Dari.
+        <code>PATH</code>. On Debian or Ubuntu, run <code>sudo apt install adb</code>. Then reopen Dari.
       </>
     ),
     requirements: (
@@ -70,7 +70,7 @@ const copy: Record<DownloadLang, Copy> = {
     adbWindows: (
       <>
         Windows에서는 {platformToolsLink}를 내려받아 압축을 풀고 <code>platform-tools</code> 폴더를{' '}
-        <code>PATH</code>에 추가한 뒤 Dari를 다시 여세요.
+        <code>PATH</code>에 추가하고, Debian이나 Ubuntu에서는 <code>sudo apt install adb</code>를 실행한 뒤 Dari를 다시 여세요.
       </>
     ),
     requirements: (
