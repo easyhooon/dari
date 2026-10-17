@@ -20,6 +20,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        // Robolectric's SDK 36 runtime reaches jdk.internal.access, which JDK 17+ does not export.
+        unitTests.all { it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED") }
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -69,6 +75,8 @@ dependencies {
 
     // Test
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

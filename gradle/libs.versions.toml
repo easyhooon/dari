@@ -25,6 +25,8 @@ protobuf = "4.35.0"
 composeMultiplatform = "1.9.3"
 sentry = "8.58.0"
 jna = "5.17.0"
+robolectric = "4.17"
+androidxTestCore = "1.7.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -58,6 +60,8 @@ kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobuf" }
 sentry = { group = "io.sentry", name = "sentry", version.ref = "sentry" }
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

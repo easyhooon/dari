@@ -1,0 +1,47 @@
+name: Android Library
+
+on:
+  pull_request:
+    paths:
+      - "dari/**"
+      - "dari-runtime/**"
+      - "dari-noop/**"
+      - "dari-core/**"
+      - "gradle/**"
+      - "gradlew"
+      - "build.gradle.kts"
+      - ".github/workflows/android-library.yml"
+  push:
+    branches: [main]
+    paths:
+      - "dari/**"
+      - "dari-runtime/**"
+      - "dari-noop/**"
+      - "dari-core/**"
+      - "gradle/**"
+      - "gradlew"
+      - "build.gradle.kts"
+      - ".github/workflows/android-library.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Unit tests (JVM + Robolectric)
+        run: >-
+          ./gradlew
+          -PskipPublicationSigning
+          :dari:testDebugUnitTest
+          :dari-runtime:testDebugUnitTest
+          :dari-noop:testDebugUnitTest
