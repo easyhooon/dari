@@ -339,7 +339,8 @@ doesn't prove that the layout looks right, that menus and buttons work, or that 
 connects, because the runners have no phone and nobody looks at the screen.
 
 - **macOS**: tested by hand; shipped.
-- **Windows**: ships as a preview until the hands-on checklist in #104 passes.
+- **Windows**: tested by hand on Windows 10 (#104); shipped. The installers aren't code-signed, so
+  SmartScreen warns on first run.
 - **Linux**: builds and launches in CI, and was tested by hand on Debian 13 (x86_64, Xfce). See
   [desktop-linux-test.md](desktop-linux-test.md) for the environment and what is still unverified.
 

@@ -28,7 +28,6 @@ const INSTALLERS: Installer[] = [
     detail: 'x64',
     pattern: /-x64\.exe$/,
     secondary: { pattern: /-x64\.msi$/, label: 'msi' },
-    preview: true,
   },
   {
     target: 'linux',
