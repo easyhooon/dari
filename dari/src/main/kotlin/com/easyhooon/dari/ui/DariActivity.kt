@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -254,6 +255,13 @@ class DariActivity : ComponentActivity() {
                                 if (!isSearchMode) {
                                     IconButton(onClick = { isSearchMode = true }) {
                                         Icon(Icons.Default.Search, contentDescription = "Search")
+                                    }
+                                    IconButton(onClick = {
+                                        val intent = Intent(this@DariActivity, DariStatsActivity::class.java)
+                                            .putExtra(DariStatsActivity.EXTRA_TAG, selectedTag)
+                                        startActivity(intent)
+                                    }) {
+                                        Icon(Icons.Default.BarChart, contentDescription = "Response time stats")
                                     }
                                 }
                                 Box {
