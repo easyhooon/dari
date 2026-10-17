@@ -22,7 +22,7 @@ https://github.com/user-attachments/assets/b7332358-953b-4391-9f68-4e547efcb9e7
 - Live messages from a USB-connected device or emulator, with the request and response side by side
 - Foldable JSON with Expand all / Collapse all and one-click Copy, plus text and JSON export
 - Optional masking of tokens, passwords and cookies, applied on the device before data leaves it
-- macOS (signed and notarized, Apple Silicon and Intel), Windows and Linux (preview), with in-app updates
+- macOS (signed and notarized, Apple Silicon and Intel), Windows, and Linux (preview), with in-app updates
 
 Requires `dari` 2.0.0 or later in your app's debug build. Apps still on 1.x can't connect until they upgrade.
 
