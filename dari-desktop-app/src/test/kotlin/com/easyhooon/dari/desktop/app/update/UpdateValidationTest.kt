@@ -15,6 +15,15 @@ class UpdateValidationTest {
     }
 
     @Test
+    fun `accepts metadata for the 2_1_0 to 2_1_1 update`() {
+        UpdateValidation.validateMetadata(
+            BundleInfo(id, "2.1.0"),
+            BundleInfo(id, "2.1.1"),
+            SemanticVersion(2, 1, 1),
+        )
+    }
+
+    @Test
     fun `rejects another app, another version, or a downgrade`() {
         listOf(
             BundleInfo("com.example.other", "2.1.0"),

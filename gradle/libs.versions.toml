@@ -1,5 +1,7 @@
 [versions]
-dari = "2.1.0"
+dari = "2.2.1"
+# Desktop app; matches dari except after a desktop-only release (see /release).
+dariDesktop = "2.4.0"
 agp = "9.0.0"
 coreKtx = "1.13.1"
 junit = "4.13.2"
@@ -21,6 +23,8 @@ ktlintGradle = "11.6.1"
 ktlintSource = "0.50.0"
 protobuf = "4.35.0"
 composeMultiplatform = "1.9.3"
+sentry = "8.58.0"
+jna = "5.17.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -52,6 +56,8 @@ androidx-room-testing = { group = "androidx.room", name = "room-testing", versio
 kotlinx-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobuf" }
+sentry = { group = "io.sentry", name = "sentry", version.ref = "sentry" }
+jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

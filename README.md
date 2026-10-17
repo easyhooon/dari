@@ -1,6 +1,8 @@
 [![Featured in Android Weekly #748](https://androidweekly.net/issues/issue-748/badge)](https://androidweekly.net/issues/issue-748)
 # Dari
 
+**English** | [한국어](README.ko.md)
+
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.easyhooon/dari)](https://central.sonatype.com/artifact/io.github.easyhooon/dari)
 [![Documentation](https://img.shields.io/badge/docs-easyhooon.github.io%2Fdari-blue)](https://easyhooon.github.io/dari)
 [![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/easyhooon/dari?utm_source=readme&utm_medium=badge)
@@ -43,6 +45,27 @@ interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
 ```
 
 Run the app, trigger a bridge call, and tap the Dari notification. See [Setup](#setup) for App-to-Web messages, tags, and Protocol Buffers.
+
+## Desktop App
+
+See the bridge messages of a connected debug build on your computer, on a bigger screen. It needs only adb: no proxy, certificate or port setup.
+
+https://github.com/user-attachments/assets/b7332358-953b-4391-9f68-4e547efcb9e7
+
+- Live messages from a USB-connected device or emulator, with the request and response side by side
+- Foldable JSON with Expand all / Collapse all and one-click Copy, plus text and JSON export
+- Optional masking of tokens, passwords and cookies, applied on the device before data leaves it
+- macOS (signed and notarized, Apple Silicon and Intel), Windows, and Linux (preview), with in-app updates
+
+Requires `dari` 2.0.0 or later in your app's debug build. Apps still on 1.x can't connect until they upgrade.
+
+📥 **[Download](https://easyhooon.github.io/dari/download)** or install from the terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install-desktop.sh | bash
+```
+
+See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for requirements and troubleshooting.
 
 ## Screenshots
 
@@ -281,6 +304,10 @@ Dari is intended for debug and internal builds. Bridge payloads may contain
 tokens, personal data, or other sensitive values, so avoid sharing exported
 messages without reviewing them first. Use `dari-noop` in release builds to
 keep the same API surface without storing or displaying bridge messages.
+
+The desktop app sends crash reports to Sentry by default: the exception type, stack trace, and OS,
+architecture and Java versions. Exception messages, bridge messages, host names and IP addresses
+are never sent. Turn it off in Settings → Privacy → **Send crash reports**.
 
 ## API Reference
 

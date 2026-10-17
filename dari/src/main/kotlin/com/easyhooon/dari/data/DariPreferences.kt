@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.io.IOException
 
 /**
  * Persists user-toggled Dari settings so changes
@@ -45,6 +46,8 @@ internal class DariPreferences(
 
     private val _showTagChip = MutableStateFlow(true)
 
+    private val _maskingEnabled = MutableStateFlow(false)
+
     init {
         // One-shot blocking read so settings are correct for the first synchronous
         // caller (e.g. Dari.init or Compose initialValue).
@@ -54,6 +57,7 @@ internal class DariPreferences(
             _darkMode.value = snapshot[KEY_DARK_MODE]
             _jsonFoldingEnabled.value = snapshot[KEY_JSON_FOLDING_ENABLED] ?: true
             _showTagChip.value = snapshot[KEY_SHOW_TAG_CHIP] ?: true
+            _maskingEnabled.value = snapshot[KEY_MASKING_ENABLED] ?: false
         }
 
         // Keep the StateFlows in sync with any subsequent DataStore writes.
@@ -63,6 +67,7 @@ internal class DariPreferences(
                 _darkMode.value = prefs[KEY_DARK_MODE]
                 _jsonFoldingEnabled.value = prefs[KEY_JSON_FOLDING_ENABLED] ?: true
                 _showTagChip.value = prefs[KEY_SHOW_TAG_CHIP] ?: true
+                _maskingEnabled.value = prefs[KEY_MASKING_ENABLED] ?: false
             }
         }
     }
@@ -129,10 +134,29 @@ internal class DariPreferences(
 
     // endregion
 
+    // region masking
+
+    val maskingEnabled: Boolean get() = _maskingEnabled.value
+
+    fun maskingEnabledFlow(): Flow<Boolean> = _maskingEnabled.asStateFlow()
+
+    fun setMaskingEnabled(value: Boolean) {
+        scope.launch {
+            try {
+                dataStore.edit { it[KEY_MASKING_ENABLED] = value }
+            } catch (_: IOException) {
+                // Keeps the previous value; the toggle shows it again from the unchanged flow.
+            }
+        }
+    }
+
+    // endregion
+
     companion object {
         private val KEY_SHAKE_TO_OPEN = booleanPreferencesKey("shake_to_open")
         private val KEY_DARK_MODE = booleanPreferencesKey("dark_mode")
         private val KEY_JSON_FOLDING_ENABLED = booleanPreferencesKey("json_folding_enabled")
         private val KEY_SHOW_TAG_CHIP = booleanPreferencesKey("show_tag_chip")
+        private val KEY_MASKING_ENABLED = booleanPreferencesKey("masking_enabled")
     }
 }

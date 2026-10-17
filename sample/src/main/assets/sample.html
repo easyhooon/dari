@@ -101,7 +101,13 @@
     <div class="section">Expandable JSON</div>
     <button class="btn btn-green" onclick="fetchTravelItinerary()">
         View Travel Itinerary
-        <span>A polished trip response with nested days, activities, and reservations</span>
+        <span>A nested trip search request and a polished response with days, activities, and reservations</span>
+    </button>
+
+    <div class="section">Masking (Sensitive Data)</div>
+    <button class="btn btn-purple" onclick="signIn()">
+        Sign In with Sensitive Data
+        <span>Tokens, a password, card details and a Bearer header to check Mask sensitive values</span>
     </button>
 
     <div class="section">Large Payload (Truncation Test)</div>
@@ -225,6 +231,25 @@
             Android.onBridgeRequest('sendWithNullFields', id, data);
         }
 
+        function signIn() {
+            var id = createRequestId();
+            // Covers each masking rule; `pinned` and `holder` must stay visible.
+            var data = JSON.stringify({
+                username: "test_user",
+                password: "hunter2",
+                device: { pin: "1234", pinned: true },
+                headers: {
+                    Authorization: "Bearer eyJhbGciOiJIUzI1NiJ9.sample.signature",
+                    "X-Api-Key": "sk_test_sample"
+                },
+                payment: { cardNumber: "4111 1111 1111 1111", cvv: "123", holder: "Test User" },
+                redirect: "https://example.com/callback?code=abc&session_id=s-42&state=xyz",
+                meta: JSON.stringify({ refresh_token: "r-1", locale: "ko-KR" })
+            });
+            log('→ signIn (sensitive data)', 'req');
+            Android.onBridgeRequest('signIn', id, data);
+        }
+
         function fetchLargeData() {
             var id = createRequestId();
             log('→ fetchLargeData (~2MB, truncated)', 'req');
@@ -233,8 +258,27 @@
 
         function fetchTravelItinerary() {
             var id = createRequestId();
+            // A realistic search body, so the request side is foldable JSON too.
+            var data = JSON.stringify({
+                query: {
+                    destination: { city: "Jeju", country: "KR" },
+                    dates: { checkIn: "2026-07-18", checkOut: "2026-07-21", flexibleDays: 1 },
+                    travelers: [
+                        { type: "adult", count: 2 },
+                        { type: "child", count: 1, ages: [7] }
+                    ],
+                    preferences: {
+                        lodging: { type: "hotel", minRating: 4.5, amenities: ["pool", "breakfast", "ocean_view"] },
+                        transport: { rentalCar: true, seat: "window", maxLayovers: 0 },
+                        activities: ["hiking", "local_food", "museum"]
+                    },
+                    budget: { currency: "KRW", max: 1800000 }
+                },
+                locale: "ko-KR",
+                client: { platform: "android", appVersion: "1.0" }
+            });
             log('→ fetchTravelItinerary (expandable JSON)', 'req');
-            Android.onBridgeRequest('fetchTravelItinerary', id, null);
+            Android.onBridgeRequest('fetchTravelItinerary', id, data);
         }
 
         function simulateSlowResponse() {

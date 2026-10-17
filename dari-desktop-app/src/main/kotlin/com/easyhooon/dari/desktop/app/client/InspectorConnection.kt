@@ -7,9 +7,11 @@ import com.easyhooon.dari.inspector.protocol.DetailInput
 import com.easyhooon.dari.inspector.protocol.FrameReader
 import com.easyhooon.dari.inspector.protocol.FrameWriter
 import com.easyhooon.dari.inspector.protocol.InspectorError
+import com.easyhooon.dari.inspector.protocol.InspectorErrorCode
 import com.easyhooon.dari.inspector.protocol.InspectorFrame
 import com.easyhooon.dari.inspector.protocol.InspectorOperations
 import com.easyhooon.dari.inspector.protocol.InspectorProtocol
+import com.easyhooon.dari.inspector.protocol.InspectorSettings
 import com.easyhooon.dari.inspector.protocol.ListInput
 import com.easyhooon.dari.inspector.protocol.ListOutput
 import com.easyhooon.dari.inspector.protocol.ObserveEvent
@@ -30,6 +32,7 @@ import java.io.IOException
 import java.net.Socket
 import java.net.SocketTimeoutException
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.thread
 
@@ -38,16 +41,15 @@ class InspectorException(val error: InspectorError) : IOException("${error.code}
 /** One session with a Dari app. Requests are matched to results by request id. */
 class InspectorConnection private constructor(
     private val socket: Socket,
-    private val adb: Adb,
-    private val serial: String,
-    private val localPort: Int,
     val app: AppInfo,
+    private val onClose: () -> Unit,
 ) : Closeable {
     private val reader = FrameReader(socket.getInputStream())
     private val writer = FrameWriter(socket.getOutputStream())
     private val pending = ConcurrentHashMap<String, CompletableDeferred<InspectorFrame.Result>>()
     private val streams = ConcurrentHashMap<String, Channel<ObserveEvent>>()
     private val nextId = AtomicLong()
+    private val closed = AtomicBoolean()
 
     /** Completes when the app or the cable goes away. */
     val disconnected = CompletableDeferred<Unit>()
@@ -76,9 +78,20 @@ class InspectorConnection private constructor(
         await(requestId, InspectorFrame.Invoke(requestId, InspectorOperations.CLEAR))
     }
 
+    /** Masks what the app sends on this connection. Returns false when its dari predates 2.2.0, which always masks. */
+    suspend fun setMasking(enabled: Boolean): Boolean = try {
+        call(InspectorOperations.SETTINGS_UPDATE, InspectorSettings.serializer(), InspectorSettings(enabled), InspectorSettings.serializer())
+        true
+    } catch (e: InspectorException) {
+        if (e.error.code != InspectorErrorCode.OPERATION_NOT_FOUND) throw e
+        false
+    }
+
+    // Idempotent: the connect job and InspectorController.disconnect() may both close it.
     override fun close() {
+        if (!closed.compareAndSet(false, true)) return
         runCatching { socket.close() }
-        adb.removeForward(serial, localPort)
+        onClose()
     }
 
     private suspend fun <I, O> call(op: String, inputSerializer: KSerializer<I>, input: I, outputSerializer: KSerializer<O>): O {
@@ -139,13 +152,25 @@ class InspectorConnection private constructor(
         InspectorProtocol.json.decodeFromJsonElement(ObserveEvent.serializer(), element)
 
     companion object {
+        /** First library release with the desktop socket; 1.x apps never answer. */
+        const val MIN_DARI_VERSION = "2.0.0"
         private const val HANDSHAKE_TIMEOUT_MS = 5_000
         private const val REQUEST_TIMEOUT_MS = 10_000L
 
         /** Blocking: forwards the port, connects and completes the handshake. */
         fun open(adb: Adb, serial: String, applicationId: String, clientVersion: String): InspectorConnection {
             val port = adb.forward(serial, applicationId)
-            val socket = Socket("127.0.0.1", port)
+            val removeForward = { adb.removeForward(serial, port) }
+            return try {
+                handshake(Socket("127.0.0.1", port), applicationId, clientVersion, onClose = removeForward)
+            } catch (e: IOException) {
+                removeForward()
+                throw e
+            }
+        }
+
+        /** Blocking: completes the handshake on [socket]. [onClose] runs once, when the connection closes. */
+        internal fun handshake(socket: Socket, applicationId: String, clientVersion: String, onClose: () -> Unit): InspectorConnection {
             try {
                 socket.soTimeout = HANDSHAKE_TIMEOUT_MS
                 FrameWriter(socket.getOutputStream()).write(
@@ -158,15 +183,14 @@ class InspectorConnection private constructor(
                 } catch (_: SocketTimeoutException) {
                     // Android freezes cached apps: the socket accepts but nothing answers.
                     throw IOException("app is in the background")
-                } ?: throw IOException("$applicationId isn't running Dari on this device")
+                } ?: throw IOException("$applicationId isn't running Dari $MIN_DARI_VERSION+ on this device")
                 if (!hello.accepted) throw IOException("App rejected the connection: ${hello.rejection}")
                 socket.soTimeout = 0
                 // An IOException keeps the cleanup below; requireNotNull would leak the socket and forward.
                 val app = hello.app ?: throw IOException("Handshake is missing app info")
-                return InspectorConnection(socket, adb, serial, port, app)
+                return InspectorConnection(socket, app, onClose)
             } catch (e: IOException) {
                 runCatching { socket.close() }
-                adb.removeForward(serial, port)
                 throw e
             }
         }

@@ -3,7 +3,9 @@ title: 데스크톱 앱
 description: adb로 연결해 컴퓨터에서 브릿지 메시지를 확인합니다
 ---
 
-Dari 데스크톱 앱은 연결된 디버그 빌드의 브릿지 메시지를 컴퓨터 화면에서 보여 줍니다. 실시간 목록, 요청과 응답을 나란히 놓은 상세 화면, 접고 펼칠 수 있는 JSON을 제공합니다. `dari` 2.0.0 이상이 필요하고, 실기기와 에뮬레이터 모두에서 동작합니다. macOS를 지원하고 Windows는 미리보기(preview)로 제공하며, Linux 빌드는 추후 제공할 예정입니다.
+import { ConnectionFlow } from '@/components/connection-flow';
+
+Dari 데스크톱 앱은 연결된 디버그 빌드의 브릿지 메시지를 컴퓨터 화면에서 보여 줍니다. 실시간 목록, 요청과 응답을 나란히 놓은 상세 화면, 접고 펼칠 수 있는 JSON을 제공합니다. `dari` 2.0.0 이상이 필요하고, 실기기와 에뮬레이터 모두에서 동작합니다. macOS 10.15 이상과 Windows(x64)를 지원하고, Linux(x64)는 미리보기(preview)로 제공합니다.
 
 ## 설치
 
@@ -16,46 +18,100 @@ Dari 데스크톱 앱은 연결된 디버그 빌드의 브릿지 메시지를 �
 curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install-desktop.sh | bash
 ```
 
-`curl`로 받은 파일에는 macOS의 다운로드 표시가 붙지 않아서, 아래의 첫 실행 확인 없이 바로 열립니다. 대신 손상된 다운로드는 체크섬으로 걸러내므로, 이 명령은 이 페이지나 저장소에 있는 것만 사용하세요. 특정 버전을 설치하려면 `bash` 앞에 `DARI_VERSION=2.0.0`을 붙입니다.
+손상된 다운로드는 체크섬으로 걸러내므로, 이 명령은 이 페이지나 저장소에 있는 것만 사용하세요. 특정 버전을 설치하려면 `bash` 앞에 `DARI_VERSION=2.0.0`을 붙입니다.
 
 ### macOS: DMG로 설치
 
-1. [다운로드 페이지](/download)나 [릴리스 페이지](https://github.com/easyhooon/dari/releases)에서 `Dari-<version>-arm64.dmg`(Apple Silicon) 또는 `Dari-<version>-x64.dmg`(Intel)를 내려받습니다.
+1. [다운로드 페이지](/ko/download)나 [릴리스 페이지](https://github.com/easyhooon/dari/releases)에서 `Dari-<version>-arm64.dmg`(Apple Silicon) 또는 `Dari-<version>-x64.dmg`(Intel)를 내려받습니다.
 2. 이미지를 열고 **Dari**를 **응용 프로그램** 폴더로 끌어 놓습니다.
 3. 필요하면 `shasum -a 256 Dari-<version>-arm64.dmg` 결과를 같은 릴리스의 `.sha256` 파일과 비교합니다. 값이 같으면 파일이 손상되지 않았다는 뜻이며, 배포자가 누구인지까지 증명하지는 않습니다.
 
-#### 처음 실행할 때
+Dari는 Developer ID로 서명되고 Apple 공증을 받았기 때문에 보안 경고 없이 열립니다. Dari는 저장소의 릴리스 페이지에서만 내려받으세요.
 
-이 앱은 Apple Developer ID 서명이나 공증 없이 ad-hoc 서명만 되어 있습니다. 그래서 처음 실행할 때 macOS가 "Apple은 'Dari'에 악성 코드가 없음을 확인할 수 없습니다"라고 표시하며 실행을 막습니다.
+### Windows
 
-1. Dari를 한 번 열고 **완료**를 누릅니다.
-2. **시스템 설정 → 개인정보 보호 및 보안**에서 Dari 안내 옆의 **그래도 열기**를 누릅니다.
-3. 확인을 누르면 이후로는 바로 열립니다.
+1. [다운로드 페이지](/ko/download)나 [릴리스 페이지](https://github.com/easyhooon/dari/releases)에서 `Dari-<version>-x64.exe`를 내려받아 실행합니다. 현재 사용자 계정에만 설치됩니다.
+2. 설치 파일에 코드 서명이 없어서 처음 실행할 때 SmartScreen 경고가 뜰 수 있습니다. **추가 정보 → 실행**을 누릅니다.
+3. 필요하면 `certutil -hashfile Dari-<version>-x64.exe SHA256` 결과를 같은 릴리스의 `.sha256` 파일과 비교합니다.
 
-**"'Dari'은(는) 손상되었기 때문에 열 수 없습니다"** 가 뜨는 경우에는 터미널에서 아래 명령을 실행한 뒤 다시 엽니다. Dari의 다운로드 표시만 지우며, 시스템 설정은 바꾸지 않습니다.
+그룹 정책이나 Intune으로 일괄 배포할 때는 같은 릴리스의 `Dari-<version>-x64.msi`를 씁니다. 두 파일은 같은 앱을 설치하고, 이미 설치된 앱은 그 자리에서 업그레이드합니다. 2.3.0 이전 릴리스에는 `.msi`만 있습니다.
+
+### Linux (preview)
+
+Debian 13, Ubuntu 24.04 이상과 이를 기반으로 한 배포판에서:
+
+1. [릴리스 페이지](https://github.com/easyhooon/dari/releases)에서 `dari_<version>_amd64.deb`를 내려받습니다.
+2. `sudo apt install ./dari_<version>_amd64.deb`로 설치합니다. 앱 메뉴의 **Development**에 Dari가 추가되고, `/opt/dari`에 설치됩니다.
+
+`.deb`는 Debian 13과 Ubuntu 24.04에서 바뀐 패키지 이름에 의존하므로 그 이전 버전에는 설치되지 않습니다. 이전 버전이나 Fedora, Arch 같은 다른 배포판에서는 같은 릴리스의 `Dari-<version>-linux-x64.tar.gz`를 씁니다. Java 런타임이 함께 들어 있어 압축을 풀고 `Dari/bin/Dari`를 실행하면 됩니다.
+
+필요하면 `sha256sum <파일>` 결과를 같은 릴리스의 `.sha256` 파일과 비교합니다. Linux 빌드는 x64만 제공하며, 지금까지 Debian 13(Xfce, X11)에서 테스트했습니다.
+
+### 다운로드 크기
+
+2.2.0 기준으로 macOS 다운로드가 Windows보다 약 11MB 큽니다.
+
+| | Windows (`.msi`) | macOS (`.dmg`, Apple Silicon) |
+| --- | --- | --- |
+| 압축 전 | 119.3 MB | 127.1 MB |
+| 압축 방식 | `MSZIP` | `UDZO` (zlib 레벨 1) |
+| 다운로드 | 59.6 MB | 70.7 MB |
+
+Windows `.exe`는 같은 MSI를 감싼 파일이라 약 0.6MB만 더 큽니다.
+
+두 설치 파일에는 같은 앱이 들어 있습니다. jlink로 줄인 Java 런타임, 앱 jar, 그리고 Compose가 화면을 그릴 때 쓰는 Skia 네이티브 라이브러리 Skiko입니다. 압축도 둘 다 Deflate를 씁니다. Deflate는 zip과 gzip이 쓰는 알고리즘으로, LZ77로 반복되는 바이트를 줄이고 Huffman 코딩으로 한 번 더 줄입니다.
+
+- **`MSZIP`**: MSI는 파일을 CAB 아카이브에 담고, `MSZIP`은 이를 32KB 블록 단위로 Deflate 압축합니다. jpackage는 WiX의 이 기본값을 그대로 씁니다.
+- **`UDZO`**: DMG는 압축된 디스크 이미지이고, `UDZO`는 이미지를 Deflate의 얇은 래퍼인 zlib으로 압축합니다. `hdiutil`은 따로 지정하지 않으면 가장 빠르고 가장 덜 줄어드는 zlib 레벨 1을 씁니다.
+
+그래서 차이는 두 가지에서 납니다.
+
+1. **macOS의 네이티브 라이브러리가 더 큽니다.** `libskiko-macos-arm64.dylib`이 20.8MB, `libjvm.dylib`이 15.7MB입니다. Windows에서는 런타임의 `lib/modules`를 빼면 12.7MB를 넘는 파일이 없습니다. 파일별로 Deflate 압축하면 macOS 앱은 65.8MB, Windows CAB은 58.4MB입니다.
+2. **zlib 레벨 1.** 여기서 약 5MB가 더 붙습니다.
+
+macOS 쪽은 이렇게 측정합니다.
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/Dari.app
+./gradlew :dari-desktop-app:createDistributable
+cd dari-desktop-app/build/compose/binaries/main/app
+du -sh Dari.app Dari.app/Contents/runtime Dari.app/Contents/app
+hdiutil create -srcfolder Dari.app -format UDZO -imagekey zlib-level=9 Dari-level9.dmg
 ```
 
-Dari는 저장소의 릴리스 페이지에서만 내려받으세요.
+```
+121M	Dari.app
+ 66M	Dari.app/Contents/runtime
+ 54M	Dari.app/Contents/app
+```
 
-### Windows (preview)
+`du -h`는 MiB 단위라서 121M은 127MB입니다. 같은 `Dari.app`을 다른 DMG 형식으로 묶은 결과입니다.
 
-1. [릴리스 페이지](https://github.com/easyhooon/dari/releases)에서 `Dari-<version>-x64.msi`를 내려받아 실행합니다. 현재 사용자 계정에만 설치됩니다.
-2. 설치 파일에 코드 서명이 없어서 처음 실행할 때 SmartScreen 경고가 뜰 수 있습니다. **추가 정보 → 실행**을 누릅니다.
-3. 필요하면 `certutil -hashfile Dari-<version>-x64.msi SHA256` 결과를 같은 릴리스의 `.sha256` 파일과 비교합니다.
+| 형식 | 알고리즘 | 지원 macOS | 크기 | `Dari.app` 복사 시간 |
+| --- | --- | --- | --- | --- |
+| `UDZO`, 레벨 1 (`hdiutil` 기본값) | zlib (Deflate) | 모든 버전 | 70.8 MB | 2~4초 |
+| `UDZO`, 레벨 9 | zlib (Deflate) | 모든 버전 | 67.3 MB | |
+| `ULFO` (2.2.1 이후) | LZFSE: Apple이 만든 LZ77 + 유한 상태 엔트로피 코딩. 압축 해제가 빠름 | 10.11 이상 | 67.3 MB | 4~5초 |
+| `ULMO` (2.2.0) | LZMA: 큰 사전을 쓰는 LZ77 + 범위 코딩. 7-Zip, xz와 같은 방식 | 10.15 이상 | 59.5 MB | 약 15초 |
+
+복사 시간은 Apple M2에서 설치나 업데이트와 같은 방식으로, DMG를 마운트하고 `ditto`로 앱을 꺼낸 시간입니다. `ULMO`가 가장 작지만 macOS가 커널 밖에서 압축을 풀기 때문에, 설치와 인앱 업데이트가 매번 약 10초 더 걸립니다. 그래서 2.2.1부터는 몇 MB를 더 쓰는 대신 설치가 약 3배 빠른 `ULFO`를 씁니다. Dari는 macOS 10.15 이상을 지원합니다.
 
 ### 업데이트
 
 Dari는 실행할 때와 6시간마다 릴리스 페이지를 확인합니다. 새 버전이 있으면 타이틀 바에 **Update to &lt;version&gt;** 버튼이 나타나고, **Help → Install Dari &lt;version&gt;** 메뉴도 같은 동작을 합니다.
 
-- **macOS**: 새 이미지를 내려받아 `.sha256`, 번들 ID, 버전, 코드 서명을 확인한 뒤 앱을 종료하고 새 버전으로 다시 엽니다. 중간에 실패하면 설치된 버전을 그대로 둡니다. **응용 프로그램**처럼 쓰기 권한이 있는 폴더에 설치된 경우에만 동작하고, 그 외에는 버튼이 다운로드 페이지를 엽니다.
-- **Windows**: 버튼이 다운로드 페이지를 엽니다. 새 `.msi`를 실행하면 설치된 앱이 업그레이드됩니다.
+- **macOS**: 새 이미지를 내려받아 `.sha256`, 번들 ID, 버전, 코드 서명을 확인한 뒤 앱을 종료하고 새 버전으로 다시 엽니다. 중간에 실패하면 설치된 버전을 그대로 둡니다. **응용 프로그램**처럼 쓰기 권한이 있는 폴더에 설치된 경우에만 동작하고, 그 외에는 Dari를 **응용 프로그램** 폴더로 옮겨 그곳에서 열라고 안내합니다.
+- **Windows**: 버튼이 다운로드 페이지를 엽니다. Dari를 종료한 뒤 새 `.exe`나 `.msi`를 실행하면 설치된 앱이 업그레이드됩니다. Dari가 열려 있으면 설치 프로그램이 `dari.lock`에서 Error 1306으로 멈춥니다. Dari를 종료하고 **Retry**를 누르세요.
+- **Linux**: 버튼이 다운로드 페이지를 엽니다. 새 `.deb`를 `sudo apt install`로 설치하면 설치된 앱이 업그레이드되고, tarball은 새 파일을 기존 위치에 풀면 됩니다.
+
+### 버전
+
+데스크톱 앱과 라이브러리는 같은 버전 번호를 쓰지만, 데스크톱 앱만 따로 릴리스할 수 있습니다. 데스크톱 버그 수정처럼 제목에 **Desktop only**가 붙은 릴리스는 데스크톱 앱만 올리고 라이브러리는 그대로 둡니다. 그래서 그 버전은 Maven Central에 없습니다.
+
+Desktop only 릴리스 때문에 앱의 `dari`를 올릴 필요는 없습니다.
 
 ## 연결
 
-1. `adb`를 쓸 수 있게 합니다. `ANDROID_HOME`을 설정하거나 Android Studio를 기본 위치에 설치하면 됩니다.
+1. `adb`를 쓸 수 있게 합니다. Android Studio를 기본 위치에 설치했다면 이미 들어 있고, Dari는 `ANDROID_HOME`도 확인합니다. Android Studio가 없다면 [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools)를 설치합니다. macOS는 `brew install android-platform-tools`, Debian이나 Ubuntu는 `sudo apt install adb`, Windows는 압축을 푼 뒤 `platform-tools` 폴더를 `PATH`에 추가합니다.
 2. USB 디버깅을 켠 기기를 연결하거나 에뮬레이터를 실행합니다.
 3. `dari`를 쓰는 앱의 debuggable 빌드를 실행하고 화면 맨 앞에 띄웁니다.
 
@@ -73,14 +129,17 @@ Dari가 기기와 앱을 알아서 찾아 연결합니다. 기기가 여러 대�
 
 이 터널은 데스크톱 앱의 연결이 끊기거나 앱을 종료하면 정리됩니다. 열려 있는 터널은 `adb forward --list`로 확인할 수 있습니다.
 
+<ConnectionFlow lang="ko" />
+
 ## 개인정보 보호
 
 - **직접 허용하지 않는 한 디버그 빌드에서만 동작합니다.** 소켓은 debuggable 빌드, 또는 아래 매니페스트 항목을 넣은 debuggable이 아닌 내부 빌드에서만 열립니다. release 빌드에 들어가는 `dari-noop`에는 캡처 코드가 없습니다.
 - **adb만 접속할 수 있습니다.** adb(shell)와 root만 접속할 수 있어서, 기기의 다른 앱은 메시지를 읽을 수 없습니다.
-- **기본으로 가립니다.** 기기 밖으로 나가기 전에 `token`, `password`, `secret`, `cookie`, `authorization` 같은 키의 값과 `Bearer` 인증 값을 가리고, protobuf 원본 미리보기는 보내지 않습니다.
-- **내 컴퓨터의 정보는 밖으로 나가지 않습니다.** 데스크톱 앱에는 분석이나 텔레메트리가 없습니다. 네트워크 요청은 업데이트 확인뿐입니다. 실행할 때와 6시간마다 `github.com`에 요청하며, 일반 브라우저 접속과 같은 정보 외에는 보내지 않습니다. `dari.log`는 내 컴퓨터에만 남고 오류만 기록합니다.
+- **가리기는 직접 켭니다.** 기본으로는 앱 내 설정과 상관없이 캡처한 그대로 데스크톱 앱에 보냅니다. 데스크톱 앱 설정에서 **Mask sensitive values**를 켜면, 기기 밖으로 나가기 전에 `token`, `password`, `secret`, `cookie`, `authorization` 같은 키의 값과 `Bearer` 인증 값을 기기에서 가립니다. 앱 내 설정과는 따로 동작합니다. dari 2.2.0보다 오래된 버전은 항상 가립니다. 정확한 기준은 [마스킹](./masking)을 참고하세요.
+- **분석 도구는 없습니다.** 크래시 리포트 외의 네트워크 요청은 업데이트 관련 요청뿐입니다. 실행할 때와 6시간마다 `github.com`에서 업데이트를 확인하며 일반 브라우저 접속과 같은 정보 외에는 보내지 않고, 업데이트를 설치할 때 릴리스 파일과 체크섬을 내려받습니다. `dari.log`는 내 컴퓨터에만 남고, 시작 시 버전, 크래시 리포트 설정 변경, 오류만 기록하며 메시지 내용은 기록하지 않습니다.
+- **크래시 리포트는 기본으로 켜져 있습니다.** 앱이 비정상 종료되면 예외 타입, 스택 트레이스, OS·아키텍처·Java 버전을 Sentry로 보냅니다. 예외 메시지, 브릿지 메시지, 호스트 이름, IP 주소는 보내지 않습니다. 설정 → Privacy → **Send crash reports**에서 끌 수 있습니다.
 
-기본 마스킹 다음에 실행되는 규칙을 직접 추가할 수 있습니다. 규칙에서 예외가 나면 그 메시지는 보내지 않습니다.
+가리는 규칙을 직접 추가할 수 있습니다. 모든 메시지에 실행되고, 기본 마스킹이 켜져 있으면 그다음에 실행됩니다. 규칙에서 예외가 나면 그 메시지는 보내지 않습니다.
 
 ```kotlin
 Dari.setPayloadRedactor { entry ->
@@ -102,21 +161,35 @@ Dari.setDesktopInspectorEnabled(false)
     android:value="true" />
 ```
 
+## 데스크톱 전용
+
+QA에 쓰는 스테이징 빌드처럼 데스크톱 앱에서만 메시지를 보고 싶은 빌드에는 다음 항목을 넣습니다. 알림을 띄우지 않고, 흔들어도 열리지 않으며, 런처 바로가기도 지웁니다. 메시지는 그대로 캡처되고 데스크톱 앱에서 평소처럼 볼 수 있습니다.
+
+```xml
+<meta-data
+    android:name="com.easyhooon.dari.DESKTOP_ONLY"
+    android:value="true" />
+```
+
+debuggable이 아닌 빌드는 위의 `ALLOW_NON_DEBUGGABLE`도 함께 넣어야 합니다. 그렇지 않으면 메시지를 볼 곳이 없습니다.
+
 ## 문제 해결
 
 | 상태 | 해결 방법 |
 | --- | --- |
 | adb not found | `ANDROID_HOME`을 설정하거나 `platform-tools`를 `PATH`에 추가한 뒤 Dari를 다시 엽니다. |
 | No device | `adb devices`로 확인하고, 기기에 뜬 USB 디버깅 허용 창을 수락합니다. |
+| No Dari app found | `dari` 1.x를 쓰는 앱은 데스크톱 연결을 지원하지 않으므로 2.0.0 이상으로 올립니다. 기기가 앱 목록을 숨기면 applicationId를 직접 입력합니다. |
 | App is in the background | Android는 백그라운드 앱을 일시 정지합니다. 앱을 화면 맨 앞에 띄우면 Dari가 다시 연결합니다. |
 | Not running Dari | 앱이 `dari` 2.0.0 이상을 쓰는 debuggable 빌드인지 확인합니다. |
 
-문제를 알리려면 **Help → Report an Issue…**를 누릅니다. Dari 버전과 OS가 채워진 버그 양식이 열립니다. 기능 제안은 **Help → Suggest a Feature…**를 누릅니다. **Help → Show Log File**은 `dari.log`가 있는 폴더를 엽니다(macOS `~/Library/Logs/Dari`, Windows `%LOCALAPPDATA%\Dari\logs`). 로그에는 오류만 기록되고 메시지 내용은 남지 않습니다.
+문제를 알리려면 **Help → Report an Issue…**를 누릅니다. Dari 버전과 OS가 채워진 버그 양식이 열립니다. 기능 제안은 **Help → Suggest a Feature…**를 누릅니다. **Help → Show Log File**은 `dari.log`가 있는 폴더를 엽니다(macOS `~/Library/Logs/Dari`, Windows `%LOCALAPPDATA%\easyhooon\Dari\logs`, Linux `~/.local/state/dari`). 로그에는 시작 시 버전, 크래시 리포트 설정 변경, 오류만 기록되고 메시지 내용은 남지 않습니다.
 
 ## 제거
 
 - **macOS**: Dari를 종료하고 `/Applications/Dari.app`을 휴지통으로 옮깁니다. 설정과 로그까지 지우려면 `~/Library/Logs/Dari`와 `~/Library/Preferences/io.github.easyhooon.plist`를 삭제합니다.
-- **Windows**: **설정 → 앱 → 설치된 앱 → Dari → 제거**를 누릅니다. 설정은 레지스트리 `HKEY_CURRENT_USER\Software\JavaSoft\Prefs\io\github\easyhooon`에, 로그는 `%LOCALAPPDATA%\Dari`에 있습니다.
+- **Windows**: **설정 → 앱 → 설치된 앱 → Dari → 제거**를 누릅니다. 설정은 레지스트리 `HKEY_CURRENT_USER\Software\JavaSoft\Prefs\io\github\easyhooon`에, 로그는 `%LOCALAPPDATA%\easyhooon\Dari`에 있으며 제거해도 남습니다.
+- **Linux**: `sudo apt remove dari`를 실행하거나 압축을 푼 `Dari` 폴더를 삭제합니다. 설정은 `~/.java/.userPrefs/io/github/easyhooon`에, 로그는 `~/.local/state/dari`에 있으며, 모두 지우려면 함께 삭제합니다.
 
 ## 소스에서 빌드
 

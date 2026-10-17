@@ -42,5 +42,8 @@ object Dari {
     @Suppress("UNUSED_PARAMETER")
     fun setDesktopInspectorEnabled(enabled: Boolean) = Unit
 
+    @Suppress("UNUSED_PARAMETER")
+    fun setMaskingEnabled(enabled: Boolean) = Unit
+
     fun clear() = Unit
 }

@@ -25,20 +25,25 @@ import com.easyhooon.dari.desktop.app.ui.AboutWindow
 import com.easyhooon.dari.desktop.app.ui.App
 import com.easyhooon.dari.desktop.app.ui.NoticesWindow
 import com.easyhooon.dari.desktop.app.ui.SettingsWindow
+import com.easyhooon.dari.desktop.app.ui.WindowChrome
 import com.easyhooon.dari.desktop.app.ui.appearanceLabel
 import com.easyhooon.dari.desktop.app.ui.chooseExportFile
+import com.easyhooon.dari.desktop.app.ui.handleCloseWindowShortcut
+import com.easyhooon.dari.desktop.app.ui.handleSettingsWindowShortcut
 import com.easyhooon.dari.desktop.app.update.ReleaseSource
 import com.easyhooon.dari.desktop.app.update.Updater
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.withContext
 import java.awt.Desktop
+import java.awt.Dimension
 import java.awt.GraphicsEnvironment
 import java.awt.Rectangle
 import java.awt.Taskbar
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.awt.image.BufferedImage
-import java.net.URI
 import javax.imageio.ImageIO
 import javax.swing.JOptionPane
 
@@ -60,6 +65,9 @@ fun main() {
         return
     }
     AppLog.info("Dari $APP_VERSION started")
+    val desktopSettings = DesktopSettings()
+    // Before any window, so startup crashes are reported too.
+    applyCrashReporting(desktopSettings.crashReportsEnabled)
     val icon = loadAppIcon()
     // Dock icon while running unpackaged (`./gradlew run`); packaged apps use the bundle icon.
     icon?.let { image ->
@@ -70,11 +78,17 @@ fun main() {
 
     application {
         val scope = rememberCoroutineScope()
+        val settings = remember { desktopSettings }
         val controller = remember {
             // ANDROID_SERIAL picks the device first, as it does for adb itself.
-            InspectorController(scope, Adb.locate()?.let(::Adb), APP_VERSION, System.getenv("ANDROID_SERIAL"))
+            InspectorController(
+                scope,
+                Adb.locate()?.let(::Adb),
+                APP_VERSION,
+                System.getenv("ANDROID_SERIAL"),
+                maskingEnabled = { settings.maskingEnabled },
+            )
         }
-        val settings = remember { DesktopSettings() }
         val updater = remember { Updater(scope, APP_VERSION) }
         val quit = {
             controller.disconnect()
@@ -97,6 +111,10 @@ fun main() {
                     }
                 }
         }
+        LaunchedEffect(settings) {
+            snapshotFlow { settings.crashReportsEnabled }
+                .collect { enabled -> withContext(Dispatchers.IO) { applyCrashReporting(enabled) } }
+        }
         LaunchedEffect(Unit) {
             controller.start()
             updater.startPeriodicChecks()
@@ -109,7 +127,7 @@ fun main() {
             }
         }
         val iconPainter = remember { icon?.let { BitmapPainter(it.toComposeImageBitmap()) } }
-        if (settingsOpen) SettingsWindow(settings, onClose = { settingsOpen = false })
+        if (settingsOpen) SettingsWindow(settings, controller, onClose = { settingsOpen = false })
         if (noticesOpen) NoticesWindow(settings.appearance, onClose = { noticesOpen = false })
         if (aboutOpen) {
             AboutWindow(
@@ -124,10 +142,15 @@ fun main() {
 
         Window(
             onCloseRequest = quit,
+            onPreviewKeyEvent = {
+                handleSettingsWindowShortcut(it, onOpen = { settingsOpen = true }) || handleCloseWindowShortcut(it, onClose = quit)
+            },
             title = "Dari",
             icon = iconPainter,
             state = windowState,
         ) {
+            // Without a floor the window can shrink to a bare title bar (seen as 80×28), which looks like no window at all.
+            LaunchedEffect(window) { window.minimumSize = Dimension(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT) }
             if (isMacOs) {
                 // Draw content under a transparent title bar, like native macOS apps.
                 window.rootPane.putClientProperty("apple.awt.fullWindowContent", true)
@@ -150,10 +173,16 @@ fun main() {
                         onCheckedChange = settings::updateJsonFolding,
                     )
                     CheckboxItem("Show Tags", checked = settings.showTags, onCheckedChange = settings::updateShowTags)
-                    if (!isMacOs) {
-                        Separator()
-                        Item("Settings…", shortcut = shortcut(Key.Comma), onClick = { settingsOpen = true })
-                    }
+                    CheckboxItem(
+                        "Mask Sensitive Values",
+                        checked = settings.maskingEnabled,
+                        onCheckedChange = { enabled ->
+                            settings.updateMasking(enabled)
+                            controller.onMaskingChanged()
+                        },
+                    )
+                    Separator()
+                    Item("Settings…", shortcut = shortcut(Key.Comma), onClick = { settingsOpen = true })
                 }
                 Menu("Session") {
                     Item("Reconnect", shortcut = shortcut(Key.R), onClick = controller::connect)
@@ -176,6 +205,8 @@ fun main() {
                     Item("Clear Messages", shortcut = shortcut(Key.K), onClick = controller::clearMessages)
                 }
                 Menu("Window") {
+                    Item("Close Window", shortcut = shortcut(Key.W), onClick = quit)
+                    Separator()
                     Item("Minimize", shortcut = shortcut(Key.M), onClick = { windowState.isMinimized = true })
                     Item("Zoom", onClick = {
                         windowState.placement = if (windowState.placement == WindowPlacement.Maximized) {
@@ -198,9 +229,9 @@ fun main() {
                         onClick = installUpdate,
                     )
                     Separator()
-                    Item("Release Notes", onClick = { browse(ReleaseSource.pageUrl) })
-                    Item("Report an Issue…", onClick = { browse(IssueReport.newIssueUrl(APP_VERSION)) })
-                    Item("Suggest a Feature…", onClick = { browse(IssueReport.featureRequestUrl()) })
+                    Item("Release Notes", onClick = { ExternalOpener.browse(ReleaseSource.pageUrl) })
+                    Item("Report an Issue…", onClick = { ExternalOpener.browse(IssueReport.newIssueUrl(APP_VERSION)) })
+                    Item("Suggest a Feature…", onClick = { ExternalOpener.browse(IssueReport.featureRequestUrl()) })
                     Item("Show Log File", onClick = ::showLogFolder)
                     Item("Third-Party Notices", onClick = { noticesOpen = true })
                     if (!isMacOs) {
@@ -209,9 +240,16 @@ fun main() {
                     }
                 }
             }
+            WindowChrome(settings.appearance)
             App(controller, settings, updater, installUpdate)
         }
     }
+}
+
+private fun applyCrashReporting(optedIn: Boolean) {
+    val wasRunning = CrashReporting.isRunning
+    val running = CrashReporting.update(optedIn, APP_VERSION)
+    if (running != wasRunning) AppLog.info(if (running) "Crash reporting on" else "Crash reporting off")
 }
 
 private fun loadAppIcon(): BufferedImage? =
@@ -233,9 +271,7 @@ private fun mainWindowState(saved: WindowBounds?): WindowState {
 
 private fun showLogFolder() {
     AppLog.directory.mkdirs()
-    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
-        Desktop.getDesktop().open(AppLog.directory)
-    }
+    ExternalOpener.open(AppLog.directory)
 }
 
 private fun copyToClipboard(text: String) {
@@ -244,10 +280,6 @@ private fun copyToClipboard(text: String) {
 
 private const val MIN_WINDOW_WIDTH = 640
 private const val MIN_WINDOW_HEIGHT = 400
-
-private fun browse(uri: URI) {
-    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) Desktop.getDesktop().browse(uri)
-}
 
 private fun shortcut(key: Key, shift: Boolean = false) =
     if (isMacOs) KeyShortcut(key, meta = true, shift = shift) else KeyShortcut(key, ctrl = true, shift = shift)

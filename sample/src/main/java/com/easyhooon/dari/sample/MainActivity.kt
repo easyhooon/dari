@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Extra masking for the desktop app on top of the built-in one; a no-op in dari-noop.
+        // Extra masking for the desktop app, after the built-in one when that is on; a no-op in dari-noop.
         Dari.setPayloadRedactor { entry ->
             entry.copy(requestData = entry.requestData?.replace(Regex("\"userId\":\"[^\"]*\""), "\"userId\":\"***\""))
         }
@@ -130,6 +130,7 @@ class MainActivity : ComponentActivity() {
                 "requestCameraPermission" -> handleRequestCameraPermission(requestId)
                 "sendWithNullFields" -> handleSendWithNullFields(handlerName, requestId, data)
                 "fetchTravelItinerary" -> handleFetchTravelItinerary(handlerName, requestId)
+                "signIn" -> handleSignIn(handlerName, requestId)
                 "fetchLargeData" -> handleFetchLargeData(handlerName, requestId)
                 "simulateSlowResponse" -> handleSimulateSlowResponse(handlerName, requestId)
                 "simulateError" -> handleSimulateError(handlerName, requestId, data)
@@ -322,6 +323,25 @@ class MainActivity : ComponentActivity() {
         }
         interceptor?.onWebToAppResponse(handlerName, requestId, largePayload, true)
         callJs(requestId, true, """{"size":${largePayload.length},"itemCount":10000}""")
+    }
+
+    // Fake credentials so "Mask sensitive values" has something to hide.
+    private fun handleSignIn(handlerName: String, requestId: String) {
+        val response = JSONObject().apply {
+            put("accessToken", "at_sample_7f3c9a")
+            put("refreshToken", "rt_sample_2b8e1d")
+            put("expiresIn", 3600)
+            put("cookie", "SID=sample-session; HttpOnly")
+            put(
+                "profile",
+                JSONObject().apply {
+                    put("name", "Test User")
+                    put("email", "test@example.com")
+                },
+            )
+        }
+        interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(2), true)
+        callJs(requestId, true, response.toString())
     }
 
     // Keep the complete payload together so its expandable shape stays easy to inspect.

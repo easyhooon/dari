@@ -67,10 +67,11 @@ covered by `setDesktopInspectorEnabled(false)`.
 - The socket opens only in debuggable builds, or when a non-debuggable internal build opts in with
   manifest meta-data `com.easyhooon.dari.desktop.ALLOW_NON_DEBUGGABLE`. In-app capture is unaffected.
 - Only adb (uid 2000) or root may connect; no INTERNET permission.
-- Built-in masking before anything leaves the device: sensitive JSON keys at any depth (including
+- Opt-in masking (off by default since 2.2.0) before anything leaves the device: sensitive JSON keys at any depth (including
   stringified JSON), `key: value` / `key=value` text (decoded protobuf, query strings), `Bearer`/`Basic`
-  credentials. Raw protobuf previews are dropped. Masking fails closed. `Dari.setPayloadRedactor`
-  runs after it; if it throws, the message is not sent.
+  credentials. Raw protobuf previews are dropped. Masking fails closed. The desktop turns it on
+  per connection with `settings.update` from its own setting, separate from the in-app one.
+  `Dari.setPayloadRedactor` runs after it, or alone when it is off; if it throws, the message is not sent.
 - Nothing logs payloads; the server logs only rejected peer UIDs.
 
 ### Why not read logcat instead
@@ -87,7 +88,7 @@ A dependency-free option was considered: the desktop app detects devices over ad
   re-parsed from free-form text.
 - **Leaks into release builds.** `Log` calls left in the app ship in release builds, unmasked, and
   any adb client can read them. `dari-noop` contains no capture code, and the desktop channel
-  masks tokens, passwords and cookies before data leaves the device.
+  can mask tokens, passwords and cookies before data leaves the device.
 
 ## Transport
 
@@ -127,6 +128,11 @@ Desktop app ──TCP──► 127.0.0.1:56778 ══ adb over USB ══► @da
 tunnels stay behind (harmless, just clutter), so it also removes every `localabstract:dari_*`
 forward when it starts and when the JVM exits. Emulators are adb devices too, so they work the same.
 
+One session end to end, from discovery to disconnect (loops; a step-through version is on the
+[Desktop App docs page](https://easyhooon.github.io/dari/docs/desktop#how-it-connects)):
+
+![Dari desktop inspector connection flow](inspector-connection-flow.svg)
+
 **Nothing to configure.** Compared with an HTTP proxy such as Charles:
 
 | | Charles | Dari |
@@ -156,6 +162,8 @@ between JavaScript and the app, so only code inside the app can see them.
   - `messages.detail {id}` → full request/response data + payload metadata
   - `messages.observe` (stream) → `added | updated | cleared` with summaries
   - `messages.clear`
+  - `settings.update {maskingEnabled}` → applied settings, for this connection only (2.2.0+; older apps
+    answer `OPERATION_NOT_FOUND` and always mask)
 - Error codes: `INVALID_INPUT`, `OPERATION_NOT_FOUND`, `NOT_FOUND`, `PROVIDER_FAILED`. Timeouts are
   client-side; a cancelled stream simply stops sending.
 - Client order: subscribe to `observe` first, then `list`, merge by id (absorbs overlap).

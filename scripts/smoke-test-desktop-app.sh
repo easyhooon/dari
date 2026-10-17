@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launches the packaged desktop app (from createDistributable) and fails if it exits within
+# Launches the packaged desktop app (from createReleaseDistributable) and fails if it exits within
 # a few seconds. Catches startup crashes on each OS; it does not check what is drawn.
 # On a headless Linux runner, wrap it: xvfb-run scripts/smoke-test-desktop-app.sh
 set -euo pipefail
@@ -7,8 +7,10 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
-./gradlew -PskipPublicationSigning :dari-desktop-app:createDistributable
-app_dir="dari-desktop-app/build/compose/binaries/main/app"
+if [ "${1:-}" != "--skip-build" ]; then
+  ./gradlew -PskipPublicationSigning :dari-desktop-app:createReleaseDistributable
+fi
+app_dir="dari-desktop-app/build/compose/binaries/main-release/app"
 case "$(uname -s)" in
   Darwin) exe="$app_dir/Dari.app/Contents/MacOS/Dari" ;;
   Linux) exe="$(find "$app_dir" -maxdepth 3 -path '*/bin/*' -type f -perm -u+x | head -n 1)" ;;

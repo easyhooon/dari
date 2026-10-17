@@ -11,9 +11,13 @@ Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
   - Skiko (JetBrains)
   - JetBrains Runtime API, JetBrains Java Annotations (JetBrains)
   - JSpecify annotations (The JSpecify Authors)
+  - Java Native Access (JNA), used on Windows for the dark title bar
 
 BSD 3-Clause License (https://skia.org/license)
   - Skia graphics library (Google), embedded in Skiko
+
+MIT License (https://github.com/getsentry/sentry-java/blob/main/LICENSE)
+  - Sentry Java SDK (Sentry), used only for crash reports
 
 GNU General Public License v2 with the Classpath Exception
   - OpenJDK runtime. Its full license texts ship with the app in

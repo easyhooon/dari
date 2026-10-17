@@ -7,8 +7,8 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /**
- * A plain-text log users can attach to bug reports. It records crashes and failures only, never
- * message contents. One file, rotated to `dari.log.1` at 1 MB.
+ * A plain-text log users can attach to bug reports. It records the version at startup, crash-report
+ * setting changes and failures, never message contents. One file, rotated to `dari.log.1` at 1 MB.
  */
 object AppLog {
     private const val MAX_BYTES = 1L * 1024 * 1024
@@ -24,11 +24,12 @@ object AppLog {
         write("ERROR", listOfNotNull(message, trace).joinToString("\n"))
     }
 
-    /** Logs any uncaught exception before the default handling (which may end the app). */
+    /** Logs (and, when opted in, reports) any uncaught exception before the default handling, which may end the app. */
     fun installCrashHandler() {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             error("Uncaught exception on ${thread.name}", error)
+            CrashReporting.capture(thread, error)
             previous?.uncaughtException(thread, error) ?: error.printStackTrace()
         }
     }
@@ -48,7 +49,8 @@ object AppLog {
         val os = System.getProperty("os.name")
         return when {
             os.startsWith("Mac") -> File(home, "Library/Logs/Dari")
-            os.startsWith("Windows") -> File(System.getenv("LOCALAPPDATA") ?: home, "Dari/logs")
+            // Outside the install folder (%LOCALAPPDATA%\Dari), which the MSI clears on upgrade.
+            os.startsWith("Windows") -> File(System.getenv("LOCALAPPDATA") ?: home, "easyhooon/Dari/logs")
             else -> File(System.getenv("XDG_STATE_HOME") ?: "$home/.local/state", "dari")
         }
     }

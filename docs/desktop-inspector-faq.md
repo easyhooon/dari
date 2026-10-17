@@ -44,7 +44,7 @@ Two parts are native:
 - **Rendering.** Compose draws through Skia (Skiko), a native library with a binary per OS and CPU.
 - **The bundled runtime.** Each installer ships a JRE for its own OS, so users don't install Java.
 
-So the code is written once and packaged per OS: `.dmg` on macOS, `.msi` on Windows, `.deb` on
+So the code is written once and packaged per OS: `.dmg` on macOS, `.exe` and `.msi` on Windows, `.deb` on
 Linux.
 
 ### How does it compare with Electron, Tauri and native?
@@ -94,6 +94,13 @@ flowchart LR
    - Android Studio's debugger connects to the JDWP port that every debuggable app opens.
    - Dari's desktop app connects to the `dari_<applicationId>` socket that the `dari` library opens.
 
+### What is a daemon?
+
+A daemon is a background process with no terminal that stays running and serves requests; the
+trailing `d` in `adbd`, `usbmuxd` and `sshd` stands for it. Each `adb ...` command is a short-lived
+client that hands its request to the long-running adb server (a daemon on the computer), which
+passes it to `adbd` (the daemon on the phone).
+
 ### What is JDWP?
 
 JDWP (Java Debug Wire Protocol) is the protocol a debugger uses to talk to a running VM. Through it
@@ -121,7 +128,7 @@ flowchart LR
         js["JavaScript in WebView"] <-->|"bridge call"| bridge["App bridge code"]
         bridge -->|"onWebToAppRequest / ..."| icpt["DariInterceptor"]
         icpt --> repo["MessageRepository<br/>(memory + Room)"]
-        repo -->|"added / updated / cleared"| sess["InspectorSession<br/>masking + redactor"]
+        repo -->|"added / updated / cleared"| sess["InspectorSession<br/>opt-in masking + redactor"]
         sess --> srv["DariInspectorServer<br/>@dari_&lt;applicationId&gt;<br/>adb (uid 2000) only"]
         adbd["adbd"]
     end
@@ -138,7 +145,7 @@ flowchart LR
 ```
 
 1. A bridge call goes through `DariInterceptor`, and `MessageRepository` stores it and emits an event.
-2. `InspectorSession` masks the message and writes it to the `dari_<applicationId>` socket.
+2. `InspectorSession` masks the message if masking is on, runs the redactor, and writes it to the `dari_<applicationId>` socket.
 3. adb carries the bytes to the forwarded port on the computer.
 4. The desktop app shows the message. It first subscribes to `observe`, then asks for the backlog with
    `list`, then fetches bodies with `detail` when a message is selected.
@@ -200,7 +207,7 @@ need nothing extra: anything `adb devices` lists shows up in Dari.
 | Path to the device | adb server → USB or local TCP → `adbd` | The same adb server and `adbd` |
 | Endpoint inside the app | JDWP, opened by ART in debuggable builds | `dari_<applicationId>`, opened by the `dari` library in debuggable builds |
 | Tunnel | `adb forward tcp:<port> jdwp:<pid>` | `adb forward tcp:0 localabstract:dari_<applicationId>` |
-| What flows | Breakpoints, stepping and variables; Logcat lines; APK installs | Bridge messages: summaries, bodies and live events, masked before they leave |
+| What flows | Breakpoints, stepping and variables; Logcat lines; APK installs | Bridge messages: summaries, bodies and live events, optionally masked before they leave |
 | Who may connect | Anyone with adb access to the device | Only adb (uid 2000) or root, checked by the app |
 | Release builds | Not debuggable, so no JDWP | `dari-noop`, so no socket and no capture code |
 | Setup on the device | USB debugging | USB debugging; the `dari` debug dependency in the app |
@@ -262,7 +269,7 @@ The desktop app could tail `adb logcat` with no library, but:
 - logcat truncates lines at about 4 KB and drops chatty output, so large bodies arrive cut off.
 - Pairing requests with responses, status and duration would have to be re-parsed from text.
 - `Log` calls ship in release builds, unmasked, and any adb client can read them. `dari-noop` ships
-  no capture code, and the desktop channel masks secrets before data leaves the device.
+  no capture code, and the desktop channel can mask secrets before data leaves the device.
 
 ## 6. Why was the library split into two artifacts and then merged back?
 
@@ -285,7 +292,7 @@ stateDiagram-v2
 So upgrading `dari` is all it takes. `Dari.setDesktopInspectorEnabled(false)` keeps the socket closed
 for anyone who doesn't want it. Release builds still use `dari-noop`.
 
-## 7. What is ad-hoc signing, and why use it?
+## 7. How is the macOS app signed?
 
 macOS has three levels:
 
@@ -295,9 +302,9 @@ macOS has three levels:
 | Ad-hoc (`codesign --sign -`) | The files weren't altered | First launch is blocked ("can't check for malicious software"); System Settings → Privacy & Security → **Open Anyway**, once | Free |
 | Developer ID plus notarization | Who published it, and Apple scanned it | Opens normally | Apple Developer Program (yearly fee), signing secrets in CI |
 
-Dari ships ad-hoc signed DMGs, as Necto does. The audience is developers, and allowing an app once is
-a small ask. Moving to Developer ID later only changes the signing step and the CI secrets. The
-Windows MSI is unsigned, so SmartScreen shows a similar one-time **More info → Run anyway**.
+Dari 2.0.0–2.1.0 shipped ad-hoc signed DMGs. Since 2.1.1 the app and DMG are Developer ID signed and
+notarized, so they open without a prompt. The Windows MSI is still unsigned, so SmartScreen shows a
+one-time **More info → Run anyway**.
 
 ## 8. Which "server" did the stop-time race condition refer to?
 
@@ -332,9 +339,10 @@ doesn't prove that the layout looks right, that menus and buttons work, or that 
 connects, because the runners have no phone and nobody looks at the screen.
 
 - **macOS**: tested by hand; shipped.
-- **Windows**: ships as a preview until the hands-on checklist in #104 passes.
-- **Linux**: builds and launches in CI. A cloud attempt couldn't open a display, so it isn't
-  released until someone tests it on a desktop Linux machine.
+- **Windows**: tested by hand on Windows 10 (#104); shipped. The installers aren't code-signed, so
+  SmartScreen warns on first run.
+- **Linux**: builds and launches in CI, and was tested by hand on Debian 13 (x86_64, Xfce). See
+  [desktop-linux-test.md](desktop-linux-test.md) for the environment and what is still unverified.
 
 ## 10. Why did CodeRabbit keep hitting its rate limit?
 

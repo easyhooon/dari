@@ -38,8 +38,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowScope
 import com.easyhooon.dari.desktop.app.Appearance
 import com.easyhooon.dari.desktop.app.ConnectionState
+import com.easyhooon.dari.desktop.app.CrashReporting
 import com.easyhooon.dari.desktop.app.DesktopSettings
 import com.easyhooon.dari.desktop.app.InspectorController
+import com.easyhooon.dari.desktop.app.client.InspectorConnection.Companion.MIN_DARI_VERSION
 import com.easyhooon.dari.desktop.app.isMacOs
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
@@ -56,6 +58,10 @@ fun WindowScope.App(controller: InspectorController, settings: DesktopSettings, 
         Column(Modifier.fillMaxSize().background(Dari.colors.background)) {
             TitleBar(controller, updater, installUpdate)
             Divider()
+            if (CrashReporting.isAvailable && !settings.crashReportNoticeDismissed) {
+                CrashReportNotice(settings)
+                Divider()
+            }
             if (controller.adbMissing) {
                 EmptyState(
                     "adb not found",
@@ -149,6 +155,29 @@ private fun WindowScope.TitleBar(controller: InspectorController, updater: Updat
     }
 }
 
+/** Tells the user once that crash reports are on by default, with a way to turn them off. */
+@Composable
+private fun CrashReportNotice(settings: DesktopSettings) {
+    Row(
+        Modifier.fillMaxWidth().background(Dari.colors.surface).padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "Dari sends crash reports: the error type, stack trace and OS and Java versions, never messages. " +
+                "You can change this in Settings.",
+            style = Dari.type.caption,
+            color = Dari.colors.textSecondary,
+            modifier = Modifier.weight(1f),
+        )
+        QuietButton("Turn Off", onClick = {
+            settings.updateCrashReports(false)
+            settings.dismissCrashReportNotice()
+        })
+        QuietButton("OK", onClick = settings::dismissCrashReportNotice)
+    }
+}
+
 /** Shown only when there is something to act on: a newer version, progress, or a failure. */
 @Composable
 private fun UpdateStatus(updater: Updater, installUpdate: () -> Unit) {
@@ -157,8 +186,14 @@ private fun UpdateStatus(updater: Updater, installUpdate: () -> Unit) {
         is Updater.Phase.Available -> Hint("Dari ${phase.version} is available. Dari restarts to install it.") {
             AccentButton("Update", onClick = installUpdate, showDownloadIcon = true)
         }
-        is Updater.Phase.Manual -> Hint("Dari ${phase.version} is available. Opens the download page.") {
-            AccentButton("Update", onClick = updater::openDownloadPage, showDownloadIcon = true)
+        is Updater.Phase.Manual -> Hint(
+            if (phase.blocker != null) {
+                "Dari ${phase.version} is available. Move Dari to Applications to update in place."
+            } else {
+                "Dari ${phase.version} is available. Opens the download page."
+            },
+        ) {
+            AccentButton("Update", onClick = updater::installManually, showDownloadIcon = true)
         }
         is Updater.Phase.Working -> Text(phase.step, style = Dari.type.caption, color = Dari.colors.textSecondary)
         Updater.Phase.Checking -> Text("Checking for updates…", style = Dari.type.caption, color = Dari.colors.textTertiary)
@@ -278,6 +313,8 @@ private fun Workspace(controller: InspectorController, settings: DesktopSettings
                 onClose = controller::closeDetail,
                 modifier = Modifier.width(with(density) { detailWidth.coerceIn(minDetail, maxDetail).toDp() })
                     .fillMaxHeight(),
+                newerCount = controller.newerCount(visible),
+                onShowLatest = { visible.firstOrNull()?.let { controller.select(it.id) } },
             )
         }
     }
@@ -304,8 +341,11 @@ private fun statusDetails(state: ConnectionState): String = when (state) {
 
 private fun emptyHint(controller: InspectorController): Pair<String, String?> = when {
     controller.devices.isEmpty() -> "No device" to "Connect an Android device with USB debugging on."
+    controller.state == ConnectionState.Idle && controller.discoveredApps.isEmpty() ->
+        "No Dari app found" to "Open a debug build using dari $MIN_DARI_VERSION or later. If it isn't listed, type its applicationId."
     controller.state == ConnectionState.Idle -> "Not connected" to "Pick an app that uses Dari, then connect."
-    controller.state is ConnectionState.Connecting -> "Waiting for the app" to "Open the app on the device; Dari reconnects on its own."
+    controller.state is ConnectionState.Connecting ->
+        "Waiting for the app" to "Open a debug build using dari $MIN_DARI_VERSION or later; Dari reconnects on its own."
     controller.messages.isNotEmpty() -> "No matches" to "Change the filter to see more messages."
     else -> "No messages yet" to "Use a bridge in the connected app and it appears here."
 }

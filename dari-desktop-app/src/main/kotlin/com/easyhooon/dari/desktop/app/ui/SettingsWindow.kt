@@ -26,23 +26,29 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
 import com.easyhooon.dari.desktop.app.Appearance
+import com.easyhooon.dari.desktop.app.ConnectionState
+import com.easyhooon.dari.desktop.app.CrashReporting
 import com.easyhooon.dari.desktop.app.DesktopSettings
+import com.easyhooon.dari.desktop.app.InspectorController
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariTheme
 
-/** Opened from Dari → Settings… (⌘,) on macOS, or View → Settings… (Ctrl+,) elsewhere. */
+/** Opened from View → Settings… or the macOS application menu. */
 @Composable
-fun SettingsWindow(settings: DesktopSettings, onClose: () -> Unit) {
+fun SettingsWindow(settings: DesktopSettings, controller: InspectorController, onClose: () -> Unit) {
     Window(
         onCloseRequest = onClose,
+        onPreviewKeyEvent = { handleCloseWindowShortcut(it, onClose = onClose) },
         title = "Dari Settings",
         resizable = false,
         state = rememberWindowState(
             position = WindowPosition.Aligned(Alignment.Center),
             width = 380.dp,
-            height = 270.dp,
+            height = 440.dp,
         ),
     ) {
+        CloseWindowMenu(onClose)
+        WindowChrome(settings.appearance)
         DariTheme(settings.appearance) {
             Column(
                 Modifier.fillMaxSize().background(Dari.colors.background).padding(20.dp),
@@ -69,6 +75,37 @@ fun SettingsWindow(settings: DesktopSettings, onClose: () -> Unit) {
                     selected = settings.showTags,
                     checkbox = true,
                     onClick = { settings.updateShowTags(!settings.showTags) },
+                )
+                OptionRow(
+                    label = "Mask sensitive values",
+                    selected = settings.maskingEnabled,
+                    checkbox = true,
+                    onClick = {
+                        settings.updateMasking(!settings.maskingEnabled)
+                        controller.onMaskingChanged()
+                    },
+                )
+                val note = if (controller.state is ConnectionState.Connected && controller.appAlwaysMasks) {
+                    "The connected app uses dari older than 2.2.0, which always masks."
+                } else {
+                    "Hides tokens, passwords and cookies before they leave the device."
+                }
+                Text(note, style = Dari.type.caption, color = Dari.colors.textSecondary)
+                SectionTitle("Privacy", Modifier.padding(top = 12.dp))
+                OptionRow(
+                    label = "Send crash reports",
+                    selected = settings.crashReportsEnabled,
+                    checkbox = true,
+                    onClick = { settings.updateCrashReports(!settings.crashReportsEnabled) },
+                )
+                Text(
+                    if (CrashReporting.isAvailable) {
+                        "Sends only the error type, stack trace and OS and Java versions, never messages."
+                    } else {
+                        "Not available in this build."
+                    },
+                    style = Dari.type.caption,
+                    color = Dari.colors.textSecondary,
                 )
             }
         }

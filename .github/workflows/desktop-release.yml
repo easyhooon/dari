@@ -1,13 +1,13 @@
 name: Desktop App Release
 
-# Builds the desktop app for macOS (Apple Silicon, Intel) and Windows (x64), smoke-tests each build,
-# and attaches the installers and their SHA-256 files to the release for the given tag.
-# Ad-hoc signed, not notarized, on macOS; unsigned on Windows. Linux ships once tested on a real machine.
+# Builds the desktop app for macOS (Apple Silicon, Intel), Windows (x64) and Linux (x64), smoke-tests
+# each build, and attaches the installers and their SHA-256 files to the release for the given tag.
+# Developer ID signed and notarized on macOS; unsigned on Windows and Linux.
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to attach the installers to (e.g. 2.0.0)"
+        description: "Release tag to attach the installers to (e.g. 2.1.1)"
         required: true
       ref:
         description: "Commit or branch to build from; defaults to the tag. Use it to repackage a release with fixed build scripts."
@@ -22,8 +22,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-15, macos-15-intel, windows-latest]
+        runner: [macos-15, macos-15-intel, windows-latest, ubuntu-24.04]
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
     defaults:
       run:
         shell: bash
@@ -42,15 +43,52 @@ jobs:
           TAG: ${{ inputs.tag }}
         run: |
           # Installers are named after the catalog version, so a mismatch would mislabel them.
-          version="$(sed -n 's/^dari = "\(.*\)"/\1/p' gradle/libs.versions.toml)"
+          version="$(sed -n 's/^dariDesktop = "\(.*\)"/\1/p' gradle/libs.versions.toml)"
           if [ "$TAG" != "$version" ]; then
-            echo "Tag $TAG does not match the version $version in gradle/libs.versions.toml" >&2
+            echo "Tag $TAG does not match dariDesktop $version in gradle/libs.versions.toml" >&2
             exit 1
           fi
       - name: Smoke test
-        run: scripts/smoke-test-desktop-app.sh
+        if: runner.os != 'macOS'
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            # xvfb has no GPU; skip Skiko's OpenGL attempt and its fallback warning.
+            SKIKO_RENDER_API=SOFTWARE xvfb-run --auto-servernum scripts/smoke-test-desktop-app.sh
+          else
+            scripts/smoke-test-desktop-app.sh
+          fi
+      - name: Prepare macOS signing and notarization
+        if: runner.os == 'macOS'
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: scripts/setup-macos-signing.sh
+      - name: Install dmgbuild
+        if: runner.os == 'macOS'
+        run: |
+          python3 -m venv "$RUNNER_TEMP/dmgbuild"
+          "$RUNNER_TEMP/dmgbuild/bin/pip" install --quiet dmgbuild==1.6.7 ds_store==1.3.3 mac_alias==2.2.3
+          echo "DMGBUILD=$RUNNER_TEMP/dmgbuild/bin/dmgbuild" >> "$GITHUB_ENV"
       - name: Package
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Enables crash reports; without the secret they stay unavailable.
+          DARI_SENTRY_DSN: ${{ secrets.DARI_SENTRY_DSN }}
         run: scripts/package-desktop-app.sh
+      - name: Show Compose signing logs
+        if: failure() && runner.os == 'macOS'
+        run: tail -n 50 dari-desktop-app/build/compose/logs/createReleaseDistributable/*.txt || true
+      - name: Remove temporary macOS credentials
+        if: always() && runner.os == 'macOS'
+        run: |
+          keychain="$RUNNER_TEMP/dari-signing.keychain-db"
+          if [ -e "$keychain" ]; then
+            security delete-keychain "$keychain"
+          fi
+          rm -f "$RUNNER_TEMP/dari-signing.p12" "$RUNNER_TEMP/dari-notary-auth.log"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: installer-${{ matrix.runner }}

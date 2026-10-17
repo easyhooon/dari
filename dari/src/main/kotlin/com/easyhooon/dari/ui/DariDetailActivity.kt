@@ -56,6 +56,7 @@ import com.easyhooon.dari.MessagePayloadMetadata
 import com.easyhooon.dari.RawPayloadFormatter
 import com.easyhooon.dari.export.DariExporter
 import com.easyhooon.dari.export.ExportFormat
+import com.easyhooon.dari.masking.maskedIf
 import com.easyhooon.dari.ui.components.CodeViewer
 import com.easyhooon.dari.ui.components.JsonViewer
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -124,11 +125,17 @@ class DariDetailActivity : ComponentActivity() {
                 .collectAsStateWithLifecycle(
                     initialValue = Dari.preferences.jsonFoldingEnabled,
                 )
+            val maskingEnabled by Dari.preferences.maskingEnabledFlow()
+                .collectAsStateWithLifecycle(
+                    initialValue = Dari.preferences.maskingEnabled,
+                )
             val isDark = darkMode ?: isSystemInDarkTheme()
             ApplyDariSystemBars(isDark)
             DariTheme(darkTheme = darkMode) {
                 val entries by Dari.repository.entries.collectAsStateWithLifecycle()
-                val entry = entries.find { it.id == id }
+                // Masked here so the tabs, share and save all see the same values.
+                val rawEntry = entries.find { it.id == id }
+                val entry = remember(rawEntry, maskingEnabled) { rawEntry?.maskedIf(maskingEnabled) }
                 var exportMenuExpanded by remember { mutableStateOf(false) }
 
                 Scaffold(

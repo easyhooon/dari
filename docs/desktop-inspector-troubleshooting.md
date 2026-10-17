@@ -33,6 +33,27 @@ Related: [design](desktop-inspector-design.md), [FAQ](desktop-inspector-faq.md).
   `./gradlew :dari-desktop-app:suggestRuntimeModules`, plus `jdk.crypto.ec` for TLS. After adding a
   JDK API, rerun that task and launch the packaged app, not just `run`.
 
+### In-app update rolled back: "_LSOpenURLsWithCompletionHandler() failed with error -600"
+
+- **Cause**: the helper relaunched Dari 0.3 s after the old process exited. LaunchServices still
+  listed the old Dari as running, so `open` sent a reopen Apple event to the dead process
+  (`procNotFound`). The helper then restored 2.1.2 as designed, so the update looked like a no-op.
+  Found when updating 2.1.2 to 2.1.3; it reproduced on both attempts. The helper is unchanged since
+  2.1.0, so this is a timing race present from the start, not a regression: a busy Mac makes
+  LaunchServices slower to drop the old process.
+- **Fix**: wait a second after the old process exits, launch with `open -n`, and retry up to five
+  times before rolling back. The helper that runs is the one inside the *installed* app, so the fix
+  applies to updates from 2.1.4 on; from 2.1.2 or 2.1.3, reinstall once (terminal script or DMG).
+
+### Release run fails at stapling: "The staple and validate action failed! Error 68"
+
+- **Cause**: notarization was already accepted, but `xcrun stapler` lost its connection to Apple's
+  ticket service (`NSURLErrorDomain -1005`, "The network connection was lost"). It recurred on the
+  hosted runners, most often on Intel. It is a network blip, not a code or signing problem.
+- **Fix**: `package-desktop-app.sh` retries staple and validate up to five times with growing waits;
+  stapling is idempotent. Before that, re-running the failed job (`gh run rerun <id> --failed`) was
+  enough, as for 2.1.3.
+
 ### Intel macOS build fails: "code object is not signed at all"
 
 - **Symptom**: the 2.0.0 `Desktop App Release` run failed on `macos-15-intel`, so no installers were attached.
@@ -83,6 +104,40 @@ Related: [design](desktop-inspector-design.md), [FAQ](desktop-inspector-faq.md).
   `@coderabbitai review`. (#103)
 
 ## Desktop app
+
+### Stuck on "Waiting for app · app is in the background" while the app is in front
+
+- **Symptom**: in 2.2.1, with several Dari apps on one phone, the status stayed on "Waiting for app ·
+  app is in the background" for minutes after the picked app came to the front. Messages still
+  loaded, and nothing reconnected.
+- **Investigation**:
+  - `adb forward --list` showed one stable forward. A thread dump showed one live
+    `dari-inspector-reader`. A hand-written ClientHello probe got an instant `ServerHello` from the
+    app, so the app side was healthy.
+  - A heap dump of the stuck process (`jcmd <pid> GC.heap_dump`) showed the real state. The connect job
+    was suspended in `runSession`'s observe loop, so it was connected, with 60 messages. Yet `state`
+    held `Connecting("app is in the background")`, written after the session came up.
+- **Cause**:
+  1. While Dari waits on a frozen app A, `open()` blocks for up to the 5 s handshake timeout.
+  2. Picking app B cancels that job and starts a new one, and B connects at once.
+  3. A's handshake then times out. `withContext` drops a cancelled caller's *result* but still
+     rethrows the block's *exception*. So the cancelled job's `catch (IOException)` ran anyway and
+     overwrote B's `Connected` with A's reason.
+  4. The same rule leaked connections: if `open()` succeeded after the cancel, nobody closed the
+     returned socket, forward and reader thread.
+- **Reproduce** (no phone interaction needed):
+  1. Wait until app A shows `isFrozen=true` in `adb shell dumpsys activity processes <A>`.
+  2. Make sure app B is running and not frozen.
+  3. In Dari, pick A, then pick B within five seconds.
+  4. Before the fix, B shows Connected and about four seconds later turns to "Waiting · app is in
+     the background".
+- **Fix**: a cancelled connect job writes no state. It runs `ensureActive()` before writing the
+  failure reason. The opened connection is kept outside `withContext`'s result and closed in
+  `finally`, and `InspectorConnection.close()` became idempotent. Unit tests use a fake app socket
+  for both the stale write and the leak. (2.2.2)
+- **Lesson**: after `withContext`, a cancelled coroutine can still land in a non-cancellation
+  `catch`. Check that the job is active before writing shared state, and never let a resource
+  returned by `withContext` be lost.
 
 ### Title bar pickers and buttons ignored clicks
 

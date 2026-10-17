@@ -14,11 +14,13 @@ import com.easyhooon.dari.inspector.protocol.InspectorErrorCode
 import com.easyhooon.dari.inspector.protocol.InspectorFrame
 import com.easyhooon.dari.inspector.protocol.InspectorOperations
 import com.easyhooon.dari.inspector.protocol.InspectorProtocol
+import com.easyhooon.dari.inspector.protocol.InspectorSettings
 import com.easyhooon.dari.inspector.protocol.ListInput
 import com.easyhooon.dari.inspector.protocol.ListOutput
 import com.easyhooon.dari.inspector.protocol.ObserveEvent
 import com.easyhooon.dari.inspector.protocol.ServerHello
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
+import com.easyhooon.dari.masking.maskedIf
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -52,6 +54,10 @@ internal class InspectorSession(
     private val reader = FrameReader(input)
     private val writer = FrameWriter(output)
     private val streams = ConcurrentHashMap<String, Job>()
+
+    // Set by the desktop for this connection; read by observe on another thread.
+    @Volatile
+    private var maskingEnabled = false
 
     fun run() {
         try {
@@ -109,6 +115,10 @@ internal class InspectorSession(
                     source.clear()
                     send(InspectorFrame.Result(invoke.requestId, output = JsonObject(emptyMap())))
                 }
+                InspectorOperations.SETTINGS_UPDATE -> {
+                    maskingEnabled = decode(InspectorSettings.serializer(), invoke.input).maskingEnabled
+                    reply(invoke.requestId, InspectorSettings.serializer(), InspectorSettings(maskingEnabled))
+                }
                 else -> fail(invoke.requestId, InspectorErrorCode.OPERATION_NOT_FOUND, "Unknown op ${invoke.op}")
             }
         } catch (e: SerializationException) {
@@ -150,7 +160,8 @@ internal class InspectorSession(
         RepositoryEvent.Cleared -> ObserveEvent.Cleared
     }
 
-    private fun InspectorEntry.redacted(): InspectorEntry = copy(entry = redactor.redact(entry))
+    private fun InspectorEntry.redacted(): InspectorEntry =
+        copy(entry = redactor.redact(entry.maskedIf(maskingEnabled)))
 
     private fun <T> decode(serializer: KSerializer<T>, input: JsonElement): T =
         InspectorProtocol.json.decodeFromJsonElement(serializer, input)

@@ -33,10 +33,13 @@ fun AboutWindow(
 ) {
     Window(
         onCloseRequest = onClose,
+        onPreviewKeyEvent = { handleCloseWindowShortcut(it, onClose = onClose) },
         title = "About Dari",
         resizable = false,
         state = rememberWindowState(position = WindowPosition.Aligned(Alignment.Center), width = 320.dp, height = 300.dp),
     ) {
+        CloseWindowMenu(onClose)
+        WindowChrome(appearance)
         DariTheme(appearance) {
             Column(
                 Modifier.fillMaxSize().background(Dari.colors.background).padding(20.dp),

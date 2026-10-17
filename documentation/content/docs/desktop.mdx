@@ -3,7 +3,9 @@ title: Desktop App
 description: Inspect bridge messages from your computer over adb
 ---
 
-The Dari desktop app shows the bridge messages of a connected debug build on your computer: a live list, the request and response side by side, and foldable JSON. It needs `dari` 2.0.0 or later and works with real devices and emulators. It runs on macOS and, in preview, Windows; a Linux build is planned.
+import { ConnectionFlow } from '@/components/connection-flow';
+
+The Dari desktop app shows the bridge messages of a connected debug build on your computer: a live list, the request and response side by side, and foldable JSON. It needs `dari` 2.0.0 or later and works with real devices and emulators. It runs on macOS 10.15 or later and Windows (x64), with Linux (x64) in preview.
 
 ## Install
 
@@ -16,9 +18,8 @@ file, and installs or updates `/Applications/Dari.app`:
 curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install-desktop.sh | bash
 ```
 
-Files downloaded with `curl` don't get macOS's download flag, so Dari opens right away without the
-first-launch prompt below. The checksum is what catches a bad download, so run the command only from
-this page or the repository. To pin a version, put `DARI_VERSION=2.0.0` before `bash`.
+The checksum is what catches a bad download, so run the command only from this page or the
+repository. To pin a version, put `DARI_VERSION=2.0.0` before `bash`.
 
 ### macOS from the DMG
 
@@ -26,38 +27,92 @@ this page or the repository. To pin a version, put `DARI_VERSION=2.0.0` before `
 2. Open the image and drag **Dari** into **Applications**.
 3. Optionally, compare `shasum -a 256 Dari-<version>-arm64.dmg` with the `.sha256` file from the same release. A match means the download isn't corrupted; it doesn't prove who published it.
 
-#### First launch
+Dari is signed with a Developer ID and notarized by Apple, so it opens without a security prompt. Download it only from the repository's releases page.
 
-The app is ad-hoc signed, without an Apple Developer ID or notarization, so macOS says it can't check Dari for malicious software and blocks it the first time:
+### Windows
 
-1. Open Dari once and click **Done**.
-2. Go to **System Settings → Privacy & Security** and click **Open Anyway** next to the Dari message.
-3. Confirm. Later launches open normally.
+1. Download `Dari-<version>-x64.exe` from the [download page](/download) or the [releases page](https://github.com/easyhooon/dari/releases) and run it. It installs for the current user only.
+2. The installer isn't code-signed, so SmartScreen may warn on first run. Click **More info → Run anyway**.
+3. Optionally, compare `certutil -hashfile Dari-<version>-x64.exe SHA256` with the `.sha256` file from the same release.
 
-If macOS instead says **"Dari is damaged and can't be opened"**, run this in Terminal, then open Dari again. It clears the download flag on Dari only and changes no system setting:
+For managed rollouts (Group Policy, Intune), use `Dari-<version>-x64.msi` from the same release instead. Both install the same app and upgrade an existing install in place. Releases before 2.3.0 have only the `.msi`.
+
+### Linux (preview)
+
+On Debian 13, Ubuntu 24.04 or later, and distributions based on them:
+
+1. Download `dari_<version>_amd64.deb` from the [releases page](https://github.com/easyhooon/dari/releases).
+2. Install it with `sudo apt install ./dari_<version>_amd64.deb`. Dari appears under **Development** in the app menu and installs to `/opt/dari`.
+
+The `.deb` depends on package names introduced in Debian 13 and Ubuntu 24.04, so it doesn't install on older releases. There, and on other distributions such as Fedora or Arch, use `Dari-<version>-linux-x64.tar.gz` from the same release: it bundles its own Java runtime. Extract it and run `Dari/bin/Dari`.
+
+Optionally, compare `sha256sum <file>` with the `.sha256` file from the same release. Linux builds are x64 only, and tested so far on Debian 13 with Xfce on X11.
+
+### Download size
+
+Measured on 2.2.0, the macOS download is about 11 MB larger than the Windows one:
+
+| | Windows (`.msi`) | macOS (`.dmg`, Apple Silicon) |
+| --- | --- | --- |
+| Unpacked | 119.3 MB | 127.1 MB |
+| Compression | `MSZIP` | `UDZO` (zlib level 1) |
+| Download | 59.6 MB | 70.7 MB |
+
+The Windows `.exe` wraps the same MSI, so it is only about 0.6 MB larger.
+
+Both hold the same app: a Java runtime trimmed by jlink, the app's jars, and Skiko, the native Skia library that Compose draws with. Both also compress with Deflate, the LZ77 + Huffman coding algorithm behind zip and gzip:
+
+- **`MSZIP`**: an MSI keeps its files in a CAB archive, and `MSZIP` compresses them with Deflate in 32 KB blocks. jpackage leaves WiX at this default.
+- **`UDZO`**: a DMG is a compressed disk image, and `UDZO` compresses it with zlib, a thin wrapper around Deflate. `hdiutil` uses zlib level 1, the fastest and weakest, unless told otherwise.
+
+So the gap has two causes:
+
+1. **Larger native libraries on macOS.** `libskiko-macos-arm64.dylib` is 20.8 MB and `libjvm.dylib` 15.7 MB; on Windows, no file but the runtime's `lib/modules` exceeds 12.7 MB. Deflated file by file, the macOS app comes to 65.8 MB, against the 58.4 MB Windows cabinet.
+2. **zlib level 1.** It adds about 5 MB more.
+
+To measure the macOS side:
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/Dari.app
+./gradlew :dari-desktop-app:createDistributable
+cd dari-desktop-app/build/compose/binaries/main/app
+du -sh Dari.app Dari.app/Contents/runtime Dari.app/Contents/app
+hdiutil create -srcfolder Dari.app -format UDZO -imagekey zlib-level=9 Dari-level9.dmg
 ```
 
-Download Dari only from the repository's releases page.
+```
+121M	Dari.app
+ 66M	Dari.app/Contents/runtime
+ 54M	Dari.app/Contents/app
+```
 
-### Windows (preview)
+`du -h` counts in MiB, so 121M is 127 MB. The same `Dari.app` in other DMG formats:
 
-1. Download `Dari-<version>-x64.msi` from the [releases page](https://github.com/easyhooon/dari/releases) and run it. It installs for the current user only.
-2. The installer isn't code-signed, so SmartScreen may warn on first run. Click **More info → Run anyway**.
-3. Optionally, compare `certutil -hashfile Dari-<version>-x64.msi SHA256` with the `.sha256` file from the same release.
+| Format | Algorithm | Opens on | Size | Copying `Dari.app` out |
+| --- | --- | --- | --- | --- |
+| `UDZO`, level 1 (`hdiutil` default) | zlib (Deflate) | Every macOS | 70.8 MB | 2–4 s |
+| `UDZO`, level 9 | zlib (Deflate) | Every macOS | 67.3 MB | |
+| `ULFO` (2.2.1 and later) | LZFSE: Apple's LZ77 with finite-state entropy coding, built for fast decompression | macOS 10.11+ | 67.3 MB | 4–5 s |
+| `ULMO` (2.2.0) | LZMA: LZ77 with a large dictionary and range coding, as in 7-Zip and xz | macOS 10.15+ | 59.5 MB | about 15 s |
+
+Copy times are from an Apple M2, mounting the DMG and copying the app out with `ditto`, as installing or updating does. `ULMO` is the smallest, but macOS decompresses it outside the kernel, so installing and every in-app update take about 10 s longer. From 2.2.1, releases use `ULFO` instead: a few MB more for an install about three times faster. Dari requires macOS 10.15 or later.
 
 ### Updates
 
 Dari checks the releases page on launch and every six hours. When a newer version exists, an **Update to &lt;version&gt;** button appears in the title bar, and **Help → Install Dari &lt;version&gt;** does the same.
 
-- **macOS**: Dari downloads the new image, checks its `.sha256`, bundle ID, version and code signature, then quits and relaunches as the new version. If anything fails, the installed version is kept. This works when Dari sits in a folder you can write to, such as **Applications**; otherwise the button opens the download page.
-- **Windows**: the button opens the download page. Run the new `.msi`; it upgrades the installed copy.
+- **macOS**: Dari downloads the new image, checks its `.sha256`, bundle ID, version and code signature, then quits and relaunches as the new version. If anything fails, the installed version is kept. This works when Dari sits in a folder you can write to, such as **Applications**; otherwise Dari tells you to move it to **Applications** and open it from there.
+- **Windows**: the button opens the download page. Quit Dari, then run the new `.exe` or `.msi`; either upgrades the installed copy. If Dari is still open, the installer stops with Error 1306 on `dari.lock`: quit Dari and click **Retry**.
+- **Linux**: the button opens the download page. Install the new `.deb` with `sudo apt install`, which upgrades the installed copy, or extract the new tarball in place of the old one.
+
+### Versions
+
+The desktop app and the library share one version line, but the desktop app can ship on its own. A release titled **Desktop only**, such as a desktop fix, updates the desktop app and leaves the library where it was, so that version doesn't exist on Maven Central.
+
+A Desktop only release never requires updating `dari` in your app.
 
 ## Connect
 
-1. Keep `adb` available: set `ANDROID_HOME`, or install Android Studio in its default location.
+1. Keep `adb` available. Android Studio in its default location already includes it, and Dari also checks `ANDROID_HOME`. Without Android Studio, install [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools): `brew install android-platform-tools` on macOS, `sudo apt install adb` on Debian or Ubuntu, or on Windows unzip it and add the `platform-tools` folder to `PATH`.
 2. Connect a device with USB debugging on, or start an emulator.
 3. Run a debuggable build of your app that uses `dari` and bring it to the foreground.
 
@@ -75,14 +130,17 @@ There is nothing to configure: no proxy, certificate, Wi-Fi or port.
 
 Tunnels are removed when the desktop app disconnects or quits. `adb forward --list` shows any open ones.
 
+<ConnectionFlow lang="en" />
+
 ## Privacy
 
 - **Debug builds only, unless you opt in.** The socket opens only in debuggable builds, or in a non-debuggable internal build that sets the manifest flag below. Release builds use `dari-noop`, which contains no capture code.
 - **adb only.** Only adb (shell) or root can connect, so other apps on the device can't read messages.
-- **Masked by default.** Before anything leaves the device, values under keys such as `token`, `password`, `secret`, `cookie` or `authorization` are masked, as are `Bearer` credentials. Raw protobuf previews aren't sent.
-- **Nothing about you leaves your computer.** The desktop app has no analytics or telemetry. Its only network request is the update check: a request to `github.com` on launch and every six hours, which sends nothing but what any browser visit would. `dari.log` stays local and records failures only.
+- **Masking is opt-in.** By default, the desktop app receives payloads as captured, whatever the in-app setting is. Turn on **Mask sensitive values** in the desktop app's settings, and the device masks values under keys such as `token`, `password`, `secret`, `cookie` or `authorization`, and `Bearer` credentials, before they leave it. This is separate from the in-app setting. Apps on dari older than 2.2.0 always mask. See [Masking](./masking) for the exact rules.
+- **No analytics.** Apart from crash reports, the desktop app's only network requests are for updates: a check against `github.com` on launch and every six hours, which sends nothing but what any browser visit would, and, when you install an update, the download of the release and its checksum. `dari.log` stays local and records the version at startup, crash-report setting changes and failures, never message contents.
+- **Crash reports are on by default.** When the app crashes, it sends the exception type, stack trace, and OS, architecture and Java versions to Sentry. Exception messages, bridge messages, host names and IP addresses are never sent. Turn it off in Settings → Privacy → **Send crash reports**.
 
-Add your own masking on top. It runs after the built-in masking, and if it throws, the message isn't sent:
+Add your own masking. It runs on every message, after the built-in masking when that is on, and if it throws, the message isn't sent:
 
 ```kotlin
 Dari.setPayloadRedactor { entry ->
@@ -104,21 +162,35 @@ A non-debuggable internal build, such as staging, can opt in with this entry in 
     android:value="true" />
 ```
 
+## Desktop only
+
+For builds where only the desktop app should show messages, such as a staging build used for QA, add this entry. Dari then shows no notification, doesn't open on shake, and removes its launcher shortcut. Messages are still captured, and the desktop app shows them as usual.
+
+```xml
+<meta-data
+    android:name="com.easyhooon.dari.DESKTOP_ONLY"
+    android:value="true" />
+```
+
+A non-debuggable build needs `ALLOW_NON_DEBUGGABLE` above as well; otherwise nothing can show its messages.
+
 ## Troubleshooting
 
 | Status | What to do |
 | --- | --- |
 | adb not found | Set `ANDROID_HOME`, or add `platform-tools` to `PATH`, then reopen Dari. |
 | No device | Check `adb devices`. Accept the USB debugging prompt on the device. |
+| No Dari app found | Apps on `dari` 1.x have no desktop connection; upgrade to 2.0.0 or later. If the device hides the app list, type the applicationId. |
 | App is in the background | Android pauses background apps. Bring the app to the foreground and Dari reconnects. |
 | Not running Dari | Check that the app is a debuggable build using `dari` 2.0.0 or later. |
 
-To report a problem, use **Help → Report an Issue…**. It opens the bug form with your Dari version and OS filled in; **Help → Suggest a Feature…** opens the feature request form. **Help → Show Log File** opens the folder with `dari.log` (`~/Library/Logs/Dari` on macOS, `%LOCALAPPDATA%\Dari\logs` on Windows). The log records failures only, never message contents.
+To report a problem, use **Help → Report an Issue…**. It opens the bug form with your Dari version and OS filled in; **Help → Suggest a Feature…** opens the feature request form. **Help → Show Log File** opens the folder with `dari.log` (`~/Library/Logs/Dari` on macOS, `%LOCALAPPDATA%\easyhooon\Dari\logs` on Windows, `~/.local/state/dari` on Linux). The log records the version at startup, crash-report setting changes and failures, never message contents.
 
 ## Uninstall
 
 - **macOS**: quit Dari and move `/Applications/Dari.app` to the Trash. To remove its settings and log too, delete `~/Library/Logs/Dari` and `~/Library/Preferences/io.github.easyhooon.plist`.
-- **Windows**: **Settings → Apps → Installed apps → Dari → Uninstall**. Settings live in the registry under `HKEY_CURRENT_USER\Software\JavaSoft\Prefs\io\github\easyhooon`, and the log in `%LOCALAPPDATA%\Dari`.
+- **Windows**: **Settings → Apps → Installed apps → Dari → Uninstall**. Settings live in the registry under `HKEY_CURRENT_USER\Software\JavaSoft\Prefs\io\github\easyhooon`, and the log in `%LOCALAPPDATA%\easyhooon\Dari`, which uninstalling leaves behind.
+- **Linux**: `sudo apt remove dari`, or delete the extracted `Dari` folder. Settings live in `~/.java/.userPrefs/io/github/easyhooon` and the log in `~/.local/state/dari`; delete them to remove everything.
 
 ## Build from source
 

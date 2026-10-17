@@ -1,0 +1,72 @@
+---
+title: 마스킹
+description: Dari가 무엇을 어떤 기준으로 가리는지, 어디서 켜는지
+---
+
+마스킹은 기본으로 꺼져 있어서, 캡처한 페이로드를 그대로 볼 수 있습니다. 스위치는 둘이고 서로 따로 동작합니다.
+
+| 스위치 | 위치 | 가리는 대상 |
+| --- | --- | --- |
+| 앱 | Dari 설정 시트의 **Mask sensitive values**, 또는 `Dari.setMaskingEnabled(true)` | 상세 화면, 앱에서 공유하거나 저장하는 모든 내용 |
+| 데스크톱 | 데스크톱 앱 설정이나 View 메뉴의 **Mask sensitive values** | 데스크톱 앱으로 보내는 메시지. 기기에서 나가기 전에, 그 연결에만 가립니다 |
+
+두 스위치는 같은 규칙을 씁니다. dari 2.2.0보다 오래된 버전은 데스크톱 앱으로 보내는 내용을 항상 가립니다.
+
+## 가리는 기준
+
+값이 아니라 **키 이름**을 봅니다. 값을 보는 경우는 `Bearer`와 `Basic` 인증 값 하나뿐입니다. 요청·응답 본문만 검사하고, 핸들러 이름이나 태그 같은 요약 필드는 검사하지 않습니다.
+
+### 1. JSON 본문
+
+`{`나 `[`로 시작하고 JSON으로 파싱되는 본문은 모든 깊이를 검사합니다. 다음 중 하나에 해당하면 민감한 키로 봅니다.
+
+- 키를 소문자로 바꾸고 영문자와 숫자만 남겼을 때, `token`, `password`, `passwd`, `secret`, `authorization`, `cookie`, `apikey`, `sessionid`, `cardnumber` 중 하나를 **포함**합니다.
+- 같은 방식으로 정리한 키가 `cvv`, `cvc`, `ssn`, `otp`, `pin` 중 하나와 **정확히 같습니다**.
+
+민감한 키의 값은 `"***"`로 바뀝니다. 값이 객체나 배열이어도 통째로 바뀝니다. 그 밖의 키에 들어 있는 문자열 값은 텍스트로 한 번 더 검사하므로, JSON 안에 문자열로 들어간 JSON도 가려집니다.
+
+| 키 | 정리한 키 | 가림 |
+| --- | --- | --- |
+| `access_token`, `Access-Token` | `accesstoken` | 예 |
+| `X-Api-Key` | `xapikey` | 예 |
+| `session_id` | `sessionid` | 예 |
+| `PIN` | `pin` | 예 |
+| `pinned`, `lessons` | `pinned`, `lessons` | 아니요 (정확히 같아야 하는 단어는 키 전체가 같을 때만 해당) |
+| `jwt`, `auth`, `credential` | | 아니요 (목록에 없음) |
+
+```json
+{"user":{"id":7,"refresh_token":"r1"},"pin":"1234","data":"{\"apiKey\":\"k\"}"}
+```
+는 다음처럼 바뀝니다.
+```json
+{"user":{"id":7,"refresh_token":"***"},"pin":"***","data":"{\"apiKey\":\"***\"}"}
+```
+
+### 2. 텍스트 본문
+
+디코딩한 protobuf, 쿼리 문자열, 로그 형태 텍스트처럼 JSON이 아닌 본문은 `key: value`나 `key=value` 형태를 찾습니다. 키에 `token`, `password`, `passwd`, `secret`, `authorization`, `cookie`, `api key`, `session id`, `card number` 중 하나가 들어 있으면 가립니다. 마지막 세 개는 단어 사이에 `_`, `-`가 있거나 아무것도 없어도 됩니다. 대소문자는 구분하지 않습니다. 정확히 같아야 하는 단어(`cvv`, `pin` 등)는 텍스트에서는 찾지 **않습니다**. 짧은 단어라 일반 텍스트에도 너무 자주 나오기 때문입니다.
+
+```text
+a=1&token=xyz&b=2           →  a=1&token=***&b=2
+session_token: "s3cr3t"     →  session_token: "***"
+```
+
+### 3. 위치와 상관없는 인증 값
+
+`Bearer <값>`과 `Basic <값>`은 어디에 있든 가립니다. `Bearer eyJhbGciOi.abc`는 `Bearer ***`가 됩니다.
+
+### 4. protobuf 원본 미리보기
+
+원본 바이트에서는 키 이름을 읽을 수 없으므로 원본 미리보기는 숨깁니다.
+
+## 실패할 때
+
+가리다가 오류가 나면 본문을 그대로 보여 주지 않고, 본문 전체를 `[dari: payload hidden, masking failed]`로 바꿉니다.
+
+## 가리지 않는 것
+
+- 위 목록에 없는 키의 값. 비밀처럼 보여도 가리지 않습니다. 예: `data` 아래에 그대로 들어 있는 JWT
+- 전화번호, 이메일, 주소 같은 개인정보
+- URL이나 핸들러 이름에 들어간 비밀 값
+
+데스크톱 앱으로 보내는 메시지는 `Dari.setPayloadRedactor`로 규칙을 더할 수 있습니다. [데스크톱 앱](./desktop#개인정보-보호)을 참고하세요.

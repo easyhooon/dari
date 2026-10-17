@@ -15,7 +15,16 @@ object InspectorOperations {
 
     /** No input, empty output. */
     const val CLEAR = "messages.clear"
+
+    /**
+     * [InspectorSettings] → [InspectorSettings]. Applies to this connection only (masking starts off);
+     * apps before dari 2.2.0 answer `OPERATION_NOT_FOUND` and always mask.
+     */
+    const val SETTINGS_UPDATE = "settings.update"
 }
+
+@Serializable
+data class InspectorSettings(val maskingEnabled: Boolean)
 
 @Serializable
 data class ListInput(val limit: Int = DEFAULT_LIST_LIMIT) {

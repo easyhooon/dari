@@ -1,0 +1,72 @@
+---
+title: Masking
+description: What Dari masks, how it decides, and where to turn it on
+---
+
+Masking is off by default, so you see payloads exactly as they were captured. There are two separate switches:
+
+| Switch | Where | What it masks |
+| --- | --- | --- |
+| In-app | **Mask sensitive values** in the Dari settings sheet, or `Dari.setMaskingEnabled(true)` | The detail screen, and everything shared or saved from the app |
+| Desktop | **Mask sensitive values** in the desktop app's settings or View menu | Messages sent to the desktop app. The device masks them before they leave, for that connection only |
+
+Both switches use the same rules. Apps on dari older than 2.2.0 always mask what they send to the desktop app.
+
+## What gets masked
+
+The rules look at **key names**, not at values. The one exception is `Bearer` and `Basic` credentials. Request and response bodies are checked; handler names, tags and other summary fields are not.
+
+### 1. JSON bodies
+
+A body that starts with `{` or `[` and parses as JSON is walked at every depth. A key is sensitive when either is true:
+
+- After lowercasing and removing everything but letters and digits, the key **contains** one of `token`, `password`, `passwd`, `secret`, `authorization`, `cookie`, `apikey`, `sessionid`, `cardnumber`.
+- The normalized key **equals** one of `cvv`, `cvc`, `ssn`, `otp`, `pin`.
+
+The value of a sensitive key is replaced with `"***"`, even if that value is an object or an array. String values under other keys are checked again as text, so stringified JSON inside JSON is masked too.
+
+| Key | Normalized | Masked |
+| --- | --- | --- |
+| `access_token`, `Access-Token` | `accesstoken` | Yes |
+| `X-Api-Key` | `xapikey` | Yes |
+| `session_id` | `sessionid` | Yes |
+| `PIN` | `pin` | Yes |
+| `pinned`, `lessons` | `pinned`, `lessons` | No (exact-match words only match the whole key) |
+| `jwt`, `auth`, `credential` | | No (not in the lists) |
+
+```json
+{"user":{"id":7,"refresh_token":"r1"},"pin":"1234","data":"{\"apiKey\":\"k\"}"}
+```
+becomes
+```json
+{"user":{"id":7,"refresh_token":"***"},"pin":"***","data":"{\"apiKey\":\"***\"}"}
+```
+
+### 2. Text bodies
+
+Bodies that aren't JSON, such as decoded protobuf, query strings and log-style text, are matched as `key: value` or `key=value`. The key matches when it contains one of `token`, `password`, `passwd`, `secret`, `authorization`, `cookie`, `api key`, `session id`, `card number`. In the last three, `_`, `-` or nothing may sit between the words. Case doesn't matter. The exact-match words (`cvv`, `pin` and so on) are **not** matched in text, because short words like these appear in ordinary text too often.
+
+```text
+a=1&token=xyz&b=2           →  a=1&token=***&b=2
+session_token: "s3cr3t"     →  session_token: "***"
+```
+
+### 3. Credentials anywhere
+
+`Bearer <value>` and `Basic <value>` are masked wherever they appear: `Bearer eyJhbGciOi.abc` becomes `Bearer ***`.
+
+### 4. Raw protobuf previews
+
+Raw byte previews are hidden, because key names can't be read from raw bytes.
+
+## Failure handling
+
+Masking fails closed. If a body can't be processed, the whole body is replaced with `[dari: payload hidden, masking failed]` instead of being shown unmasked.
+
+## Not covered
+
+- Values under keys that aren't listed above, even when they look secret, such as a bare JWT under `data`.
+- Phone numbers, emails, addresses and other personal data.
+- Secrets in URLs or handler names.
+
+For messages sent to the desktop app, add your own rule with `Dari.setPayloadRedactor`. See [Desktop app](./desktop#privacy).

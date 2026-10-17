@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -79,6 +80,8 @@ fun StatusMark(status: String, modifier: Modifier = Modifier) {
             },
             style = Dari.type.codeCaption,
             color = color,
+            maxLines = 1,
+            softWrap = false,
         )
     }
 }
@@ -193,7 +196,9 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
                     .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                if (value.isEmpty()) Text(placeholder, style = Dari.type.label, color = Dari.colors.textTertiary)
+                if (value.isEmpty()) {
+                    Text(placeholder, style = Dari.type.label, color = Dari.colors.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
                 inner()
             }
         },
@@ -254,7 +259,11 @@ fun <T> Picker(
     }
 }
 
-/** Compact popup menu in Dari's palette instead of Material's tinted default. */
+/**
+ * Compact popup menu in Dari's palette instead of Material's tinted default.
+ * Selection is disabled inside: the popup inherits an enclosing SelectionContainer's registrar,
+ * and pressing its text then crashed ("layouts are not part of the same hierarchy").
+ */
 @Composable
 fun DariMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     DropdownMenu(
@@ -266,8 +275,9 @@ fun DariMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable Colu
         shadowElevation = 8.dp,
         border = BorderStroke(1.dp, Dari.colors.border),
         modifier = Modifier.padding(vertical = 4.dp).widthIn(min = 180.dp),
-        content = content,
-    )
+    ) {
+        DisableSelection { content() }
+    }
 }
 
 /** 28dp row with a check column, so selected and unselected labels line up. */

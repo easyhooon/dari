@@ -13,10 +13,14 @@ import com.easyhooon.dari.inspector.protocol.WireMessageSummary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import java.io.File
@@ -34,6 +38,10 @@ class InspectorController(
     private val adb: Adb?,
     private val clientVersion: String,
     preferredSerial: String? = null,
+    private val maskingEnabled: () -> Boolean = { false },
+    // Blocking; replaced in tests so sessions run without a device.
+    private val openConnection: ((serial: String, applicationId: String) -> InspectorConnection)? =
+        adb?.let { adb -> { serial, applicationId -> InspectorConnection.open(adb, serial, applicationId, clientVersion) } },
 ) {
     var devices by mutableStateOf<List<AdbDevice>>(emptyList())
         private set
@@ -50,17 +58,30 @@ class InspectorController(
         private set
     var selectedId by mutableStateOf<Long?>(null)
         private set
+
+    // Messages added after the current selection was made; drives the "N new · Show latest" hint.
+    private var arrivedSinceSelection by mutableStateOf<Set<Long>>(emptySet())
     var detail by mutableStateOf<WireMessageDetail?>(null)
         private set
     var filter by mutableStateOf("")
     var directionFilter by mutableStateOf<String?>(null)
     var statusFilter by mutableStateOf<String?>(null)
 
+    /** The connected app's dari predates 2.2.0 and masks regardless of the setting. */
+    var appAlwaysMasks by mutableStateOf(false)
+        private set
+
     /** Short confirmation such as "Copied", cleared after a moment. */
     var notice by mutableStateOf<String?>(null)
         private set
 
     private var connection: InspectorConnection? = null
+
+    // Masking updates run one at a time and send the latest setting, so rapid toggles apply in order.
+    private val maskingMutex = Mutex()
+
+    // Bumped once a masking change applies; detail responses requested before it are dropped.
+    private var maskingGeneration = 0
     private var noticeJob: Job? = null
 
     // ANDROID_SERIAL or a pick in the device menu; automatic picks may be revised later.
@@ -101,27 +122,42 @@ class InspectorController(
     fun connect() {
         val serial = selectedSerial ?: return
         val appId = applicationId.trim().ifEmpty { return }
-        val adb = adb ?: return
+        val open = openConnection ?: return
         disconnect()
         connectJob = scope.launch {
             while (isActive) {
                 state = ConnectionState.Connecting(state.reasonOrNull())
-                try {
-                    val conn = withContext(Dispatchers.IO) { InspectorConnection.open(adb, serial, appId, clientVersion) }
-                    connection = conn
-                    runSession(conn)
+                val reason = try {
+                    openAndRunSession(open, serial, appId)
+                    null
                 } catch (e: IOException) {
-                    state = ConnectionState.Connecting(e.message)
+                    e.message
                 } catch (_: TimeoutCancellationException) {
                     // A request timeout, not this job's cancellation: keep retrying.
-                    state = ConnectionState.Connecting("the app did not respond in time")
+                    "the app did not respond in time"
                 } catch (e: SerializationException) {
-                    state = ConnectionState.Connecting("unexpected data from the app: ${e.message}")
-                } finally {
-                    connection?.let { conn -> withContext(Dispatchers.IO) { conn.close() } }
-                    connection = null
+                    "unexpected data from the app: ${e.message}"
                 }
+                // withContext still rethrows open()'s IOException after a cancel (e.g. a frozen app's handshake
+                // timeout), so a replaced job would otherwise overwrite the newer session's state.
+                ensureActive()
+                reason?.let { state = ConnectionState.Connecting(it) }
                 delay(POLL_INTERVAL_MS)
+            }
+        }
+    }
+
+    private suspend fun openAndRunSession(open: (String, String) -> InspectorConnection, serial: String, appId: String) {
+        var opened: InspectorConnection? = null
+        try {
+            // Kept outside withContext's result, which is dropped when this job is cancelled while open() blocks.
+            val conn = withContext(Dispatchers.IO) { open(serial, appId).also { opened = it } }
+            connection = conn
+            runSession(conn)
+        } finally {
+            opened?.let { conn ->
+                if (connection === conn) connection = null
+                withContext(NonCancellable + Dispatchers.IO) { conn.close() }
             }
         }
     }
@@ -137,20 +173,51 @@ class InspectorController(
         connectJob = null
         connection?.let { conn -> scope.launch(Dispatchers.IO) { conn.close() } }
         connection = null
+        appAlwaysMasks = false
         state = ConnectionState.Idle
+    }
+
+    /** Applies the desktop's current masking setting to the connected app. */
+    fun onMaskingChanged() {
+        val conn = connection ?: return
+        scope.launch {
+            maskingMutex.withLock { runCatching { conn.setMasking(maskingEnabled()) } }
+                .onSuccess {
+                    // Summaries carry no payloads, so only the open detail needs refetching.
+                    maskingGeneration++
+                    detail = null
+                    selectedId?.let(::loadDetail)
+                }
+                .onFailure {
+                    AppLog.error("Changing masking failed", it)
+                    maskingGeneration++
+                    detail = null
+                    // Session already gone (e.g. user disconnected): the next one applies the saved setting.
+                    if (connection !== conn) return@onFailure
+                    // The app may still send under the old setting; a new session applies the saved one.
+                    showNotice("Couldn't change masking, reconnecting")
+                    connect()
+                }
+        }
     }
 
     fun select(id: Long) {
         detailDismissed = false
         selectedId = id
+        arrivedSinceSelection = emptySet()
         loadDetail(id)
     }
 
     fun closeDetail() {
         detailDismissed = true
         selectedId = null
+        arrivedSinceSelection = emptySet()
         detail = null
     }
+
+    /** Messages in [visible] that arrived while the selected one was open. */
+    fun newerCount(visible: List<WireMessageSummary>): Int =
+        if (selectedId == null) 0 else visible.count { it.id in arrivedSinceSelection }
 
     /** Moves the selection within [visible] by [delta] rows (keyboard ↑/↓). */
     fun moveSelection(visible: List<WireMessageSummary>, delta: Int) {
@@ -203,7 +270,8 @@ class InspectorController(
     private suspend fun fetchDetail(id: Long): WireMessageDetail? {
         detail?.takeIf { it.summary.id == id && messages[id] == it.summary }?.let { return it }
         val conn = connection ?: return null
-        return runCatching { conn.detail(id) }.getOrNull()
+        val generation = maskingGeneration
+        return runCatching { conn.detail(id) }.getOrNull()?.takeIf { generation == maskingGeneration }
     }
 
     private fun showNotice(text: String, clearAfter: Boolean = true) {
@@ -232,9 +300,11 @@ class InspectorController(
     }
 
     private suspend fun runSession(conn: InspectorConnection) {
+        appAlwaysMasks = !maskingMutex.withLock { conn.setMasking(maskingEnabled()) }
         val events = conn.observe()
         val backlog = conn.list()
         messages = emptyMap()
+        arrivedSinceSelection = emptySet()
         detail = null
         merge(backlog)
         state = ConnectionState.Connected(conn.app)
@@ -243,10 +313,16 @@ class InspectorController(
         for (event in events) apply(event)
     }
 
-    private fun apply(event: ObserveEvent) {
+    // Internal so tests can feed events without a device.
+    internal fun apply(event: ObserveEvent) {
         when (event) {
             is ObserveEvent.Added -> {
                 merge(listOf(event.message))
+                if (selectedId != null) {
+                    val arrived = arrivedSinceSelection + event.message.id
+                    // Drops evicted ids so the set stays bounded by MAX_MESSAGES.
+                    arrivedSinceSelection = if (arrived.size > messages.size) arrived.filterTo(HashSet()) { it in messages } else arrived
+                }
                 selectNewestIfNone()
             }
             is ObserveEvent.Updated -> {
@@ -255,6 +331,7 @@ class InspectorController(
             }
             ObserveEvent.Cleared -> {
                 messages = emptyMap()
+                arrivedSinceSelection = emptySet()
                 selectedId = null
                 detail = null
             }
@@ -283,9 +360,10 @@ class InspectorController(
 
     private fun loadDetail(id: Long) {
         val conn = connection ?: return
+        val generation = maskingGeneration
         scope.launch {
             val result = runCatching { conn.detail(id) }.getOrNull()
-            if (selectedId == id) detail = result
+            if (selectedId == id && generation == maskingGeneration) detail = result
         }
     }
 
