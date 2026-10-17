@@ -29,6 +29,30 @@ schema를 이용한 디코딩은 앱이 담당합니다. handler와 요청/응�
 
 ```kotlin
 import com.easyhooon.dari.Dari
+import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
+import com.easyhooon.dari.interceptor.protobufDecoder
+
+val interceptor: ProtobufDariInterceptor? = Dari.createInterceptor(
+    tag = "OrderBridge",
+    protobufDecoder = protobufDecoder {
+        webToApp("createOrder") {
+            request { JsonFormat.printer().print(CreateOrderRequest.parseFrom(it)) }
+            response { JsonFormat.printer().print(CreateOrderResponse.parseFrom(it)) }
+        }
+        appToWeb("orderUpdated") {
+            request { JsonFormat.printer().print(OrderUpdated.parseFrom(it)) }
+        }
+    },
+)
+```
+
+
+`webToApp`과 `appToWeb`은 handler, 방향, 요청/응답 구분별로 decoder를 등록합니다. 등록되지 않은 조합은 `DECODER_UNAVAILABLE`로 처리되고, 같은 조합을 두 번 등록하면 decoder 생성 시점에 예외가 발생합니다.
+
+직접 분기하고 싶다면 `ProtobufPayloadDecoder`를 구현해 `ProtobufDecodeContext`로 라우팅할 수 있습니다:
+
+```kotlin
+import com.easyhooon.dari.Dari
 import com.easyhooon.dari.interceptor.PayloadPart.REQUEST
 import com.easyhooon.dari.interceptor.PayloadPart.RESPONSE
 import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
