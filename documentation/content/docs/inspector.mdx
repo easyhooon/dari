@@ -1,0 +1,43 @@
+---
+title: Inspector UI
+description: Filter, export and measure captured bridge messages on the device and the desktop
+---
+
+Dari has two inspectors: the in-app screen, opened from the notification, the launcher shortcut or a shake, and the [desktop app](./desktop). Both show the same messages, with slightly different tools.
+
+## Filters
+
+| Filter | In-app | Desktop |
+| --- | --- | --- |
+| Text search | Search icon. Matches the handler name and display name. | **Filter handler, tag or request ID** field. Matches the handler name, display name, tag and request ID. |
+| Tag | **All tags** chips, shown once a message has a tag. | Type the tag in the filter field. |
+| Status | **All statuses** chips: in progress, success, error. | **All statuses** menu. |
+| Direction | — | **All directions** menu: Web→App or App→Web. |
+
+Filters combine. Neither inspector searches request or response payloads yet.
+
+## Response Time
+
+Open it with the chart icon in the app, or with **Response Time** in the desktop toolbar or **View** menu. Each row is one handler in one direction:
+
+- **Calls** and **Errors**: how many times it was called and how many ended in `ERROR`.
+- **Avg**, **Min**, **Max**: time from request to response. Fire-and-forget and in-progress calls have no response, so they count as calls but not in the times; a handler with no responses at all shows "no responses" and goes last.
+- Rows are sorted by slowest average first, and averages of 500 ms or more are highlighted.
+
+In the app, the screen covers the tag selected on the list. On the desktop, it covers the messages left after the main window's filters.
+
+## Export
+
+Exports contain the messages currently shown, after filters.
+
+- **In-app**: the share icon on the list offers **Share as TEXT**, **Share as JSON**, **Save as TEXT** and **Save as JSON**. Share sends a file to another app through the share sheet; Save writes it where you pick. The detail screen has the same menu for a single message. When **Mask sensitive values** is on in the app's settings, exports are masked too.
+- **Desktop**: **Session → Export Messages as Text…** or **as JSON…** saves the filtered list. For the selected message, use the detail pane's menu (**Copy as Text**, **Save as Text…**, **Save as JSON…**) or **Session → Copy Message as Text** (<kbd>⌘⇧C</kbd> / <kbd>Ctrl+Shift+C</kbd>).
+
+A JSON export is an array with one object per message, with fields such as `handler_name`, `status`, `request_data` and `response_data`. Payloads are kept as strings, exactly as captured.
+
+## Clear
+
+- **In-app**: **Settings → Clear all messages**, then confirm.
+- **Desktop**: **Clear** in the toolbar, or **Session → Clear Messages** (<kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd>).
+
+Both delete the messages stored by the app, so they disappear from both inspectors.
