@@ -239,7 +239,7 @@ private fun FilterBar(controller: InspectorController, openStats: () -> Unit) {
         SearchField(
             value = controller.filter,
             onValueChange = { controller.filter = it },
-            placeholder = "Filter handler, tag or request ID",
+            placeholder = "Filter handler, tag, request ID or payload",
             modifier = Modifier.widthIn(max = 360.dp).weight(1f),
         )
         Picker(

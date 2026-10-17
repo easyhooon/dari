@@ -5,9 +5,10 @@ internal fun handlerLabel(handlerName: String, displayName: String?): String {
     return "$handlerName($label)"
 }
 
-/** Same fields the desktop filter searches: handler, display name, tag and request ID. */
+/** Handler, display name, tag, request ID and payloads; the desktop runs the same match via `messages.search`. */
 internal fun MessageEntry.matchesQuery(query: String): Boolean =
-    listOfNotNull(handlerName, displayName, tag, requestId).any { it.contains(query, ignoreCase = true) }
+    listOfNotNull(handlerName, displayName, tag, requestId, requestData, responseData)
+        .any { it.contains(query, ignoreCase = true) }
 
 internal fun MessageEntry.matchesFilters(
     query: String,

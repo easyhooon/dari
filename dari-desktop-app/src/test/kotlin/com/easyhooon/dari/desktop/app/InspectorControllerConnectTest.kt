@@ -13,6 +13,8 @@ import com.easyhooon.dari.inspector.protocol.InspectorOperations
 import com.easyhooon.dari.inspector.protocol.InspectorProtocol
 import com.easyhooon.dari.inspector.protocol.InspectorSettings
 import com.easyhooon.dari.inspector.protocol.ListOutput
+import com.easyhooon.dari.inspector.protocol.SearchInput
+import com.easyhooon.dari.inspector.protocol.SearchOutput
 import com.easyhooon.dari.inspector.protocol.ServerHello
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
 import com.easyhooon.dari.inspector.protocol.WireMessageSummary
@@ -200,7 +202,38 @@ class InspectorControllerConnectTest {
         assertEquals(1, opens.get())
     }
 
-    /** Answers like a foreground app: hello, settings.update, list, detail, and an observe stream that stays open. */
+    @Test
+    fun `the filter matches payloads through the app, masked when masking is on`(): Unit = runBlocking(dispatcher) {
+        app.messages = listOf(MESSAGE)
+        val controller = sessionController()
+        controller.connect()
+        controller.awaitState { it is ConnectionState.Connected }
+
+        controller.filter = SECRET
+        awaitUntil { controller.visibleMessages() == listOf(MESSAGE) }
+
+        masking = true
+        controller.onMaskingChanged()
+        awaitUntil { controller.visibleMessages().isEmpty() }
+    }
+
+    @Test
+    fun `an app without search still filters by summary fields`(): Unit = runBlocking(dispatcher) {
+        app.messages = listOf(MESSAGE)
+        app.searchSupported = false
+        val controller = sessionController()
+        controller.connect()
+        controller.awaitState { it is ConnectionState.Connected }
+
+        controller.filter = SECRET
+        delay(400)
+        assertEquals(emptyList(), controller.visibleMessages())
+        controller.filter = "gettoken"
+        assertEquals(listOf(MESSAGE), controller.visibleMessages())
+        assertIs<ConnectionState.Connected>(controller.state)
+    }
+
+    /** Answers like a foreground app: hello, settings.update, list, detail, search, and an observe stream that stays open. */
     private class FakeApp : Closeable {
         private val server = ServerSocket(0, 50, InetAddress.getLoopbackAddress())
         private val clients = ConcurrentLinkedQueue<Socket>()
@@ -211,6 +244,10 @@ class InspectorControllerConnectTest {
         /** Returned by messages.list. Details carry [SECRET], or [MASKED] once masking is on for that connection. */
         @Volatile
         var messages: List<WireMessageSummary> = emptyList()
+
+        /** False answers messages.search like an app from before it existed. */
+        @Volatile
+        var searchSupported = true
 
         /** Answers the next settings.update with an error. */
         val failNextSettings = AtomicBoolean()
@@ -269,6 +306,14 @@ class InspectorControllerConnectTest {
                         masking.set(json.decodeFromJsonElement(InspectorSettings.serializer(), frame.input).maskingEnabled)
                         InspectorFrame.Result(frame.requestId, frame.input)
                     }
+                }
+                InspectorOperations.SEARCH -> if (searchSupported) {
+                    val query = json.decodeFromJsonElement(SearchInput.serializer(), frame.input).query
+                    val payload = if (masking.get()) MASKED else SECRET
+                    val ids = messages.filter { payload.contains(query, ignoreCase = true) }.map { it.id }
+                    InspectorFrame.Result(frame.requestId, json.encodeToJsonElement(SearchOutput.serializer(), SearchOutput(ids)))
+                } else {
+                    InspectorFrame.Result(frame.requestId, error = InspectorError(InspectorErrorCode.OPERATION_NOT_FOUND, "Unknown op"))
                 }
                 else -> InspectorFrame.Result(frame.requestId, frame.input)
             }

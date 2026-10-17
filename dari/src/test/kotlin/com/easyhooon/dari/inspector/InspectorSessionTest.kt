@@ -18,6 +18,7 @@ import com.easyhooon.dari.inspector.protocol.InspectorProtocol
 import com.easyhooon.dari.inspector.protocol.InspectorSettings
 import com.easyhooon.dari.inspector.protocol.ListOutput
 import com.easyhooon.dari.inspector.protocol.ObserveEvent
+import com.easyhooon.dari.inspector.protocol.SearchOutput
 import com.easyhooon.dari.inspector.protocol.ServerHello
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
 import java.io.PipedInputStream
@@ -131,6 +132,23 @@ class InspectorSessionTest {
 
         client.invoke("5", InspectorOperations.SETTINGS_UPDATE)
         assertEquals(InspectorErrorCode.INVALID_INPUT, client.result().error?.code)
+    }
+
+    @Test
+    fun `search matches payloads as sent on this connection`() {
+        val client = connect().handshake()
+        client.invoke("1", InspectorOperations.SEARCH, buildJsonObject { put("query", "SECRET") })
+        assertEquals(SearchOutput(listOf(-1L)), client.output(SearchOutput.serializer()))
+        client.invoke("2", InspectorOperations.SEARCH, buildJsonObject { put("query", "camera") })
+        assertEquals(SearchOutput(listOf(-2L)), client.output(SearchOutput.serializer()))
+
+        client.invoke("3", InspectorOperations.SETTINGS_UPDATE, buildJsonObject { put("maskingEnabled", true) })
+        client.result()
+        client.invoke("4", InspectorOperations.SEARCH, buildJsonObject { put("query", "secret") })
+        assertEquals(SearchOutput(emptyList()), client.output(SearchOutput.serializer()))
+
+        client.invoke("5", InspectorOperations.SEARCH, buildJsonObject { put("query", " ") })
+        assertEquals(SearchOutput(emptyList()), client.output(SearchOutput.serializer()))
     }
 
     @Test

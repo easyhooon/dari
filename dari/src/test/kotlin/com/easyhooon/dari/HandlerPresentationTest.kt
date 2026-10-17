@@ -53,6 +53,20 @@ class HandlerPresentationTest {
     }
 
     @Test
+    fun `search matches request and response payloads`() {
+        val entry = MessageEntry(
+            handlerName = "getUser",
+            direction = MessageDirection.WEB_TO_APP,
+            requestData = """{"userId":"u-981"}""",
+            responseData = """{"error":"Session expired"}""",
+        )
+
+        assertTrue(entry.matchesQuery("U-981"))
+        assertTrue(entry.matchesQuery("session expired"))
+        assertFalse(entry.matchesQuery("u-982"))
+    }
+
+    @Test
     fun `filters combine and null means any`() {
         val entry = MessageEntry(
             handlerName = "getUser",

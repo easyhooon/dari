@@ -63,7 +63,13 @@ class InspectorController(
     private var arrivedSinceSelection by mutableStateOf<Set<Long>>(emptySet())
     var detail by mutableStateOf<WireMessageDetail?>(null)
         private set
-    var filter by mutableStateOf("")
+    private var filterText by mutableStateOf("")
+    var filter: String
+        get() = filterText
+        set(value) {
+            filterText = value
+            searchPayloads()
+        }
     var directionFilter by mutableStateOf<String?>(null)
     var statusFilter by mutableStateOf<String?>(null)
     var tagFilter by mutableStateOf<String?>(null)
@@ -87,6 +93,10 @@ class InspectorController(
     // Bumped once a masking change applies; detail responses requested before it are dropped.
     private var maskingGeneration = 0
     private var noticeJob: Job? = null
+
+    // Payloads stay on the device, so the app runs the search; only valid for the query it was run with.
+    private var payloadMatches by mutableStateOf("" to emptySet<Long>())
+    private var searchJob: Job? = null
 
     // ANDROID_SERIAL or a pick in the device menu; automatic picks may be revised later.
     private var deviceChosenByUser = preferredSerial != null
@@ -191,6 +201,8 @@ class InspectorController(
                     maskingGeneration++
                     detail = null
                     selectedId?.let(::loadDetail)
+                    payloadMatches = "" to emptySet()
+                    searchPayloads()
                 }
                 .onFailure {
                     AppLog.error("Changing masking failed", it)
@@ -299,7 +311,8 @@ class InspectorController(
                 (
                     query.isEmpty() ||
                         listOfNotNull(message.handlerName, message.displayName, message.tag, message.requestId)
-                            .any { it.contains(query, ignoreCase = true) }
+                            .any { it.contains(query, ignoreCase = true) } ||
+                        (payloadMatches.first == query && message.id in payloadMatches.second)
                     )
         }
     }
@@ -311,10 +324,13 @@ class InspectorController(
         messages = emptyMap()
         arrivedSinceSelection = emptySet()
         detail = null
+        // Ids are only stable per app process, so a reconnect drops matches from the last one.
+        payloadMatches = "" to emptySet()
         merge(backlog)
         state = ConnectionState.Connected(conn.app)
         selectedId?.let { if (it in messages) loadDetail(it) }
         selectNewestIfNone()
+        searchPayloads()
         for (event in events) apply(event)
     }
 
@@ -329,10 +345,12 @@ class InspectorController(
                     arrivedSinceSelection = if (arrived.size > messages.size) arrived.filterTo(HashSet()) { it in messages } else arrived
                 }
                 selectNewestIfNone()
+                searchPayloads()
             }
             is ObserveEvent.Updated -> {
                 merge(listOf(event.message))
                 if (event.message.id == selectedId) loadDetail(event.message.id)
+                searchPayloads()
             }
             ObserveEvent.Cleared -> {
                 messages = emptyMap()
@@ -360,6 +378,25 @@ class InspectorController(
             updated.entries.drop(updated.size - MAX_MESSAGES).associate { it.key to it.value }
         } else {
             updated
+        }
+    }
+
+    // Debounced: typing and event bursts send one request once they settle.
+    private fun searchPayloads() {
+        searchJob?.cancel()
+        val query = filter.trim()
+        val conn = connection
+        if (query.isEmpty() || conn == null) return
+        searchJob = scope.launch {
+            delay(SEARCH_DEBOUNCE_MS)
+            val ids = try {
+                conn.search(query)
+            } catch (_: IOException) {
+                return@launch
+            } catch (_: TimeoutCancellationException) {
+                return@launch
+            }
+            payloadMatches = query to ids
         }
     }
 
@@ -403,5 +440,6 @@ class InspectorController(
         const val POLL_INTERVAL_MS = 2_000L
         const val MAX_MESSAGES = 2_000
         const val NOTICE_MILLIS = 2_500L
+        const val SEARCH_DEBOUNCE_MS = 250L
     }
 }
