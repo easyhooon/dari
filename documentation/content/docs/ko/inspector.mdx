@@ -1,0 +1,43 @@
+---
+title: 인스펙터 UI
+description: 기기와 데스크톱에서 캡처한 브릿지 메시지를 필터링하고, 내보내고, 응답 시간을 확인합니다
+---
+
+Dari의 인스펙터는 두 가지입니다. 하나는 알림, 런처 바로가기, 흔들기로 여는 앱 내 화면이고, 다른 하나는 [데스크톱 앱](./desktop)입니다. 두 곳 모두 같은 메시지를 보여 주지만, 제공하는 도구는 조금씩 다릅니다.
+
+## 필터
+
+| 필터 | 앱 내 화면 | 데스크톱 |
+| --- | --- | --- |
+| 텍스트 검색 | 검색 아이콘. 핸들러 이름과 표시 이름을 찾습니다. | **Filter handler, tag or request ID** 입력란. 핸들러 이름, 표시 이름, 태그, 요청 ID를 찾습니다. |
+| 태그 | **All tags** 칩. 태그가 붙은 메시지가 있을 때 나타납니다. | 필터 입력란에 태그를 입력합니다. |
+| 상태 | **All statuses** 칩: 진행 중, 성공, 오류 | **All statuses** 메뉴 |
+| 방향 | — | **All directions** 메뉴: Web→App 또는 App→Web |
+
+필터는 함께 적용됩니다. 요청과 응답 본문은 아직 두 인스펙터 모두 검색하지 않습니다.
+
+## Response Time
+
+앱에서는 차트 아이콘, 데스크톱에서는 툴바나 **View** 메뉴의 **Response Time**으로 엽니다. 한 행은 한 방향의 핸들러 하나입니다.
+
+- **Calls**, **Errors**: 호출 횟수와 그중 `ERROR`로 끝난 횟수입니다.
+- **Avg**, **Min**, **Max**: 요청부터 응답까지 걸린 시간입니다. 단방향(fire-and-forget) 호출과 진행 중인 호출은 응답이 없어 호출 수에만 들어가고 시간 계산에서는 빠집니다. 응답이 하나도 없는 핸들러는 "no responses"로 표시되고 맨 아래에 놓입니다.
+- 평균이 느린 순서로 정렬하고, 평균이 500 ms 이상이면 강조합니다.
+
+앱에서는 목록에서 고른 태그의 메시지만 집계합니다. 데스크톱에서는 메인 창의 필터를 거친 메시지만 집계합니다.
+
+## 내보내기
+
+내보내기에는 필터를 거쳐 현재 보이는 메시지만 들어갑니다.
+
+- **앱 내 화면**: 목록의 공유 아이콘에서 **Share as TEXT**, **Share as JSON**, **Save as TEXT**, **Save as JSON**을 고릅니다. Share는 공유 시트로 다른 앱에 파일을 보내고, Save는 고른 위치에 파일을 저장합니다. 상세 화면에도 메시지 하나를 위한 같은 메뉴가 있습니다. 앱 설정에서 **Mask sensitive values**를 켜 두면 내보낸 파일도 마스킹됩니다.
+- **데스크톱**: **Session → Export Messages as Text…** 또는 **as JSON…**으로 필터된 목록을 저장합니다. 선택한 메시지는 상세 패널의 메뉴(**Copy as Text**, **Save as Text…**, **Save as JSON…**)나 **Session → Copy Message as Text**(<kbd>⌘⇧C</kbd> / <kbd>Ctrl+Shift+C</kbd>)로 내보냅니다.
+
+JSON 파일은 메시지마다 객체 하나가 들어 있는 배열이고, `handler_name`, `status`, `request_data`, `response_data` 같은 필드를 담습니다. 본문은 캡처한 그대로 문자열로 들어갑니다.
+
+## 지우기
+
+- **앱 내 화면**: **Settings → Clear all messages**를 누르고 확인합니다.
+- **데스크톱**: 툴바의 **Clear** 또는 **Session → Clear Messages**(<kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd>)를 누릅니다.
+
+어느 쪽이든 앱에 저장된 메시지를 지우므로, 두 인스펙터에서 모두 사라집니다.
