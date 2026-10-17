@@ -30,4 +30,18 @@ class UpdaterTest {
         assertNotNull(Updater.installBlocker(Paths.get("/repo/dari-desktop-app/build/compose/binaries/main/app/Dari.app")))
         assertNotNull(Updater.installBlocker(Paths.get("/nonexistent-dari-folder/Dari.app")))
     }
+
+    @Test
+    fun `a Linux tarball folder the user owns can update itself`() {
+        val image = Files.createDirectories(Files.createTempDirectory("dari-linux").resolve("Dari"))
+        assertNull(Updater.installBlocker(Updater.InstallTarget.LinuxImage(image)))
+    }
+
+    @Test
+    fun `the deb install, build outputs and read-only folders on Linux are updated by hand`() {
+        val deb = assertNotNull(Updater.linuxInstallBlocker(Paths.get("/opt/dari")))
+        assertTrue("apt install" in deb)
+        assertNotNull(Updater.linuxInstallBlocker(Paths.get("/repo/dari-desktop-app/build/compose/binaries/main/app/Dari")))
+        assertNotNull(Updater.linuxInstallBlocker(Paths.get("/nonexistent-dari-folder/Dari")))
+    }
 }
