@@ -59,6 +59,7 @@ interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
 
 - USB로 연결한 기기나 에뮬레이터의 실시간 메시지, 요청과 응답을 나란히 표시
 - 모두 펼치기 / 모두 접기와 원클릭 복사를 지원하는 접이식 JSON, 텍스트·JSON 내보내기
+- 핸들러별 응답 시간 보기: 호출·에러 수와 평균/최소/최대, 느린 순 정렬, 평균 500ms 이상 강조
 - 토큰, 비밀번호, 쿠키 마스킹(선택). 데이터가 기기를 떠나기 전에 기기에서 적용
 - macOS(서명 및 공증, Apple Silicon·Intel), Windows, Linux(미리보기), 앱 내 업데이트 지원
 

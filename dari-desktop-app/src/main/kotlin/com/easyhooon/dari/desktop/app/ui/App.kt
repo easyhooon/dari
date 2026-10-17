@@ -53,7 +53,13 @@ import java.awt.Cursor
 private val TrafficLightInset = if (isMacOs) 78.dp else 12.dp
 
 @Composable
-fun WindowScope.App(controller: InspectorController, settings: DesktopSettings, updater: Updater, installUpdate: () -> Unit) {
+fun WindowScope.App(
+    controller: InspectorController,
+    settings: DesktopSettings,
+    updater: Updater,
+    installUpdate: () -> Unit,
+    openStats: () -> Unit,
+) {
     DariTheme(settings.appearance) {
         Column(Modifier.fillMaxSize().background(Dari.colors.background)) {
             TitleBar(controller, updater, installUpdate)
@@ -70,7 +76,7 @@ fun WindowScope.App(controller: InspectorController, settings: DesktopSettings, 
                 )
                 return@Column
             }
-            FilterBar(controller)
+            FilterBar(controller, openStats)
             Divider()
             Workspace(controller, settings)
         }
@@ -223,7 +229,7 @@ private fun Hint(text: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun FilterBar(controller: InspectorController) {
+private fun FilterBar(controller: InspectorController, openStats: () -> Unit) {
     val visible = controller.visibleMessages()
     Row(
         Modifier.fillMaxWidth().height(DariMetrics.toolbarHeight).padding(horizontal = 12.dp),
@@ -257,6 +263,7 @@ private fun FilterBar(controller: InspectorController) {
             style = Dari.type.codeCaption,
             color = Dari.colors.textTertiary,
         )
+        QuietButton("Response Time", onClick = openStats)
         QuietButton(
             "Clear",
             onClick = controller::clearMessages,
