@@ -256,6 +256,17 @@ private fun FilterBar(controller: InspectorController, openStats: () -> Unit) {
             optionLabel = { it?.lowercase() ?: "All statuses" },
             onPick = { controller.statusFilter = it },
         )
+        // Stay visible while a tag is picked, so a filter whose messages were cleared can still be reset.
+        val tags = controller.availableTags
+        if (tags.isNotEmpty() || controller.tagFilter != null) {
+            Picker(
+                label = controller.tagFilter ?: "All tags",
+                options = listOf(null) + tags,
+                isSelected = { it == controller.tagFilter },
+                optionLabel = { it ?: "All tags" },
+                onPick = { controller.tagFilter = it },
+            )
+        }
         Spacer(Modifier.weight(1f))
         controller.notice?.let { Text(it, style = Dari.type.caption, color = Dari.colors.accent) }
         Text(

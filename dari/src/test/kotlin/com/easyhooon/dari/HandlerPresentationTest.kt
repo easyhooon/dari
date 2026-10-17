@@ -1,6 +1,7 @@
 package com.easyhooon.dari
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -23,7 +24,7 @@ class HandlerPresentationTest {
             displayName = "오늘의 건강목표",
         )
 
-        assertTrue(entry.matchesHandlerQuery("건강목표"))
+        assertTrue(entry.matchesQuery("건강목표"))
     }
 
     @Test
@@ -34,6 +35,37 @@ class HandlerPresentationTest {
             displayName = "오늘의 건강목표",
         )
 
-        assertTrue(entry.matchesHandlerQuery("n:4"))
+        assertTrue(entry.matchesQuery("n:4"))
+    }
+
+    @Test
+    fun `search also matches tag and request ID, like the desktop filter`() {
+        val entry = MessageEntry(
+            handlerName = "getUser",
+            direction = MessageDirection.WEB_TO_APP,
+            tag = "CheckoutWebView",
+            requestId = "req-42",
+        )
+
+        assertTrue(entry.matchesQuery("checkout"))
+        assertTrue(entry.matchesQuery("REQ-4"))
+        assertFalse(entry.matchesQuery("payment"))
+    }
+
+    @Test
+    fun `filters combine and null means any`() {
+        val entry = MessageEntry(
+            handlerName = "getUser",
+            direction = MessageDirection.APP_TO_WEB,
+            tag = "main",
+            status = MessageStatus.ERROR,
+        )
+
+        assertTrue(entry.matchesFilters(" ", null, null, null))
+        assertTrue(entry.matchesFilters(" user ", "main", MessageStatus.ERROR, MessageDirection.APP_TO_WEB))
+        assertFalse(entry.matchesFilters("", null, null, MessageDirection.WEB_TO_APP))
+        assertFalse(entry.matchesFilters("", "other", null, null))
+        assertFalse(entry.matchesFilters("", null, MessageStatus.SUCCESS, null))
+        assertFalse(entry.matchesFilters("profile", null, null, null))
     }
 }

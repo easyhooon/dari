@@ -66,6 +66,10 @@ class InspectorController(
     var filter by mutableStateOf("")
     var directionFilter by mutableStateOf<String?>(null)
     var statusFilter by mutableStateOf<String?>(null)
+    var tagFilter by mutableStateOf<String?>(null)
+
+    /** Tags seen in this session, in order of first appearance. */
+    val availableTags: List<String> get() = messages.values.mapNotNull { it.tag }.distinct()
 
     /** The connected app's dari predates 2.2.0 and masks regardless of the setting. */
     var appAlwaysMasks by mutableStateOf(false)
@@ -285,12 +289,13 @@ class InspectorController(
         }
     }
 
-    /** Newest first, after the search, direction and status facets. */
+    /** Newest first, after the search, direction, status and tag facets. */
     fun visibleMessages(): List<WireMessageSummary> {
         val query = filter.trim()
         return messages.values.reversed().filter { message ->
             (directionFilter == null || message.direction == directionFilter) &&
                 (statusFilter == null || message.status == statusFilter) &&
+                (tagFilter == null || message.tag == tagFilter) &&
                 (
                     query.isEmpty() ||
                         listOfNotNull(message.handlerName, message.displayName, message.tag, message.requestId)
