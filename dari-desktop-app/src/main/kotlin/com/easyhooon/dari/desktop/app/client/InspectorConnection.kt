@@ -15,6 +15,8 @@ import com.easyhooon.dari.inspector.protocol.InspectorSettings
 import com.easyhooon.dari.inspector.protocol.ListInput
 import com.easyhooon.dari.inspector.protocol.ListOutput
 import com.easyhooon.dari.inspector.protocol.ObserveEvent
+import com.easyhooon.dari.inspector.protocol.SearchInput
+import com.easyhooon.dari.inspector.protocol.SearchOutput
 import com.easyhooon.dari.inspector.protocol.ServerHello
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
 import com.easyhooon.dari.inspector.protocol.WireMessageSummary
@@ -72,6 +74,14 @@ class InspectorConnection private constructor(
 
     suspend fun detail(id: Long): WireMessageDetail =
         call(InspectorOperations.DETAIL, DetailInput.serializer(), DetailInput(id), WireMessageDetail.serializer())
+
+    /** Ids of messages matching [query], payloads included. Empty when the app's dari predates search. */
+    suspend fun search(query: String): Set<Long> = try {
+        call(InspectorOperations.SEARCH, SearchInput.serializer(), SearchInput(query), SearchOutput.serializer()).ids.toSet()
+    } catch (e: InspectorException) {
+        if (e.error.code != InspectorErrorCode.OPERATION_NOT_FOUND) throw e
+        emptySet()
+    }
 
     suspend fun clear() {
         val requestId = nextId.incrementAndGet().toString()

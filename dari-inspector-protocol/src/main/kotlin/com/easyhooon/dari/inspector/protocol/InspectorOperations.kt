@@ -21,6 +21,12 @@ object InspectorOperations {
      * apps before dari 2.2.0 answer `OPERATION_NOT_FOUND` and always mask.
      */
     const val SETTINGS_UPDATE = "settings.update"
+
+    /**
+     * [SearchInput] → [SearchOutput]: ids whose handler, display name, tag, request ID or payload
+     * contains the query, as sent on this connection (masked when on). Older apps answer `OPERATION_NOT_FOUND`.
+     */
+    const val SEARCH = "messages.search"
 }
 
 @Serializable
@@ -39,6 +45,12 @@ data class ListOutput(val messages: List<WireMessageSummary>)
 
 @Serializable
 data class DetailInput(val id: Long)
+
+@Serializable
+data class SearchInput(val query: String)
+
+@Serializable
+data class SearchOutput(val ids: List<Long>)
 
 @Serializable
 sealed interface ObserveEvent {

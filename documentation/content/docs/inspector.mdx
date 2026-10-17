@@ -9,12 +9,14 @@ Dari has two inspectors: the in-app screen, opened from the notification, the la
 
 | Filter | In-app | Desktop |
 | --- | --- | --- |
-| Text search | Search icon. Matches the handler name, display name, tag and request ID. | **Filter handler, tag or request ID** field. Matches the handler name, display name, tag and request ID. |
+| Text search | Search icon. | **Filter handler, tag, request ID or payload** field. |
 | Tag | **All tags** chips, shown once a message has a tag. | **All tags** menu, shown once a message has a tag. |
 | Status | **All statuses** chips: in progress, success, error. | **All statuses** menu. |
 | Direction | Web → App and App → Web chips. | **All directions** menu: Web→App or App→Web. |
 
-Filters combine. Neither inspector searches request or response payloads yet.
+Text search matches the handler name, display name, tag, request ID and the request and response payloads, case-insensitively. With masking on, it searches the masked payloads, so hidden values don't match. Filters combine.
+
+The desktop asks the app to search payloads, so payload matches need the app on a dari release after 2.2.1; older apps match everything except payloads.
 
 ## Response Time
 

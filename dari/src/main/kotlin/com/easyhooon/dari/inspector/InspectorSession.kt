@@ -17,10 +17,13 @@ import com.easyhooon.dari.inspector.protocol.InspectorProtocol
 import com.easyhooon.dari.inspector.protocol.InspectorSettings
 import com.easyhooon.dari.inspector.protocol.ListInput
 import com.easyhooon.dari.inspector.protocol.ListOutput
+import com.easyhooon.dari.inspector.protocol.SearchInput
+import com.easyhooon.dari.inspector.protocol.SearchOutput
 import com.easyhooon.dari.inspector.protocol.ObserveEvent
 import com.easyhooon.dari.inspector.protocol.ServerHello
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
 import com.easyhooon.dari.masking.maskedIf
+import com.easyhooon.dari.matchesQuery
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -109,6 +112,15 @@ internal class InspectorSession(
                     } else {
                         reply(invoke.requestId, WireMessageDetail.serializer(), item.entry.toWireDetail(item.wireId))
                     }
+                }
+                InspectorOperations.SEARCH -> {
+                    val query = decode(SearchInput.serializer(), invoke.input).query.trim()
+                    val ids = if (query.isEmpty()) {
+                        emptyList()
+                    } else {
+                        source.snapshot().map { it.redacted() }.filter { it.entry.matchesQuery(query) }.map { it.wireId }
+                    }
+                    reply(invoke.requestId, SearchOutput.serializer(), SearchOutput(ids))
                 }
                 InspectorOperations.OBSERVE -> observe(invoke.requestId)
                 InspectorOperations.CLEAR -> {

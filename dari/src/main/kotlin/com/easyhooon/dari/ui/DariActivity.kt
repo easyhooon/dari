@@ -195,9 +195,13 @@ class DariActivity : ComponentActivity() {
 
                 val availableTags = entries.mapNotNull { it.tag }.distinct()
 
-                val filteredEntries = entries.reversed().filter {
-                    it.matchesFilters(searchQuery, selectedTag, selectedStatus, selectedDirection)
+                // Search what the list shows: masked payloads when masking is on.
+                val searchable = remember(entries, maskingEnabled, searchQuery.isNotBlank()) {
+                    if (maskingEnabled && searchQuery.isNotBlank()) entries.maskedIf(true) else entries
                 }
+                val filteredEntries = entries.indices.reversed()
+                    .filter { searchable[it].matchesFilters(searchQuery, selectedTag, selectedStatus, selectedDirection) }
+                    .map { entries[it] }
                 val hasActiveFilters = searchQuery.isNotBlank() || selectedTag != null ||
                     selectedStatus != null || selectedDirection != null
 
