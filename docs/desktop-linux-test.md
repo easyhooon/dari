@@ -29,6 +29,7 @@ Where the Linux build of the desktop app (`.deb` and `.tar.gz`) has been tested 
 | Synthetic loopback fixture (fake `adb` + local bridge server) | Pass: handshake, settings update, message list and detail, live new-message badge, JSON panels |
 | Real device over Wi-Fi adb (Galaxy S25+, Android 17, sample app) | Pass: device and app listed, connects, shows history and live messages, request/response panels |
 | Tarball (`tar -czf` of the distributable, 54 MB) | Pass: extracts to `Dari/`, `Dari/bin/Dari` launches and finds the device |
+| Update button (Xfce, AWT `Desktop.browse` unsupported) | Pass: falls back to `xdg-open`, opens the download page in Firefox |
 | Settings and log locations | Settings in `~/.java/.userPrefs/io/github/easyhooon/dari/desktop`, log in `~/.local/state/dari/dari.log` |
 
 ## Not verified

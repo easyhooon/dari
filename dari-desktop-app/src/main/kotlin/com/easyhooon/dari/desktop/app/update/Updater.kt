@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.easyhooon.dari.desktop.app.AppLog
+import com.easyhooon.dari.desktop.app.ExternalOpener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -11,7 +12,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.awt.Desktop
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
@@ -180,9 +180,7 @@ class Updater(
     }
 
     fun openDownloadPage() {
-        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-            Desktop.getDesktop().browse(ReleaseSource.downloadPageUrl)
-        }
+        ExternalOpener.browse(ReleaseSource.downloadPageUrl)
     }
 
     companion object {
