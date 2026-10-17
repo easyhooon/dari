@@ -203,19 +203,14 @@ The existing `String`/JSON methods remain unchanged. To inspect protobuf payload
 There is no protobuf feature flag or `DariConfig` toggle. Using this interceptor overload and the protobuf capture methods opts the bridge into protobuf inspection. See the [full guide](https://easyhooon.github.io/dari/docs/protobuf) or [Korean guide](https://easyhooon.github.io/dari/ko/docs/protobuf).
 
 ```kotlin
-import com.easyhooon.dari.interceptor.PayloadPart.REQUEST
-import com.easyhooon.dari.interceptor.PayloadPart.RESPONSE
-import com.easyhooon.dari.interceptor.ProtobufPayloadDecoder
+import com.easyhooon.dari.interceptor.protobufDecoder
 
 val protobufInterceptor = Dari.createInterceptor(
     tag = "OrderBridge",
-    protobufDecoder = ProtobufPayloadDecoder { payload, context ->
-        when (context.handlerName to context.part) {
-            "createOrder" to REQUEST ->
-                JsonFormat.printer().print(CreateOrderRequest.parseFrom(payload))
-            "createOrder" to RESPONSE ->
-                JsonFormat.printer().print(CreateOrderResponse.parseFrom(payload))
-            else -> null
+    protobufDecoder = protobufDecoder {
+        webToApp("createOrder") {
+            request { JsonFormat.printer().print(CreateOrderRequest.parseFrom(it)) }
+            response { JsonFormat.printer().print(CreateOrderResponse.parseFrom(it)) }
         }
     },
 )

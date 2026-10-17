@@ -29,6 +29,30 @@ The application owns schema-aware decoding. Return a human-readable string for e
 
 ```kotlin
 import com.easyhooon.dari.Dari
+import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
+import com.easyhooon.dari.interceptor.protobufDecoder
+
+val interceptor: ProtobufDariInterceptor? = Dari.createInterceptor(
+    tag = "OrderBridge",
+    protobufDecoder = protobufDecoder {
+        webToApp("createOrder") {
+            request { JsonFormat.printer().print(CreateOrderRequest.parseFrom(it)) }
+            response { JsonFormat.printer().print(CreateOrderResponse.parseFrom(it)) }
+        }
+        appToWeb("orderUpdated") {
+            request { JsonFormat.printer().print(OrderUpdated.parseFrom(it)) }
+        }
+    },
+)
+```
+
+
+`webToApp` and `appToWeb` register decoders per handler, direction, and request/response part. Unregistered combinations fall back to `DECODER_UNAVAILABLE`, and registering the same combination twice throws when the decoder is built.
+
+For full control, implement `ProtobufPayloadDecoder` directly and route on `ProtobufDecodeContext`:
+
+```kotlin
+import com.easyhooon.dari.Dari
 import com.easyhooon.dari.interceptor.PayloadPart.REQUEST
 import com.easyhooon.dari.interceptor.PayloadPart.RESPONSE
 import com.easyhooon.dari.interceptor.ProtobufDariInterceptor

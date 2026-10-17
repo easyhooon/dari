@@ -204,19 +204,14 @@ interceptor?.onWebToAppRequest(handlerName, null, data)
 protobuf 기능 플래그나 `DariConfig` 토글은 없습니다. 이 인터셉터 오버로드와 protobuf 캡처 메서드를 사용하면 해당 브릿지에서 protobuf 검사가 활성화됩니다. 자세한 내용은 [한국어 가이드](https://easyhooon.github.io/dari/ko/docs/protobuf) 또는 [영어 가이드](https://easyhooon.github.io/dari/docs/protobuf)를 참고하세요.
 
 ```kotlin
-import com.easyhooon.dari.interceptor.PayloadPart.REQUEST
-import com.easyhooon.dari.interceptor.PayloadPart.RESPONSE
-import com.easyhooon.dari.interceptor.ProtobufPayloadDecoder
+import com.easyhooon.dari.interceptor.protobufDecoder
 
 val protobufInterceptor = Dari.createInterceptor(
     tag = "OrderBridge",
-    protobufDecoder = ProtobufPayloadDecoder { payload, context ->
-        when (context.handlerName to context.part) {
-            "createOrder" to REQUEST ->
-                JsonFormat.printer().print(CreateOrderRequest.parseFrom(payload))
-            "createOrder" to RESPONSE ->
-                JsonFormat.printer().print(CreateOrderResponse.parseFrom(payload))
-            else -> null
+    protobufDecoder = protobufDecoder {
+        webToApp("createOrder") {
+            request { JsonFormat.printer().print(CreateOrderRequest.parseFrom(it)) }
+            response { JsonFormat.printer().print(CreateOrderResponse.parseFrom(it)) }
         }
     },
 )

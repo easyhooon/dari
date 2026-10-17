@@ -23,7 +23,7 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.lifecycleScope
 import com.easyhooon.dari.Dari
 import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
-import com.easyhooon.dari.interceptor.ProtobufPayloadDecoder
+import com.easyhooon.dari.interceptor.protobufDecoder
 import com.google.protobuf.StringValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -34,14 +34,11 @@ class MainActivity : ComponentActivity() {
 
     private val interceptor: ProtobufDariInterceptor? = Dari.createInterceptor(
         tag = "Sample",
-        protobufDecoder = ProtobufPayloadDecoder { payload, context ->
-            if (context.handlerName != PROTOBUF_HANDLER) return@ProtobufPayloadDecoder null
-
-            JSONObject().apply {
-                put("type", "google.protobuf.StringValue")
-                put("value", StringValue.parseFrom(payload).value)
-                put("part", context.part.name)
-            }.toString(2)
+        protobufDecoder = protobufDecoder {
+            webToApp(PROTOBUF_HANDLER) {
+                request { describeStringValue(it, "REQUEST") }
+                response { describeStringValue(it, "RESPONSE") }
+            }
         },
     )
     private var webView: WebView? = null
@@ -508,5 +505,12 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val PROTOBUF_HANDLER = "protobufGreeting"
+
+        fun describeStringValue(payload: ByteArray, part: String): String =
+            JSONObject().apply {
+                put("type", "google.protobuf.StringValue")
+                put("value", StringValue.parseFrom(payload).value)
+                put("part", part)
+            }.toString(2)
     }
 }
