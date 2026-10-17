@@ -13,6 +13,39 @@ Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualiz
 
 📖 **[Documentation](https://easyhooon.github.io/dari)** — Setup guide, configuration reference, and API docs.
 
+<p align="center">
+  <img src="screenshots/list_v2.jpeg" width="240" alt="Bridge message list" />
+  <img src="screenshots/request_v2.jpeg" width="240" alt="Request payload detail" />
+  <img src="screenshots/notification.jpeg" width="240" alt="Live notification" />
+</p>
+
+## Why Dari?
+
+Debugging a hybrid app usually means sprinkling `Log.d` across `@JavascriptInterface` methods and scrolling Logcat to match requests with responses. Dari gives you:
+
+- Every Web ↔ App bridge call in one list, with request/response paired by `requestId`
+- Pretty-printed JSON payloads, status (`IN_PROGRESS` / `SUCCESS` / `ERROR`), and timing
+- A live notification and shake-to-open, so the inspector is one tap away while testing
+- A no-op artifact for release builds, so nothing ships to production
+
+## Quick Start
+
+```kotlin
+// build.gradle.kts
+debugImplementation("io.github.easyhooon:dari:<latest-version>")
+releaseImplementation("io.github.easyhooon:dari-noop:<latest-version>")
+```
+
+```kotlin
+// In your bridge layer
+val interceptor = Dari.createInterceptor()
+
+interceptor?.onWebToAppRequest(handlerName, requestId, data)
+interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
+```
+
+Run the app, trigger a bridge call, and tap the Dari notification. See [Setup](#setup) for App-to-Web messages, tags, and Protocol Buffers.
+
 ## Desktop App
 
 See the bridge messages of a connected debug build on your computer, on a bigger screen. It needs only adb: no proxy, certificate or port setup.
@@ -33,27 +66,6 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
 ```
 
 See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for requirements and troubleshooting.
-
-## Star History
-
-GitHub stars for `easyhooon/dari` over time. This live chart shows repository stars, not library downloads.
-
-<a href="https://www.star-history.com/#easyhooon/dari&amp;Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=easyhooon%2Fdari&amp;type=Date&amp;theme=dark" />
-    <img alt="Dari GitHub star history" src="https://api.star-history.com/svg?repos=easyhooon%2Fdari&amp;type=Date" />
-  </picture>
-</a>
-
-## Download history
-
-[![Scarf downloads for Dari](https://api.scarf.sh/v2/packages/Easyhooon/829e32f5-20a5-45b8-b758-fe71daf64cac/downloads-badge)](https://app.scarf.sh/packages/Easyhooon/repository-jvm/io.github.easyhooon%2Fdari)
-
-![Observed Dari rolling 30-day downloads](https://raw.githubusercontent.com/easyhooon/dari/dari-downloads-data/docs/downloads-30d-observed.svg)
-
-Each point is a daily observation of [Scarf's public monthly downloads badge](https://api.scarf.sh/v2/packages/Easyhooon/829e32f5-20a5-45b8-b758-fe71daf64cac/downloads-badge) for the single Maven Central artifact `io.github.easyhooon:dari`. It is a **preceding 30-day count**, not downloads on that day or unique users. The chart starts on October 13, 2026; earlier observations cannot be reconstructed from this badge. A scheduled GitHub Action records the public count each day and updates the SVG. The graph states its observed period and last update time.
-
-This scope excludes `dari-core`, `dari-noop`, platform artifacts, Ding, and the rest of the Easyhooon namespace. A build can fetch several artifacts together, so adding their counts would not estimate users. [Scarf says](https://docs.scarf.sh/package-registry-integrations-maven-central/) Maven Central data typically appears about a week after a download.
 
 ## Screenshots
 
@@ -381,6 +393,27 @@ interface DariInterceptor {
     )
 }
 ```
+
+## Project Stats
+
+### Star History
+
+GitHub stars for `easyhooon/dari` over time. This live chart shows repository stars, not library downloads.
+
+<a href="https://www.star-history.com/#easyhooon/dari&amp;Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=easyhooon%2Fdari&amp;type=Date&amp;theme=dark" />
+    <img alt="Dari GitHub star history" src="https://api.star-history.com/svg?repos=easyhooon%2Fdari&amp;type=Date" />
+  </picture>
+</a>
+
+### Download history
+
+[![Scarf downloads for Dari](https://api.scarf.sh/v2/packages/Easyhooon/829e32f5-20a5-45b8-b758-fe71daf64cac/downloads-badge)](https://app.scarf.sh/packages/Easyhooon/repository-jvm/io.github.easyhooon%2Fdari)
+
+![Observed Dari rolling 30-day downloads](https://raw.githubusercontent.com/easyhooon/dari/dari-downloads-data/docs/downloads-30d-observed.svg)
+
+Rolling 30-day Maven Central requests for `io.github.easyhooon:dari`, observed daily via Scarf. See [how it is measured](scripts/README-downloads.md).
 
 ## Support
 
