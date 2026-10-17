@@ -10,6 +10,7 @@ on:
       - "scripts/*desktop-app.sh"
       - "scripts/*macos*.sh"
       - "scripts/test-macos-packaging.py"
+      - "detekt-config.yml"
       - "gradle/**"
       - "build.gradle.kts"
       - ".github/workflows/desktop-app.yml"
@@ -21,6 +22,7 @@ on:
       - "scripts/*desktop-app.sh"
       - "scripts/*macos*.sh"
       - "scripts/test-macos-packaging.py"
+      - "detekt-config.yml"
       - "gradle/**"
       - "build.gradle.kts"
       - ".github/workflows/desktop-app.yml"
@@ -49,6 +51,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Unit tests
         run: ./gradlew -PskipPublicationSigning :dari-inspector-protocol:test :dari-desktop-app:test
+      - name: Lint
+        if: runner.os == 'Linux'
+        run: >-
+          ./gradlew
+          -PskipPublicationSigning
+          :dari-inspector-protocol:ktlintCheck :dari-inspector-protocol:detekt
+          :dari-desktop-app:ktlintCheck :dari-desktop-app:detekt
       - name: macOS packaging contract tests
         if: runner.os == 'macOS'
         run: python3 scripts/test-macos-packaging.py

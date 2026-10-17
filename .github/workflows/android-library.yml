@@ -7,6 +7,10 @@ on:
       - "dari-runtime/**"
       - "dari-noop/**"
       - "dari-core/**"
+      - "dari-inspector-protocol/**"
+      - "sample/**"
+      - "scripts/check-dari-api-parity.sh"
+      - "detekt-config.yml"
       - "gradle/**"
       - "gradlew"
       - "build.gradle.kts"
@@ -18,6 +22,10 @@ on:
       - "dari-runtime/**"
       - "dari-noop/**"
       - "dari-core/**"
+      - "dari-inspector-protocol/**"
+      - "sample/**"
+      - "scripts/check-dari-api-parity.sh"
+      - "detekt-config.yml"
       - "gradle/**"
       - "gradlew"
       - "build.gradle.kts"
@@ -45,3 +53,20 @@ jobs:
           :dari:testDebugUnitTest
           :dari-runtime:testDebugUnitTest
           :dari-noop:testDebugUnitTest
+          :sample:testDebugUnitTest
+      - name: Lint
+        run: >-
+          ./gradlew
+          -PskipPublicationSigning
+          :dari:ktlintCheck :dari:detekt
+          :dari-runtime:ktlintCheck :dari-runtime:detekt
+          :dari-noop:ktlintCheck :dari-noop:detekt
+          :sample:ktlintCheck :sample:detekt
+      # Apps use releaseImplementation(dari-noop), so both must expose the same API.
+      - name: API parity and sample builds
+        run: >-
+          ./gradlew
+          -PskipPublicationSigning
+          checkDariApiParity
+          :sample:assembleDebug
+          :sample:assembleRelease

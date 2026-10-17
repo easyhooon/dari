@@ -46,6 +46,10 @@ allprojects {
             buildUponDefaultConfig = true
             toolVersion = libs.versions.detekt.get()
             config.setFrom(files("$rootDir/detekt-config.yml"))
+            // The default source only covers src/main and src/test, which misses KMP source sets.
+            if (plugins.hasPlugin("org.jetbrains.kotlin.multiplatform")) {
+                source.setFrom(file("src").listFiles().orEmpty().map { it.resolve("kotlin") }.filter { it.isDirectory })
+            }
         }
 
         extensions.configure<KtlintExtension> {
