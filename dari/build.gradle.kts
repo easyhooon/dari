@@ -22,7 +22,7 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
-        // Robolectric's SDK 36 runtime reaches jdk.internal.access, which JDK 17+ does not export.
+        // Robolectric's SDK 36 runtime needs JDK 21+ and reaches jdk.internal.access, which is not exported.
         unitTests.all { it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED") }
     }
 
