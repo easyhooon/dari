@@ -1,8 +1,8 @@
 name: Desktop App Release
 
-# Builds the desktop app for macOS (Apple Silicon, Intel) and Windows (x64), smoke-tests each build,
-# and attaches the installers and their SHA-256 files to the release for the given tag.
-# Developer ID signed and notarized on macOS; unsigned on Windows. Linux awaits real-machine testing.
+# Builds the desktop app for macOS (Apple Silicon, Intel), Windows (x64) and Linux (x64), smoke-tests
+# each build, and attaches the installers and their SHA-256 files to the release for the given tag.
+# Developer ID signed and notarized on macOS; unsigned on Windows and Linux.
 on:
   workflow_dispatch:
     inputs:
@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-15, macos-15-intel, windows-latest]
+        runner: [macos-15, macos-15-intel, windows-latest, ubuntu-24.04]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     defaults:
@@ -50,7 +50,13 @@ jobs:
           fi
       - name: Smoke test
         if: runner.os != 'macOS'
-        run: scripts/smoke-test-desktop-app.sh
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            # xvfb has no GPU; skip Skiko's OpenGL attempt and its fallback warning.
+            SKIKO_RENDER_API=SOFTWARE xvfb-run --auto-servernum scripts/smoke-test-desktop-app.sh
+          else
+            scripts/smoke-test-desktop-app.sh
+          fi
       - name: Prepare macOS signing and notarization
         if: runner.os == 'macOS'
         env:

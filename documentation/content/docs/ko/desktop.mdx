@@ -5,7 +5,7 @@ description: adb로 연결해 컴퓨터에서 브릿지 메시지를 확인합�
 
 import { ConnectionFlow } from '@/components/connection-flow';
 
-Dari 데스크톱 앱은 연결된 디버그 빌드의 브릿지 메시지를 컴퓨터 화면에서 보여 줍니다. 실시간 목록, 요청과 응답을 나란히 놓은 상세 화면, 접고 펼칠 수 있는 JSON을 제공합니다. `dari` 2.0.0 이상이 필요하고, 실기기와 에뮬레이터 모두에서 동작합니다. macOS 10.15 이상을 지원하고 Windows는 미리보기(preview)로 제공하며, Linux 빌드는 추후 제공할 예정입니다.
+Dari 데스크톱 앱은 연결된 디버그 빌드의 브릿지 메시지를 컴퓨터 화면에서 보여 줍니다. 실시간 목록, 요청과 응답을 나란히 놓은 상세 화면, 접고 펼칠 수 있는 JSON을 제공합니다. `dari` 2.0.0 이상이 필요하고, 실기기와 에뮬레이터 모두에서 동작합니다. macOS 10.15 이상을 지원하고, Windows와 Linux(x64)는 미리보기(preview)로 제공합니다.
 
 ## 설치
 
@@ -35,6 +35,17 @@ Dari는 Developer ID로 서명되고 Apple 공증을 받았기 때문에 보안 
 3. 필요하면 `certutil -hashfile Dari-<version>-x64.exe SHA256` 결과를 같은 릴리스의 `.sha256` 파일과 비교합니다.
 
 그룹 정책이나 Intune으로 일괄 배포할 때는 같은 릴리스의 `Dari-<version>-x64.msi`를 씁니다. 두 파일은 같은 앱을 설치하고, 이미 설치된 앱은 그 자리에서 업그레이드합니다. 2.3.0 이전 릴리스에는 `.msi`만 있습니다.
+
+### Linux (preview)
+
+Debian 13, Ubuntu 24.04 이상과 이를 기반으로 한 배포판에서:
+
+1. [릴리스 페이지](https://github.com/easyhooon/dari/releases)에서 `dari_<version>_amd64.deb`를 내려받습니다.
+2. `sudo apt install ./dari_<version>_amd64.deb`로 설치합니다. 앱 메뉴의 **Development**에 Dari가 추가되고, `/opt/dari`에 설치됩니다.
+
+`.deb`는 Debian 13과 Ubuntu 24.04에서 바뀐 패키지 이름에 의존하므로 그 이전 버전에는 설치되지 않습니다. 이전 버전이나 Fedora, Arch 같은 다른 배포판에서는 같은 릴리스의 `Dari-<version>-linux-x64.tar.gz`를 씁니다. Java 런타임이 함께 들어 있어 압축을 풀고 `Dari/bin/Dari`를 실행하면 됩니다.
+
+필요하면 `sha256sum <파일>` 결과를 같은 릴리스의 `.sha256` 파일과 비교합니다. Linux 빌드는 x64만 제공하며, 지금까지 Debian 13(Xfce, X11)에서 테스트했습니다.
 
 ### 다운로드 크기
 
@@ -90,6 +101,7 @@ Dari는 실행할 때와 6시간마다 릴리스 페이지를 확인합니다. �
 
 - **macOS**: 새 이미지를 내려받아 `.sha256`, 번들 ID, 버전, 코드 서명을 확인한 뒤 앱을 종료하고 새 버전으로 다시 엽니다. 중간에 실패하면 설치된 버전을 그대로 둡니다. **응용 프로그램**처럼 쓰기 권한이 있는 폴더에 설치된 경우에만 동작하고, 그 외에는 Dari를 **응용 프로그램** 폴더로 옮겨 그곳에서 열라고 안내합니다.
 - **Windows**: 버튼이 다운로드 페이지를 엽니다. Dari를 종료한 뒤 새 `.exe`나 `.msi`를 실행하면 설치된 앱이 업그레이드됩니다. Dari가 열려 있으면 설치 프로그램이 `dari.lock`에서 Error 1306으로 멈춥니다. Dari를 종료하고 **Retry**를 누르세요.
+- **Linux**: 버튼이 다운로드 페이지를 엽니다. 새 `.deb`를 `sudo apt install`로 설치하면 설치된 앱이 업그레이드되고, tarball은 새 파일을 기존 위치에 풀면 됩니다.
 
 ### 버전
 
@@ -99,7 +111,7 @@ Desktop only 릴리스 때문에 앱의 `dari`를 올릴 필요는 없습니다.
 
 ## 연결
 
-1. `adb`를 쓸 수 있게 합니다. Android Studio를 기본 위치에 설치했다면 이미 들어 있고, Dari는 `ANDROID_HOME`도 확인합니다. Android Studio가 없다면 [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools)를 설치합니다. macOS는 `brew install android-platform-tools`, Windows는 압축을 푼 뒤 `platform-tools` 폴더를 `PATH`에 추가합니다.
+1. `adb`를 쓸 수 있게 합니다. Android Studio를 기본 위치에 설치했다면 이미 들어 있고, Dari는 `ANDROID_HOME`도 확인합니다. Android Studio가 없다면 [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools)를 설치합니다. macOS는 `brew install android-platform-tools`, Debian이나 Ubuntu는 `sudo apt install adb`, Windows는 압축을 푼 뒤 `platform-tools` 폴더를 `PATH`에 추가합니다.
 2. USB 디버깅을 켠 기기를 연결하거나 에뮬레이터를 실행합니다.
 3. `dari`를 쓰는 앱의 debuggable 빌드를 실행하고 화면 맨 앞에 띄웁니다.
 
@@ -171,12 +183,13 @@ debuggable이 아닌 빌드는 위의 `ALLOW_NON_DEBUGGABLE`도 함께 넣어야
 | App is in the background | Android는 백그라운드 앱을 일시 정지합니다. 앱을 화면 맨 앞에 띄우면 Dari가 다시 연결합니다. |
 | Not running Dari | 앱이 `dari` 2.0.0 이상을 쓰는 debuggable 빌드인지 확인합니다. |
 
-문제를 알리려면 **Help → Report an Issue…**를 누릅니다. Dari 버전과 OS가 채워진 버그 양식이 열립니다. 기능 제안은 **Help → Suggest a Feature…**를 누릅니다. **Help → Show Log File**은 `dari.log`가 있는 폴더를 엽니다(macOS `~/Library/Logs/Dari`, Windows `%LOCALAPPDATA%\easyhooon\Dari\logs`). 로그에는 시작 시 버전, 크래시 리포트 설정 변경, 오류만 기록되고 메시지 내용은 남지 않습니다.
+문제를 알리려면 **Help → Report an Issue…**를 누릅니다. Dari 버전과 OS가 채워진 버그 양식이 열립니다. 기능 제안은 **Help → Suggest a Feature…**를 누릅니다. **Help → Show Log File**은 `dari.log`가 있는 폴더를 엽니다(macOS `~/Library/Logs/Dari`, Windows `%LOCALAPPDATA%\easyhooon\Dari\logs`, Linux `~/.local/state/dari`). 로그에는 시작 시 버전, 크래시 리포트 설정 변경, 오류만 기록되고 메시지 내용은 남지 않습니다.
 
 ## 제거
 
 - **macOS**: Dari를 종료하고 `/Applications/Dari.app`을 휴지통으로 옮깁니다. 설정과 로그까지 지우려면 `~/Library/Logs/Dari`와 `~/Library/Preferences/io.github.easyhooon.plist`를 삭제합니다.
 - **Windows**: **설정 → 앱 → 설치된 앱 → Dari → 제거**를 누릅니다. 설정은 레지스트리 `HKEY_CURRENT_USER\Software\JavaSoft\Prefs\io\github\easyhooon`에, 로그는 `%LOCALAPPDATA%\easyhooon\Dari`에 있으며 제거해도 남습니다.
+- **Linux**: `sudo apt remove dari`를 실행하거나 압축을 푼 `Dari` 폴더를 삭제합니다. 설정은 `~/.java/.userPrefs/io/github/easyhooon`에, 로그는 `~/.local/state/dari`에 있으며, 모두 지우려면 함께 삭제합니다.
 
 ## 소스에서 빌드
 

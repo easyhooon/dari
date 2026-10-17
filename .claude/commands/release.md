@@ -7,10 +7,12 @@ Both releases share one number line, set in `gradle/libs.versions.toml`: `dari` 
 The desktop updater, `install-desktop.sh` and the download page all read GitHub's `/releases/latest`, so every GitHub release needs the desktop installers, a plain semver tag, and must not be a draft or prerelease. Apps keep working on any library version from 2.0.0 because compatibility is decided by `InspectorProtocol.VERSION`, not by these numbers.
 
 ## Step 1: Pick the mode and verify the version
+- Everything going into the release must already be merged to `main` with CI green. If a feature PR is still open, verify it (and wait for its checks) and merge it first.
 - Run `gh release list --limit 3` and note the latest tag. The new version must be higher, or installed desktop apps never see it.
 - **Full release**: set both `dari` and `dariDesktop` to the version.
 - **Desktop-only release**: set only `dariDesktop`; leave `dari` alone.
   - First run `git diff --stat <latest_tag>..HEAD -- dari dari-core dari-noop dari-runtime dari-inspector-protocol`. If it lists anything, stop and ask the user: library or protocol changes need a full release, or apps never get them.
+- Make the bump in a PR: branch `chore/bump-desktop-<version>` (or `chore/bump-version-<version>` for a full release) from `origin/main`, commit `chore: bump the desktop app to <version>`, open the PR, wait for CI, then merge it.
 - The bump must be on `main` before tagging, because `desktop-release.yml` checks out the tag and fails when `dariDesktop` doesn't match it.
 
 ## Step 2: Publish to Maven Central (full release only)
@@ -38,11 +40,14 @@ The desktop updater, `install-desktop.sh` and the download page all read GitHub'
     ```
   - Desktop-only: start the body with `Desktop app only. The library stays at <dari>, so there is no <version> on Maven Central and apps don't need to update.`
 - Omit `## Behavior changes` when no PR has one.
-- Run `gh release create <version> --target main --title "<title>" --notes "<release notes>"`
+- Push the tag first; a draft release doesn't create it, and the workflow checks it out: `git fetch origin && git tag <version> origin/main && git push origin <version>`
+- Create the release as a **draft**, so `/releases/latest` doesn't point installed apps at a release with no installers yet: `gh release create <version> --draft --verify-tag --title "<title>" --notes "<release notes>"`
 
-## Step 4: Attach the desktop installers
+## Step 4: Attach the desktop installers, then publish
 - Run `gh workflow run desktop-release.yml -f tag=<version>` and wait for it with `gh run watch`.
-- Run `gh release view <version> --json assets` and confirm the `.dmg`, `.exe`, `.msi` and `.sha256` files are there. Until they are, `/releases/latest` points installed apps at a release they can't download.
+- Run `gh release view <version> --json assets` and confirm every installer and its `.sha256` is there: `Dari-<version>-arm64.dmg`, `Dari-<version>-x64.dmg`, `Dari-<version>-x64.exe`, `Dari-<version>-x64.msi`, `dari_<version>_amd64.deb`, `Dari-<version>-linux-x64.tar.gz`.
+- If the workflow fails or a file is missing, stop and leave the release as a draft.
+- Publish: `gh release edit <version> --draft=false --latest`
 
 ## Step 5: Report
 - Print the release URL and confirm completion.

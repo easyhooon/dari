@@ -44,7 +44,6 @@ import java.awt.Taskbar
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.awt.image.BufferedImage
-import java.net.URI
 import javax.imageio.ImageIO
 import javax.swing.JOptionPane
 
@@ -230,9 +229,9 @@ fun main() {
                         onClick = installUpdate,
                     )
                     Separator()
-                    Item("Release Notes", onClick = { browse(ReleaseSource.pageUrl) })
-                    Item("Report an Issue…", onClick = { browse(IssueReport.newIssueUrl(APP_VERSION)) })
-                    Item("Suggest a Feature…", onClick = { browse(IssueReport.featureRequestUrl()) })
+                    Item("Release Notes", onClick = { ExternalOpener.browse(ReleaseSource.pageUrl) })
+                    Item("Report an Issue…", onClick = { ExternalOpener.browse(IssueReport.newIssueUrl(APP_VERSION)) })
+                    Item("Suggest a Feature…", onClick = { ExternalOpener.browse(IssueReport.featureRequestUrl()) })
                     Item("Show Log File", onClick = ::showLogFolder)
                     Item("Third-Party Notices", onClick = { noticesOpen = true })
                     if (!isMacOs) {
@@ -272,9 +271,7 @@ private fun mainWindowState(saved: WindowBounds?): WindowState {
 
 private fun showLogFolder() {
     AppLog.directory.mkdirs()
-    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
-        Desktop.getDesktop().open(AppLog.directory)
-    }
+    ExternalOpener.open(AppLog.directory)
 }
 
 private fun copyToClipboard(text: String) {
@@ -283,10 +280,6 @@ private fun copyToClipboard(text: String) {
 
 private const val MIN_WINDOW_WIDTH = 640
 private const val MIN_WINDOW_HEIGHT = 400
-
-private fun browse(uri: URI) {
-    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) Desktop.getDesktop().browse(uri)
-}
 
 private fun shortcut(key: Key, shift: Boolean = false) =
     if (isMacOs) KeyShortcut(key, meta = true, shift = shift) else KeyShortcut(key, ctrl = true, shift = shift)
