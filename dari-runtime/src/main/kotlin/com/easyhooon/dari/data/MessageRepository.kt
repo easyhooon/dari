@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Message store backed by Room for persistence across sessions.
@@ -44,7 +46,11 @@ class MessageRepository internal constructor(
     private val dao: MessageDao = database.messageDao(),
 ) {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+
+    // Room DAO calls suspend, so a single dispatcher lane alone can interleave writes.
+    // The fair mutex keeps DB writes in call order, which id-based tie-breaking relies on.
+    private val writeMutex = Mutex()
     private val temporaryId = AtomicLong(-1L)
 
     private val _entries = MutableStateFlow<List<MessageEntry>>(emptyList())
@@ -81,7 +87,7 @@ class MessageRepository internal constructor(
     internal val initialized = CompletableDeferred<Unit>()
 
     init {
-        scope.launch {
+        launchWrite {
             val cutoff = retentionCutoff()
             if (cutoff != null) {
                 dao.deleteOlderThan(cutoff)
@@ -90,6 +96,10 @@ class MessageRepository internal constructor(
             synchronized(lock) { _entries.value = persisted }
             initialized.complete(Unit)
         }
+    }
+
+    private fun launchWrite(block: suspend () -> Unit) {
+        scope.launch { writeMutex.withLock { block() } }
     }
 
     private fun retentionCutoff(): Long? =
@@ -110,7 +120,7 @@ class MessageRepository internal constructor(
         }
 
         // Insert to DB asynchronously and update with actual id
-        scope.launch {
+        launchWrite {
             val actualId = dao.insert(entry.toEntity())
             synchronized(lock) {
                 _entries.update { current ->
@@ -141,7 +151,7 @@ class MessageRepository internal constructor(
             updatedEntry?.let { _events.tryEmit(RepositoryEvent.Updated(InspectorEntry(wireIdOf(it.id), it))) }
         }
         updatedEntry?.let { entry ->
-            scope.launch {
+            launchWrite {
                 dao.updateByRequestId(
                     requestId = requestId,
                     tag = tag,
@@ -166,7 +176,7 @@ class MessageRepository internal constructor(
             wireIds.clear()
             _events.tryEmit(RepositoryEvent.Cleared)
         }
-        scope.launch { dao.clear() }
+        launchWrite { dao.clear() }
     }
 
     /** Current entries with their stable inspector ids, consistent with [events]. */
