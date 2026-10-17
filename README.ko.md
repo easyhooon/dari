@@ -56,7 +56,7 @@ https://github.com/user-attachments/assets/b7332358-953b-4391-9f68-4e547efcb9e7
 - USB로 연결한 기기나 에뮬레이터의 실시간 메시지, 요청과 응답을 나란히 표시
 - 모두 펼치기 / 모두 접기와 원클릭 복사를 지원하는 접이식 JSON, 텍스트·JSON 내보내기
 - 토큰, 비밀번호, 쿠키 마스킹(선택). 데이터가 기기를 떠나기 전에 기기에서 적용
-- macOS(서명 및 공증, Apple Silicon·Intel)와 Windows(미리보기), 앱 내 업데이트 지원
+- macOS(서명 및 공증, Apple Silicon·Intel), Windows, Linux(미리보기), 앱 내 업데이트 지원
 
 앱의 디버그 빌드에 `dari` 2.0.0 이상이 필요합니다. 1.x를 쓰는 앱은 업그레이드해야 연결됩니다.
 
