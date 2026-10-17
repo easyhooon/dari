@@ -5,6 +5,7 @@ on:
     paths:
       - "dari-core/**"
       - "compat/**"
+      - "detekt-config.yml"
       - "dari/build.gradle.kts"
       - "dari-noop/build.gradle.kts"
       - "gradle/**"
@@ -16,6 +17,7 @@ on:
     paths:
       - "dari-core/**"
       - "compat/**"
+      - "detekt-config.yml"
       - "dari/build.gradle.kts"
       - "dari-noop/build.gradle.kts"
       - "gradle/**"
@@ -51,6 +53,7 @@ jobs:
           :dari-core:compileTestKotlinIosArm64
           :dari-core:compileTestKotlinIosSimulatorArm64
           :dari-core:ktlintCheck
+          :dari-core:detekt
           :dari-core:checkLegacyAbi
           :dari-core:publishToMavenLocal
           :dari-core:publishAllPublicationsToCompatRepository
