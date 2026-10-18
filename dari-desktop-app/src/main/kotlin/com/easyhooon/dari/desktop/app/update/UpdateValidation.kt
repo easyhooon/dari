@@ -16,6 +16,9 @@ object UpdateValidation {
 
     const val LINUX_LAUNCHER = "Dari"
 
+    /** `upgradeUuid` in build.gradle.kts; every Dari MSI carries it. */
+    const val WINDOWS_UPGRADE_CODE = "94cfb91e-3282-4beb-a9a1-af3b4a2c6ca5"
+
     fun verify(candidate: Path, installed: Path, expected: SemanticVersion) {
         validateMetadata(info(installed), info(candidate), expected)
         val result = Processes.run("/usr/bin/codesign", "--verify", "--deep", "--strict", "--all-architectures", candidate.toString())
@@ -41,6 +44,19 @@ object UpdateValidation {
     private fun linuxInfo(image: Path): BundleInfo {
         val cfg = image.resolve("lib/app/$LINUX_LAUNCHER.cfg")
         return if (Files.isRegularFile(cfg)) parseLinuxConfig(Files.readString(cfg)) else BundleInfo(null, null)
+    }
+
+    /** Checks the UpgradeCode and ProductVersion printed by `dari-msi-info.ps1` against the running Dari. */
+    fun verifyWindows(msiInfo: String, installedVersion: SemanticVersion, expected: SemanticVersion) {
+        validateMetadata(BundleInfo(WINDOWS_UPGRADE_CODE, installedVersion.toString()), parseMsiInfo(msiInfo), expected)
+    }
+
+    fun parseMsiInfo(output: String): BundleInfo {
+        val lines = output.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        return BundleInfo(
+            identifier = lines.getOrNull(0)?.removePrefix("{")?.removeSuffix("}")?.lowercase(),
+            version = lines.getOrNull(1),
+        )
     }
 
     fun validateMetadata(installed: BundleInfo, candidate: BundleInfo, expected: SemanticVersion) {

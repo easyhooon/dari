@@ -79,6 +79,22 @@ class UpdateValidationTest {
         }
     }
 
+    @Test
+    fun `reads and checks the UpgradeCode and version of an MSI`() {
+        val info = "{94CFB91E-3282-4BEB-A9A1-AF3B4A2C6CA5}\r\n2.1.0\r\n"
+        assertEquals(BundleInfo(UpdateValidation.WINDOWS_UPGRADE_CODE, "2.1.0"), UpdateValidation.parseMsiInfo(info))
+        UpdateValidation.verifyWindows(info, SemanticVersion(2, 0, 0), expected)
+        listOf(
+            "{00000000-0000-0000-0000-000000000000}\n2.1.0",
+            "{94CFB91E-3282-4BEB-A9A1-AF3B4A2C6CA5}\n2.2.0",
+            "",
+        ).forEach { other ->
+            assertFailsWith<UpdateValidation.Failure>(other) {
+                UpdateValidation.verifyWindows(other, SemanticVersion(2, 0, 0), expected)
+            }
+        }
+    }
+
     private fun linuxImage(folder: Path, version: String): Path {
         Files.createDirectories(folder.resolve("lib/app"))
         Files.createDirectories(folder.resolve("bin"))

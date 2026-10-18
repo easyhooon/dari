@@ -23,8 +23,9 @@ import javax.swing.JOptionPane
 import kotlin.time.Duration.Companion.hours
 
 /**
- * Checks GitHub releases and replaces the installed Dari.app (macOS) or tarball folder (Linux) in
- * place. Modeled on Necto's updater: stage the new copy next to the app, quit, and let a helper swap it in.
+ * Checks GitHub releases and updates the installed Dari.app (macOS), per-user MSI install (Windows) or
+ * tarball folder (Linux) in place. Modeled on Necto's updater: stage the new copy next to the app, quit,
+ * and let a helper swap it in.
  */
 class Updater(
     private val scope: CoroutineScope,
@@ -38,6 +39,9 @@ class Updater(
 
         /** The `Dari` folder extracted from the Linux tarball, holding `bin/Dari`. */
         data class LinuxImage(override val path: Path) : InstallTarget
+
+        /** The per-user MSI install folder, `%LOCALAPPDATA%\Dari`, holding `Dari.exe`. */
+        data class WindowsInstall(override val path: Path) : InstallTarget
     }
 
     sealed interface Phase {
@@ -48,7 +52,7 @@ class Updater(
         /** A newer version this copy of Dari can install itself. */
         data class Available(val version: SemanticVersion) : Phase
 
-        /** A newer version that has to be installed by hand; [blocker] says why when known, null on Windows. */
+        /** A newer version that has to be installed by hand; [blocker] says why when known. */
         data class Manual(val version: SemanticVersion, val blocker: String? = null) : Phase
         data class Working(val step: String) : Phase
         data class Failed(val message: String) : Phase
@@ -116,28 +120,18 @@ class Updater(
             try {
                 withContext(Dispatchers.IO) {
                     Files.createDirectory(workspace)
-                    val scriptName = when (target) {
-                        is InstallTarget.MacBundle -> "dari-finish-update.sh"
-                        is InstallTarget.LinuxImage -> "dari-finish-update-linux.sh"
-                    }
-                    val script = workspace.resolve(scriptName)
-                    Updater::class.java.getResourceAsStream("/$scriptName")!!.use {
-                        Files.copy(it, script, StandardCopyOption.REPLACE_EXISTING)
+                    val script = when (target) {
+                        is InstallTarget.MacBundle -> copyResource("dari-finish-update.sh", workspace)
+                        is InstallTarget.LinuxImage -> copyResource("dari-finish-update-linux.sh", workspace)
+                        is InstallTarget.WindowsInstall -> copyResource("dari-finish-update.ps1", workspace)
                     }
 
                     when (target) {
                         is InstallTarget.MacBundle -> stageMac(target.path, workspace, version)
                         is InstallTarget.LinuxImage -> stageLinux(target.path, workspace, version)
+                        is InstallTarget.WindowsInstall -> stageWindows(workspace, version)
                     }
-
-                    // nohup keeps the helper alive after Dari exits; it waits for this pid first.
-                    ProcessBuilder(
-                        "/usr/bin/nohup", "/bin/sh", script.toString(),
-                        ProcessHandle.current().pid().toString(), target.path.toString(), workspace.toString(),
-                    ).redirectErrorStream(true)
-                        .redirectOutput(workspace.resolve("install.log").toFile())
-                        .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
-                        .start()
+                    startHelper(target, script, workspace)
                 }
                 quit()
             } catch (e: Exception) {
@@ -146,6 +140,32 @@ class Updater(
                 phase = Phase.Failed(e.message ?: "The update failed. Nothing was installed.")
             }
         }
+    }
+
+    private fun copyResource(name: String, workspace: Path): Path {
+        val file = workspace.resolve(name)
+        Updater::class.java.getResourceAsStream("/$name")!!.use { Files.copy(it, file, StandardCopyOption.REPLACE_EXISTING) }
+        return file
+    }
+
+    /** The helper outlives Dari and waits for this pid before touching the install. */
+    private fun startHelper(target: InstallTarget, script: Path, workspace: Path) {
+        val pid = ProcessHandle.current().pid().toString()
+        val builder = if (target is InstallTarget.WindowsInstall) {
+            // Log outside the workspace: Windows can't delete a folder holding an open file. Run from the
+            // workspace's parent so the helper doesn't hold the install folder open while the MSI replaces it.
+            ProcessBuilder(
+                "powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
+                "-File", script.toString(), "-AppPid", pid, "-Target", target.path.toString(), "-Workspace", workspace.toString(),
+            ).directory(workspace.parent.toFile())
+                .redirectOutput(File(AppLog.directory, "update.log"))
+        } else {
+            // nohup keeps the helper alive after Dari exits.
+            ProcessBuilder("/usr/bin/nohup", "/bin/sh", script.toString(), pid, target.path.toString(), workspace.toString())
+                .redirectOutput(workspace.resolve("install.log").toFile())
+                .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
+        }
+        builder.redirectErrorStream(true).start()
     }
 
     /** Leaves the new `Contents` in [workspace] for `dari-finish-update.sh`. */
@@ -202,6 +222,24 @@ class Updater(
         Files.delete(tarball)
     }
 
+    /** Leaves the checked MSI at `workspace/Dari.msi` for `dari-finish-update.ps1`. */
+    private fun stageWindows(workspace: Path, version: SemanticVersion) {
+        val current = current ?: throw UpdateValidation.Failure("This build has no version to update from.")
+        phase = Phase.Working("Downloading $version…")
+        val msi = workspace.resolve("Dari.msi")
+        downloadVerified(ReleaseSource.msiUrl(version), msi)
+
+        phase = Phase.Working("Verifying $version…")
+        val infoScript = copyResource("dari-msi-info.ps1", workspace)
+        val info = Processes.run(
+            "powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+            "-File", infoScript.toString(), "-Msi", msi.toString(),
+        )
+        if (info.exitCode != 0) throw UpdateValidation.Failure("The update could not be checked. Nothing was installed.")
+        UpdateValidation.verifyWindows(info.output, current, version)
+        Files.delete(infoScript)
+    }
+
     private fun downloadVerified(url: URI, file: Path) {
         val checksum = file.resolveSibling("${file.fileName}.sha256")
         ReleaseSource.download(url, file)
@@ -236,7 +274,8 @@ class Updater(
     companion object {
         /**
          * Where the running packaged build lives: `…/Dari.app/Contents/MacOS/Dari` → `…/Dari.app` on
-         * macOS, `…/Dari/bin/Dari` → `…/Dari` on Linux. Null for Windows and `./gradlew run`.
+         * macOS, `…/Dari/bin/Dari` → `…/Dari` on Linux, `…\Dari\Dari.exe` → `…\Dari` on Windows. Null for
+         * `./gradlew run`.
          */
         fun currentInstallTarget(): InstallTarget? {
             val launcher = System.getProperty("jpackage.app-path")?.let { Paths.get(it).toAbsolutePath() } ?: return null
@@ -248,6 +287,8 @@ class Updater(
                     launcher.parent?.parent
                         ?.takeIf { Files.isRegularFile(it.resolve("lib/app/${UpdateValidation.LINUX_LAUNCHER}.cfg")) }
                         ?.let(InstallTarget::LinuxImage)
+                os.startsWith("Windows") ->
+                    launcher.parent?.takeIf { Files.isRegularFile(it.resolve("app/Dari.cfg")) }?.let(InstallTarget::WindowsInstall)
                 else -> null
             }
         }
@@ -255,6 +296,7 @@ class Updater(
         fun installBlocker(target: InstallTarget): String? = when (target) {
             is InstallTarget.MacBundle -> installBlocker(target.path)
             is InstallTarget.LinuxImage -> linuxInstallBlocker(target.path)
+            is InstallTarget.WindowsInstall -> windowsInstallBlocker(target.path, System.getenv("LOCALAPPDATA"))
         }
 
         /**
@@ -289,6 +331,15 @@ class Updater(
                     "Dari can't replace itself in ${parent ?: path}. Download the new tarball and extract it into a folder you own."
                 else -> null
             }
+        }
+
+        /** The per-user MSI always installs under %LOCALAPPDATA%; anything else wasn't installed by it. */
+        fun windowsInstallBlocker(folder: Path, localAppData: String?): String? = when {
+            folder.toString().replace('\\', '/').contains("/build/compose/") -> "Development builds don't update themselves."
+            localAppData == null || !folder.startsWith(Paths.get(localAppData)) ->
+                "Dari wasn't installed by its installer, so it can't update itself. Download the new .exe from the download page and run it."
+            !Files.isWritable(folder.parent) -> "Dari can't update itself in ${folder.parent}. Download the new .exe and run it."
+            else -> null
         }
 
         private fun releaseArch(): String = if (System.getProperty("os.arch") == "aarch64") "arm64" else "x64"
