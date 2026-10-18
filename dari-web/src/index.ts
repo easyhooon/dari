@@ -13,3 +13,9 @@ export type {
   RequestEvent,
   ResponseEvent,
 } from './types'
+export { filterEntries, EMPTY_FILTER } from './filter'
+export type { Filter } from './filter'
+export { exportJson, exportText, messageText, browserContext } from './export'
+export type { ExportContext } from './export'
+export { handlerStats, SLOW_HANDLER_THRESHOLD_MS } from './stats'
+export type { HandlerStats } from './stats'
