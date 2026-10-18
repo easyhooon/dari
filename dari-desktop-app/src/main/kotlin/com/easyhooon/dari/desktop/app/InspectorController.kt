@@ -189,6 +189,8 @@ class InspectorController(
     fun disconnect() {
         connectJob?.cancel()
         connectJob = null
+        searchJob?.cancel()
+        searchJob = null
         connection?.let { conn -> scope.launch(Dispatchers.IO) { conn.close() } }
         connection = null
         appAlwaysMasks = false
@@ -402,6 +404,8 @@ class InspectorController(
             } catch (_: TimeoutCancellationException) {
                 return@launch
             }
+            // An answer from a replaced session says nothing about the current app.
+            if (connection !== conn) return@launch
             if (ids == null) {
                 appLacksPayloadSearch = true
                 return@launch
