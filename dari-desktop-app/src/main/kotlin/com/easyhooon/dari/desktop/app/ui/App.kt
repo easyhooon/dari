@@ -281,10 +281,10 @@ private fun FilterBar(controller: InspectorController, openStats: () -> Unit) {
         val origins = controller.availableOrigins
         if (origins.size > 1 || controller.originFilter != null) {
             Picker(
-                label = controller.originFilter?.substringAfter("://") ?: "All origins",
+                label = controller.originFilter ?: "All origins",
                 options = listOf(null) + origins,
                 isSelected = { it == controller.originFilter },
-                optionLabel = { it?.substringAfter("://") ?: "All origins" },
+                optionLabel = { it ?: "All origins" },
                 onPick = { controller.originFilter = it },
             )
         }

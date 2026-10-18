@@ -117,17 +117,16 @@ Dari stores and exports both values separately, searches both, and renders `N:4-
 
 ## Page URL and origin
 
-Report the page so each message records which web deployment sent it. `doUpdateVisitedHistory` also fires on SPA history changes:
+Report the page so each message records which web deployment sent it. Add `doUpdateVisitedHistory`, which also fires on SPA history changes, to the `WebViewClient` your WebView already uses; assigning a new client would drop its navigation and auth callbacks:
 
 ```kotlin
-webView.webViewClient = object : WebViewClient() {
-    override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
-        interceptor?.onPageUrlChanged(url)
-    }
+override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
+    super.doUpdateVisitedHistory(view, url, isReload)
+    interceptor?.onPageUrlChanged(url)
 }
 ```
 
-Requests captured afterwards store the URL without its query or fragment, which can carry tokens. Both inspectors show it in the detail view, add an origin filter once more than one origin appears, and scope Response Time stats to the picked origin. Exports include it as `page_url`. Use one interceptor per WebView so pages don't overwrite each other.
+Requests captured afterwards store the URL without user info, query or fragment, which can carry credentials or tokens. Both inspectors show it in the detail view, add an origin filter once more than one origin appears, and scope Response Time stats to the picked origin. Exports include it as `page_url`. Use one interceptor per WebView so pages don't overwrite each other.
 
 ## Fire-and-Forget
 

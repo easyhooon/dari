@@ -177,16 +177,16 @@ data class MessageEntry(
 
     companion object {
         /**
+         * Drops user info, query and fragment, which can carry credentials or tokens, so only origin
+         * and path are kept. Returns null for blank input.
+         */
+        fun sanitizePageUrl(url: String?): String? =
+            url?.substringBefore('#')?.substringBefore('?')?.let(::withoutUserInfo)?.takeIf { it.isNotBlank() }
+
+        /**
          * Truncates [data] to [maxLength] characters if it exceeds the limit.
          * Returns a Pair of (truncated data, wasTruncated).
          */
-        /**
-         * Drops the query and fragment, which can carry tokens, so only origin and path are kept.
-         * Returns null for blank input.
-         */
-        fun sanitizePageUrl(url: String?): String? =
-            url?.substringBefore('#')?.substringBefore('?')?.takeIf { it.isNotBlank() }
-
         fun truncateIfNeeded(data: String?, maxLength: Int): Pair<String?, Boolean> {
             if (data == null || data.length <= maxLength) return data to false
             val truncated = data.take(maxLength) + "\n\n...[truncated, original length: ${data.length} chars]"
@@ -203,6 +203,13 @@ private fun originOf(url: String): String? {
     // Drop any user info so credentials never reach a chip or an export.
     val host = url.substring(authorityStart, authorityEnd).substringAfterLast('@')
     return url.substring(0, authorityStart).lowercase() + host.lowercase()
+}
+
+private fun withoutUserInfo(url: String): String {
+    val authorityStart = url.indexOf("://").takeIf { it > 0 }?.plus(3) ?: return url
+    val authorityEnd = url.indexOf('/', authorityStart).let { if (it < 0) url.length else it }
+    val at = url.lastIndexOf('@', authorityEnd - 1)
+    return if (at < authorityStart) url else url.substring(0, authorityStart) + url.substring(at + 1)
 }
 
 private fun String?.utf8Size(): Int = this?.encodeToByteArray()?.size ?: 0
