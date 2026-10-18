@@ -9,6 +9,8 @@ import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessagePayloadMetadata
 import com.easyhooon.dari.RawPayloadFormatter
+import com.easyhooon.dari.inspector.inspectorAppInfo
+import com.easyhooon.dari.inspector.protocol.AppInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -34,6 +36,9 @@ internal object DariExporter {
 
     /** Safety cap for inline text share to stay below Android's Binder limit (~1MB). */
     private const val SHARE_TEXT_MAX_LENGTH = 100_000
+
+    // Overridable so tests can compare two exports byte for byte.
+    internal var clock: () -> Long = System::currentTimeMillis
 
     suspend fun exportAndShare(context: Context, entries: List<MessageEntry>, format: ExportFormat) {
         val file = withContext(Dispatchers.IO) {
@@ -87,10 +92,7 @@ internal object DariExporter {
         entries: List<MessageEntry>,
         format: ExportFormat,
     ): Boolean = withContext(Dispatchers.IO) {
-        val content = when (format) {
-            ExportFormat.TEXT -> formatAsText(entries)
-            ExportFormat.JSON -> formatAsJson(entries)
-        }
+        val content = formatExport(inspectorAppInfo(context), entries, format, clock())
         try {
             val stream = context.contentResolver.openOutputStream(uri)
             if (stream == null) {
@@ -137,10 +139,7 @@ internal object DariExporter {
         // don't overwrite a file that a previous share target is still reading.
         val file = File.createTempFile("dari_export_${timestamp}_", ".$extension", exportDir)
 
-        val content = when (format) {
-            ExportFormat.TEXT -> formatAsText(entries)
-            ExportFormat.JSON -> formatAsJson(entries)
-        }
+        val content = formatExport(inspectorAppInfo(context), entries, format, clock())
         file.writeText(content, Charsets.UTF_8)
         return file
     }
@@ -160,19 +159,44 @@ internal object DariExporter {
         context.startActivity(Intent.createChooser(intent, "Export Bridge Messages"))
     }
 
-    private fun formatAsJson(entries: List<MessageEntry>): String {
-        val exportable = entries.map { it.toExportable() }
-        return prettyJson.encodeToString(
-            kotlinx.serialization.builtins.ListSerializer(ExportableMessage.serializer()),
-            exportable,
-        )
+    internal fun formatExport(
+        app: AppInfo,
+        entries: List<MessageEntry>,
+        format: ExportFormat,
+        exportedAt: Long,
+        dateFormat: SimpleDateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy", Locale.getDefault()),
+    ): String = when (format) {
+        ExportFormat.TEXT -> formatAsText(app, entries, exportedAt, dateFormat)
+        ExportFormat.JSON -> formatAsJson(app, entries, exportedAt)
     }
 
-    private fun formatAsText(entries: List<MessageEntry>): String {
-        val dateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy", Locale.getDefault())
-        return entries.joinToString("\n${"=".repeat(60)}\n\n") { entry ->
+    private fun formatAsJson(app: AppInfo, entries: List<MessageEntry>, exportedAt: Long): String {
+        val document = ExportDocument(
+            meta = app.toExportMeta(exportedAt),
+            messages = entries.map { it.toExportable() },
+        )
+        return prettyJson.encodeToString(ExportDocument.serializer(), document)
+    }
+
+    private fun formatAsText(
+        app: AppInfo,
+        entries: List<MessageEntry>,
+        exportedAt: Long,
+        dateFormat: SimpleDateFormat,
+    ): String {
+        val separator = "=".repeat(60)
+        val header = formatHeader(app, exportedAt, dateFormat)
+        return header + "\n$separator\n\n" + entries.joinToString("\n$separator\n\n") { entry ->
             formatSingleEntry(entry, dateFormat)
         }
+    }
+
+    internal fun formatHeader(app: AppInfo, exportedAt: Long, dateFormat: SimpleDateFormat): String = buildString {
+        val name = listOf(app.appName, app.appVersion).filter { it.isNotBlank() }.joinToString(" ")
+        appendLine("App: $name (${app.applicationId})")
+        appendLine("Device: ${app.deviceModel}, SDK ${app.sdkInt}")
+        appendLine("Dari: ${app.dariVersion}")
+        appendLine("Exported: ${dateFormat.format(Date(exportedAt))}")
     }
 
     internal fun formatSingleEntry(

@@ -3,6 +3,7 @@ package com.easyhooon.dari.export
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessageStatus
+import com.easyhooon.dari.inspector.protocol.AppInfo
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -70,4 +71,36 @@ internal fun MessageEntry.toExportable(): ExportableMessage = ExportableMessage(
     requestTimestamp = requestTimestamp,
     responseTimestamp = responseTimestamp,
     durationMs = durationMs,
+)
+
+/** Top-level JSON export: the capture's origin followed by its messages. */
+@Serializable
+internal data class ExportDocument(
+    @SerialName("format_version") val formatVersion: Int = EXPORT_FORMAT_VERSION,
+    val meta: ExportMeta,
+    val messages: List<ExportableMessage>,
+)
+
+@Serializable
+internal data class ExportMeta(
+    @SerialName("application_id") val applicationId: String,
+    @SerialName("app_name") val appName: String,
+    @SerialName("app_version") val appVersion: String,
+    @SerialName("dari_version") val dariVersion: String,
+    @SerialName("device_model") val deviceModel: String,
+    @SerialName("sdk_int") val sdkInt: Int,
+    @SerialName("exported_at") val exportedAt: Long,
+)
+
+// 1 was the bare message array.
+internal const val EXPORT_FORMAT_VERSION = 2
+
+internal fun AppInfo.toExportMeta(exportedAt: Long): ExportMeta = ExportMeta(
+    applicationId = applicationId,
+    appName = appName,
+    appVersion = appVersion,
+    dariVersion = dariVersion,
+    deviceModel = deviceModel,
+    sdkInt = sdkInt,
+    exportedAt = exportedAt,
 )

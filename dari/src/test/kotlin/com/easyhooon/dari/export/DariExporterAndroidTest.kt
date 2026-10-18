@@ -12,6 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,6 +34,12 @@ class DariExporterAndroidTest {
         context = Robolectric.buildActivity(Activity::class.java).setup().get()
         exportDir = File(context.cacheDir, "dari_export")
         exportDir.deleteRecursively()
+        DariExporter.clock = { 5_000L }
+    }
+
+    @After
+    fun tearDown() {
+        DariExporter.clock = System::currentTimeMillis
     }
 
     private fun entry(handler: String = "getUser", requestData: String = """{"id":1}""") = MessageEntry(
@@ -57,7 +64,10 @@ class DariExporterAndroidTest {
     fun `saveToUri writes JSON content to the output stream`() {
         val content = saved(listOf(entry()), ExportFormat.JSON)
 
-        assertTrue(content.trimStart().startsWith("["))
+        assertTrue(content.trimStart().startsWith("{"))
+        assertTrue(content.contains("\"format_version\": 2"))
+        assertTrue(content.contains("\"application_id\": \"${context.packageName}\""))
+        assertTrue(content.contains("\"exported_at\": 5000"))
         assertTrue(content.contains("\"handler_name\": \"getUser\""))
     }
 
@@ -65,7 +75,9 @@ class DariExporterAndroidTest {
     fun `saveToUri writes TEXT content to the output stream`() {
         val content = saved(listOf(entry()), ExportFormat.TEXT)
 
-        assertTrue(content.startsWith("Handler: getUser"))
+        assertTrue(content.startsWith("App: "))
+        assertTrue(content.contains("(${context.packageName})"))
+        assertTrue(content.contains("Handler: getUser"))
         assertTrue(content.contains("Duration: 200 ms"))
     }
 
