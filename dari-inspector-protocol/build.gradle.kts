@@ -15,6 +15,13 @@ kotlin {
     compilerOptions.jvmTarget.set(JvmTarget.JVM_11)
 }
 
+tasks.test {
+    // Shared with dari-web; see fixtures/messages/README.md.
+    val fixtures = rootProject.layout.projectDirectory.dir("fixtures/messages")
+    inputs.dir(fixtures).withPropertyName("sharedFixtures").withPathSensitivity(PathSensitivity.RELATIVE)
+    systemProperty("dari.fixtures.dir", fixtures.asFile.absolutePath)
+}
+
 dependencies {
     api(libs.kotlinx.serialization.json)
 

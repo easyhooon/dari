@@ -1,0 +1,28 @@
+{
+  "description": "fireAndForget finishes requests on arrival unless a call overrides it; responses without an id are ignored.",
+  "options": { "fireAndForget": true },
+  "events": [
+    { "at": 2000, "type": "webToAppRequest", "handlerName": "log", "data": "tap" },
+    { "at": 2010, "type": "webToAppResponse", "requestId": null, "isSuccess": false, "data": "ignored" },
+    { "at": 2020, "type": "webToAppRequest", "handlerName": "pay", "requestId": "x", "fireAndForget": false }
+  ],
+  "expected": [
+    {
+      "summary": {
+        "id": 1, "handlerName": "log", "direction": "WEB_TO_APP", "status": "SUCCESS",
+        "requestTimestamp": 2000, "requestSizeBytes": 3, "responseSizeBytes": 0
+      },
+      "requestData": "tap",
+      "requestDataTruncated": false,
+      "responseDataTruncated": false
+    },
+    {
+      "summary": {
+        "id": 2, "requestId": "x", "handlerName": "pay", "direction": "WEB_TO_APP", "status": "IN_PROGRESS",
+        "requestTimestamp": 2020, "requestSizeBytes": 0, "responseSizeBytes": 0
+      },
+      "requestDataTruncated": false,
+      "responseDataTruncated": false
+    }
+  ]
+}
