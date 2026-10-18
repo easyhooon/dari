@@ -19,6 +19,8 @@ classify() {
     dari/* | dari-core/* | dari-noop/* | dari-runtime/*) echo library ;;
     dari-inspector-protocol/*) echo protocol ;;
     dari-desktop-app/*) echo desktop ;;
+    dari-web/*) echo web ;;
+    fixtures/*) echo test ;;
     scripts/package-desktop-app.sh | scripts/smoke-test-desktop-app.sh | scripts/verify-macos-signature.sh \
       | scripts/test-macos-packaging.py | .github/workflows/desktop-*.yml) echo desktop-tooling ;;
     gradle/libs.versions.toml) echo version-catalog ;;
@@ -54,7 +56,7 @@ echo "Range: $base..$ref ($(git rev-list --count --no-merges "$base..$ref") comm
 echo "On $ref: dari=$dari_version dariDesktop=${desktop_version:-<not split yet, follows dari>}"
 echo
 
-for area in library protocol desktop desktop-tooling shared-build test no-release; do
+for area in library protocol desktop web desktop-tooling shared-build test no-release; do
   list="$(files "$area")"
   [ -n "$list" ] || continue
   count="$(printf '%s\n' "$list" | grep -c .)"
@@ -92,6 +94,15 @@ if [ -n "$protocol_version_change" ]; then
   echo "WARNING: InspectorProtocol.VERSION changed:"
   printf '%s\n' "$protocol_version_change" | sed 's/^/  /'
   echo "  Apps and the desktop app must both update; say so under Behavior changes."
+fi
+# dari-web has its own version and tags (dari-web-vX.Y.Z), so it never changes the verdict above.
+web_base="$(git tag --list 'dari-web-v*' --sort=-v:refname | head -n 1)"
+web_from="${web_base:-$(git rev-list --max-parents=0 "$ref" | tail -n 1)}"
+web_changes="$(git diff --name-only "$web_from" "$ref" -- dari-web | grep -vE '^dari-web/test/' | grep -c . || true)"
+web_version="$(git show "$ref:dari-web/package.json" 2> /dev/null | sed -n 's/^  "version": "\(.*\)",/\1/p')"
+if [ -n "$web_version" ]; then
+  echo "Web: dari-web=$web_version, last tag ${web_base:-<never published>}, $web_changes non-test files changed since."
+  [ "$web_changes" -eq 0 ] || echo "  Publish separately with /release web <version>."
 fi
 # No grep -q for the same reason: it stops reading at the first match.
 if git log --no-merges --format='%s' "$base..$ref" | grep -iE '^feat(\(|:|!)' > /dev/null; then

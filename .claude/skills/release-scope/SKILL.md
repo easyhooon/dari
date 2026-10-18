@@ -39,6 +39,8 @@ allowed-tools:
 | `review` | 공유 빌드 파일(`build.gradle.kts`, `gradle/`, 버전 외 카탈로그 줄 등)만 변경 | 3단계에서 판단 | 판단 |
 | `none` | 문서, 샘플, 테스트, CI, 패키징 도구만 변경 | 없음 | 없음 |
 
+- `web`(`dari-web/`)은 판정에 영향을 주지 않는다. `dari-web`은 `dari-web/package.json`의 독립 버전과 `dari-web-vX.Y.Z` 태그를 쓰고, 출력 끝의 `Web:` 줄이 마지막 웹 태그 이후 변경 수를 알려준다. 변경이 있으면 `/release web <version>`을 따로 안내한다. 이유: 웹 패키지는 네이티브 라이브러리에 런타임 의존이 없어, 같은 번호 줄에 묶으면 의미 없는 bump가 생긴다.
+- `fixtures/`는 Kotlin·TS 양쪽 테스트가 읽는 계약 파일이라 `test`로 센다.
 - `test`(테스트만), `desktop-tooling`(패키징 스크립트·데스크톱 워크플로)은 그 자체로는 릴리스 사유가 아니다. 다음 릴리스를 만들 때 반영된다.
 - 카탈로그에서 `dari`/`dariDesktop` 줄만 바뀐 것(직전 릴리스의 버전 올림)은 변경으로 세지 않는다.
 - 출력에 `dariDesktop=<not split yet, follows dari>`가 보이고 판정이 `desktop`이면: 그 ref에는 데스크톱 버전 분리(#158)가 아직 없다. `/release desktop`은 `dariDesktop` 키가 main에 있어야 동작하므로, 분리를 먼저 머지하라고 안내하거나 정식 릴리스로 진행할지 사용자에게 묻는다. 이유: 키 없이 데스크톱 전용으로 내면 설치 파일 버전과 태그가 어긋나 릴리스 워크플로가 실패한다.
@@ -57,6 +59,7 @@ allowed-tools:
 - 올릴 키: `dari`·`dariDesktop` 둘 다 / `dariDesktop`만 / 없음
 - 다음 버전 후보: `gh release list --limit 1`로 실제 공개된 최신 릴리스를 확인하고 그보다 크게 잡는다. 비교 기준 태그(`base_tag`)가 아니라 공개된 최신 릴리스가 기준이다. 이유: 설치된 데스크톱 앱 업데이터는 공개된 최신 릴리스보다 높은 버전만 알린다. 과거 구간을 점검한 경우처럼 ref가 이미 릴리스된 태그면 "다음 버전" 대신 그 구간이 어떤 릴리스였어야 했는지만 답한다.
 - 이어서 실행할 명령: `full` → `/release <version>`, `desktop` → `/release desktop <version>`, `none` → 릴리스 없음
+- `Web:` 줄에 변경이 있으면 `/release web <version>`도 함께 안내한다(semver는 `dari-web` 기준).
 
 ## 건너뛰고 싶어지는 이유와 왜 안 되는지
 
@@ -80,4 +83,5 @@ allowed-tools:
 - 다음 검토: 2027-01-16, 또는 모듈 구성(새 라이브러리 모듈, 데스크톱 경로)이 바뀔 때. 바뀌면 `scripts/release-scope.sh`의 `classify()`를 고치고 위 세 구간을 다시 돌려 판정이 그대로인지 확인한다.
 - 변경 이력
   - 2026-10-16: 처음 작성. `dari`/`dariDesktop` 분리(#158)에 맞춰 판정 기준 정리.
+  - 2026-10-18: `dari-web`(독립 버전, `dari-web-v*` 태그)과 `fixtures/`를 분류에 추가. 판정에는 영향 없음.
   - 2026-10-16: 커밋이 많은 구간(`1.0.0..HEAD`)에서 `| head`의 SIGPIPE로 exit 141 나던 문제와, 카탈로그 주석 변경을 shared build로 세던 문제 수정. 위 세 구간과 `1.0.0..HEAD`를 다시 돌려 판정 유지 확인.

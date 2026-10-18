@@ -1,7 +1,8 @@
 You are releasing a new version of dari. Arguments: $ARGUMENTS
 - `<version>` (e.g. `2.3.0`): a full release. The library goes to Maven Central and the desktop app ships with the same number.
 - `desktop <version>` (e.g. `desktop 2.2.2`): a desktop-only release. Nothing goes to Maven Central.
-- No version: read it from `gradle/libs.versions.toml`, using `dari` for a full release and `dariDesktop` for `desktop`.
+- `web <version>` (e.g. `web 0.1.1`): an npm release of `dari-web` only. See "Web release" below; skip Steps 1–5.
+- No version: read it from `gradle/libs.versions.toml`, using `dari` for a full release and `dariDesktop` for `desktop`, or from `dari-web/package.json` for `web`.
 
 Both releases share one number line, set in `gradle/libs.versions.toml`: `dari` is the library, `dariDesktop` is the desktop app. They differ only after a desktop-only release.
 The desktop updater, `install-desktop.sh` and the download page all read GitHub's `/releases/latest`, so every GitHub release needs the desktop installers, a plain semver tag, and must not be a draft or prerelease. Apps keep working on any library version from 2.0.0 because compatibility is decided by `InspectorProtocol.VERSION`, not by these numbers.
@@ -51,3 +52,12 @@ The desktop updater, `install-desktop.sh` and the download page all read GitHub'
 
 ## Step 5: Report
 - Print the release URL and confirm completion.
+
+## Web release (`web` only)
+`dari-web` (`@easyhooon/dari-web` on npm) has its own semver in `dari-web/package.json`, unrelated to `dari` / `dariDesktop`.
+- Find the last web tag: `git tag --list 'dari-web-v*' --sort=-v:refname | head -n 1`. The new version must be higher; with no tag, the first release is the version already in `package.json`.
+- Bump in a PR when needed: branch `chore/bump-web-<version>` from `origin/main`, run `npm version <version> --no-git-tag-version` in `dari-web/`, commit `chore: bump dari-web to <version>`, wait for the Dari Web CI, merge.
+- Publish from a clean `main`: `cd dari-web && npm ci && npm publish --access public`. `prepublishOnly` runs typecheck, tests and the build. The user signs in to npm (`npm login`) themselves.
+- Tag the published commit: `git fetch origin && git tag dari-web-v<version> origin/main && git push origin dari-web-v<version>`. The prefix keeps it out of the `x.y.z` tags that `/release-scope` and the desktop release read.
+- No GitHub release by default. If the user wants one, pass `--latest=false`: the desktop updater, `install-desktop.sh` and the download page read `/releases/latest`, which must stay on a desktop release.
+- Report the npm URL: `https://www.npmjs.com/package/@easyhooon/dari-web/v/<version>`.
