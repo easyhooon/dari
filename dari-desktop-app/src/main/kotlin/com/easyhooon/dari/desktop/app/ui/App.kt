@@ -42,6 +42,7 @@ import com.easyhooon.dari.desktop.app.CrashReporting
 import com.easyhooon.dari.desktop.app.DesktopSettings
 import com.easyhooon.dari.desktop.app.InspectorController
 import com.easyhooon.dari.desktop.app.client.InspectorConnection.Companion.MIN_DARI_VERSION
+import com.easyhooon.dari.desktop.app.client.InspectorConnection.Companion.PAYLOAD_SEARCH_MIN_DARI_VERSION
 import com.easyhooon.dari.desktop.app.isMacOs
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
@@ -77,6 +78,15 @@ fun WindowScope.App(
                 return@Column
             }
             FilterBar(controller, openStats)
+            if (controller.appLacksPayloadSearch && controller.filter.isNotBlank()) {
+                Text(
+                    "Payload search needs dari $PAYLOAD_SEARCH_MIN_DARI_VERSION or later in the app. " +
+                        "Matching handler, display name, tag and request ID only.",
+                    style = Dari.type.caption,
+                    color = Dari.colors.textSecondary,
+                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                )
+            }
             Divider()
             Workspace(controller, settings)
         }

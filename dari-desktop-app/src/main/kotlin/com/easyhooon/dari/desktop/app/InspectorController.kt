@@ -81,6 +81,10 @@ class InspectorController(
     var appAlwaysMasks by mutableStateOf(false)
         private set
 
+    /** The connected app's dari predates payload search, so the filter only matches summary fields. */
+    var appLacksPayloadSearch by mutableStateOf(false)
+        private set
+
     /** Short confirmation such as "Copied", cleared after a moment. */
     var notice by mutableStateOf<String?>(null)
         private set
@@ -185,9 +189,12 @@ class InspectorController(
     fun disconnect() {
         connectJob?.cancel()
         connectJob = null
+        searchJob?.cancel()
+        searchJob = null
         connection?.let { conn -> scope.launch(Dispatchers.IO) { conn.close() } }
         connection = null
         appAlwaysMasks = false
+        appLacksPayloadSearch = false
         state = ConnectionState.Idle
     }
 
@@ -327,6 +334,7 @@ class InspectorController(
         detail = null
         // Ids are only stable per app process, so a reconnect drops matches from the last one.
         payloadMatches = "" to emptySet()
+        appLacksPayloadSearch = false
         merge(backlog)
         state = ConnectionState.Connected(conn.app)
         selectedId?.let { if (it in messages) loadDetail(it) }
@@ -387,7 +395,7 @@ class InspectorController(
         searchJob?.cancel()
         val query = filter.trim()
         val conn = connection
-        if (query.isEmpty() || conn == null) return
+        if (query.isEmpty() || conn == null || appLacksPayloadSearch) return
         searchJob = scope.launch {
             delay(SEARCH_DEBOUNCE_MS)
             val ids = try {
@@ -395,6 +403,12 @@ class InspectorController(
             } catch (_: IOException) {
                 return@launch
             } catch (_: TimeoutCancellationException) {
+                return@launch
+            }
+            // An answer from a replaced session says nothing about the current app.
+            if (connection !== conn) return@launch
+            if (ids == null) {
+                appLacksPayloadSearch = true
                 return@launch
             }
             payloadMatches = query to ids

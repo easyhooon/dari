@@ -39,6 +39,7 @@ import kotlin.concurrent.thread
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
@@ -226,11 +227,27 @@ class InspectorControllerConnectTest {
         controller.awaitState { it is ConnectionState.Connected }
 
         controller.filter = SECRET
-        delay(400)
+        awaitUntil { controller.appLacksPayloadSearch }
         assertEquals(emptyList(), controller.visibleMessages())
         controller.filter = "gettoken"
         assertEquals(listOf(MESSAGE), controller.visibleMessages())
         assertIs<ConnectionState.Connected>(controller.state)
+
+        // A reconnect may reach an updated app, so the hint starts over.
+        controller.disconnect()
+        assertFalse(controller.appLacksPayloadSearch)
+    }
+
+    @Test
+    fun `an app with search is not flagged as lacking it`(): Unit = runBlocking(dispatcher) {
+        app.messages = listOf(MESSAGE)
+        val controller = sessionController()
+        controller.connect()
+        controller.awaitState { it is ConnectionState.Connected }
+
+        controller.filter = SECRET
+        awaitUntil { controller.visibleMessages() == listOf(MESSAGE) }
+        assertFalse(controller.appLacksPayloadSearch)
     }
 
     /** Answers like a foreground app: hello, settings.update, list, detail, search, and an observe stream that stays open. */

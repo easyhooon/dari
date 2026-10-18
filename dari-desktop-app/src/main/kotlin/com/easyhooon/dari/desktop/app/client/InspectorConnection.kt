@@ -75,12 +75,12 @@ class InspectorConnection private constructor(
     suspend fun detail(id: Long): WireMessageDetail =
         call(InspectorOperations.DETAIL, DetailInput.serializer(), DetailInput(id), WireMessageDetail.serializer())
 
-    /** Ids of messages matching [query], payloads included. Empty when the app's dari predates search. */
-    suspend fun search(query: String): Set<Long> = try {
+    /** Ids of messages matching [query], payloads included. Null when the app's dari predates search. */
+    suspend fun search(query: String): Set<Long>? = try {
         call(InspectorOperations.SEARCH, SearchInput.serializer(), SearchInput(query), SearchOutput.serializer()).ids.toSet()
     } catch (e: InspectorException) {
         if (e.error.code != InspectorErrorCode.OPERATION_NOT_FOUND) throw e
-        emptySet()
+        null
     }
 
     suspend fun clear() {
@@ -164,6 +164,7 @@ class InspectorConnection private constructor(
     companion object {
         /** First library release with the desktop socket; 1.x apps never answer. */
         const val MIN_DARI_VERSION = "2.0.0"
+        const val PAYLOAD_SEARCH_MIN_DARI_VERSION = "2.5.0"
         private const val HANDSHAKE_TIMEOUT_MS = 5_000
         private const val REQUEST_TIMEOUT_MS = 10_000L
 
