@@ -165,6 +165,9 @@ class Updater(
                 .redirectOutput(workspace.resolve("install.log").toFile())
                 .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
         }
+        // The jpackage launcher sets this for itself; a relaunched Dari that inherits it skips the app's
+        // main class and only prints java's usage.
+        builder.environment().remove("_JPACKAGE_LAUNCHER")
         builder.redirectErrorStream(true).start()
     }
 
