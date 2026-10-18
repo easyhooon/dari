@@ -7,14 +7,21 @@ import com.easyhooon.dari.MessagePayloadMetadata
 import com.easyhooon.dari.PayloadContentType
 import com.easyhooon.dari.PayloadDecodeStatus
 import com.easyhooon.dari.RawPayloadPreview
+import com.easyhooon.dari.inspector.protocol.AppInfo
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 class DariExporterTest {
 
@@ -45,6 +52,55 @@ class DariExporterTest {
         requestTimestamp = requestTimestamp,
         responseTimestamp = responseTimestamp,
     )
+
+    private val app = AppInfo("com.example", "Example", "1.2.0", "2.5.0", "Google Pixel 9", 36)
+
+    private val utc = SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy", Locale.US).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
+
+    @Test
+    fun `json export wraps messages with format version and meta`() {
+        val entries = listOf(createEntry(id = 1L, handlerName = "a"), createEntry(id = 2L, handlerName = "b"))
+        val root = Json.parseToJsonElement(
+            DariExporter.formatExport(app, entries, ExportFormat.JSON, exportedAt = 9_000L),
+        ).jsonObject
+
+        assertEquals(listOf("format_version", "meta", "messages"), root.keys.toList())
+        assertEquals(2, root["format_version"]!!.jsonPrimitive.int)
+        val meta = root["meta"]!!.jsonObject
+        assertEquals(
+            listOf("application_id", "app_name", "app_version", "dari_version", "device_model", "sdk_int", "exported_at"),
+            meta.keys.toList(),
+        )
+        assertEquals("com.example", meta["application_id"]!!.jsonPrimitive.content)
+        assertEquals(36, meta["sdk_int"]!!.jsonPrimitive.int)
+        assertEquals(9_000L, meta["exported_at"]!!.jsonPrimitive.long)
+        val messages = root["messages"]!!.jsonArray
+        assertEquals(listOf("a", "b"), messages.map { it.jsonObject["handler_name"]!!.jsonPrimitive.content })
+    }
+
+    @Test
+    fun `text export starts with an app and device header`() {
+        val text = DariExporter.formatExport(app, listOf(createEntry()), ExportFormat.TEXT, 9_000L, utc)
+
+        assertTrue(
+            text.startsWith(
+                "App: Example 1.2.0 (com.example)\n" +
+                    "Device: Google Pixel 9, SDK 36\n" +
+                    "Dari: 2.5.0\n" +
+                    "Exported: ${utc.format(Date(9_000L))}\n\n" +
+                    "=".repeat(60) + "\n\nHandler: getAppInfo",
+            ),
+        )
+    }
+
+    @Test
+    fun `text header skips a blank app version`() {
+        val header = DariExporter.formatHeader(app.copy(appVersion = ""), 0L, utc)
+
+        assertTrue(header.startsWith("App: Example (com.example)\n"))
+    }
 
     @Test
     fun `formatSingleEntry contains handler name`() {

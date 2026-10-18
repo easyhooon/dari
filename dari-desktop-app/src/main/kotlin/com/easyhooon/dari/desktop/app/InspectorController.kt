@@ -270,12 +270,13 @@ class InspectorController(
 
     /** Saves the selected message, or with [all] every message passing the filters (oldest first). */
     fun export(target: File, format: ExportFormat, all: Boolean) {
+        val app = (state as? ConnectionState.Connected)?.app ?: return
         val ids = if (all) visibleMessages().reversed().map { it.id } else listOfNotNull(selectedId)
         scope.launch {
             if (all) showNotice("Exporting ${ids.size} messages…", clearAfter = false)
             val details = ids.mapNotNull { fetchDetail(it) }
             val result = runCatching {
-                withContext(Dispatchers.IO) { target.writeText(MessageExport.format(details, format)) }
+                withContext(Dispatchers.IO) { target.writeText(MessageExport.format(app, details, format)) }
             }
             result.exceptionOrNull()?.let { AppLog.error("Export to ${target.name} failed", it) }
             val saved = if (details.size == 1) "message" else "${details.size} messages"

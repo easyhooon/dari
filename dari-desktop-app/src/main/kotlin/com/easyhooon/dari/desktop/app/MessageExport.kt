@@ -1,5 +1,6 @@
 package com.easyhooon.dari.desktop.app
 
+import com.easyhooon.dari.inspector.protocol.AppInfo
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
 import com.easyhooon.dari.inspector.protocol.WirePayloadMetadata
 import kotlinx.serialization.json.Json
@@ -24,10 +25,52 @@ object MessageExport {
     private val prettyJson = Json { prettyPrint = true }
     private const val SEPARATOR_WIDTH = 60
 
-    fun format(details: List<WireMessageDetail>, format: ExportFormat): String = when (format) {
-        ExportFormat.TEXT -> details.joinToString("\n${"=".repeat(SEPARATOR_WIDTH)}\n\n") { text(it) }
-        ExportFormat.JSON -> prettyJson.encodeToString(JsonElement.serializer(), JsonArray(details.map(::exportable)))
+    // 1 was the bare message array.
+    private const val FORMAT_VERSION = 2
+
+    fun format(
+        app: AppInfo,
+        details: List<WireMessageDetail>,
+        format: ExportFormat,
+        exportedAt: Long = System.currentTimeMillis(),
+        dateFormat: SimpleDateFormat = defaultDateFormat(),
+    ): String = when (format) {
+        ExportFormat.TEXT -> {
+            val separator = "\n${"=".repeat(SEPARATOR_WIDTH)}\n\n"
+            header(app, exportedAt, dateFormat) + separator + details.joinToString(separator) { text(it, dateFormat) }
+        }
+        ExportFormat.JSON -> {
+            val document = JsonObject(
+                linkedMapOf(
+                    "format_version" to JsonPrimitive(FORMAT_VERSION),
+                    "meta" to meta(app, exportedAt),
+                    "messages" to JsonArray(details.map(::exportable)),
+                ),
+            )
+            prettyJson.encodeToString(JsonElement.serializer(), document)
+        }
     }
+
+    private fun header(app: AppInfo, exportedAt: Long, dateFormat: SimpleDateFormat): String = buildString {
+        val name = listOf(app.appName, app.appVersion).filter { it.isNotBlank() }.joinToString(" ")
+        appendLine("App: $name (${app.applicationId})")
+        appendLine("Device: ${app.deviceModel}, SDK ${app.sdkInt}")
+        appendLine("Dari: ${app.dariVersion}")
+        appendLine("Exported: ${dateFormat.format(Date(exportedAt))}")
+    }
+
+    // Field names and order match ExportMeta in :dari.
+    private fun meta(app: AppInfo, exportedAt: Long) = JsonObject(
+        linkedMapOf(
+            "application_id" to JsonPrimitive(app.applicationId),
+            "app_name" to JsonPrimitive(app.appName),
+            "app_version" to JsonPrimitive(app.appVersion),
+            "dari_version" to JsonPrimitive(app.dariVersion),
+            "device_model" to JsonPrimitive(app.deviceModel),
+            "sdk_int" to JsonPrimitive(app.sdkInt),
+            "exported_at" to JsonPrimitive(exportedAt),
+        ),
+    )
 
     /** A payload as shown in the detail pane: pretty JSON when it parses, else the raw text. */
     fun payload(data: String): String = prettyOrRaw(data).orEmpty()
