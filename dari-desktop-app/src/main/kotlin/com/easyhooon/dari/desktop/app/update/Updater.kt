@@ -137,6 +137,9 @@ class Updater(
                     ).redirectErrorStream(true)
                         .redirectOutput(workspace.resolve("install.log").toFile())
                         .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
+                        // The jpackage launcher sets this for itself; a relaunched bin/Dari that inherits it
+                        // skips the app's main class and only prints java's usage.
+                        .apply { environment().remove("_JPACKAGE_LAUNCHER") }
                         .start()
                 }
                 quit()
