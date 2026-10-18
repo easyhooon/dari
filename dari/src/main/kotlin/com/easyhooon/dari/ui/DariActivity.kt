@@ -419,6 +419,7 @@ class DariActivity : ComponentActivity() {
                                                 DariDetailActivity::class.java,
                                             ).apply {
                                                 putExtra("id", entry.id)
+                                                putExtra(DariDetailActivity.EXTRA_SEARCH_QUERY, searchQuery)
                                             }
                                             startActivity(intent)
                                         },

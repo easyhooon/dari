@@ -112,6 +112,7 @@ class DariDetailActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val id = intent.getLongExtra("id", -1L)
+        val searchQuery = intent.getStringExtra(EXTRA_SEARCH_QUERY).orEmpty().trim()
         if (id == -1L) {
             finish()
             return
@@ -213,13 +214,18 @@ class DariDetailActivity : ComponentActivity() {
                         if (entry == null) {
                             Text("Message not found", modifier = Modifier.padding(16.dp))
                         } else {
-                            DetailTabs(entry, jsonFoldingEnabled)
+                            DetailTabs(entry, jsonFoldingEnabled, searchQuery)
                         }
                     }
 
                 }
             }
         }
+    }
+
+    internal companion object {
+        /** Filter text from the list; matches in the payload are highlighted. */
+        const val EXTRA_SEARCH_QUERY = "searchQuery"
     }
 }
 
@@ -229,6 +235,7 @@ private val TAB_TITLES = listOf("OVERVIEW", "REQUEST", "RESPONSE")
 private fun DetailTabs(
     entry: MessageEntry,
     jsonFoldingEnabled: Boolean,
+    searchQuery: String,
 ) {
     val pagerState = rememberPagerState(pageCount = { TAB_TITLES.size })
     val coroutineScope = rememberCoroutineScope()
@@ -272,8 +279,8 @@ private fun DetailTabs(
         ) { page ->
             when (page) {
                 0 -> OverviewTab(entry)
-                1 -> DataTab(entry.requestData, entry.requestPayloadMetadata, jsonFoldingEnabled)
-                2 -> DataTab(entry.responseData, entry.responsePayloadMetadata, jsonFoldingEnabled)
+                1 -> DataTab(entry.requestData, entry.requestPayloadMetadata, jsonFoldingEnabled, searchQuery)
+                2 -> DataTab(entry.responseData, entry.responsePayloadMetadata, jsonFoldingEnabled, searchQuery)
             }
         }
     }
@@ -367,6 +374,7 @@ private fun DataTab(
     data: String?,
     metadata: MessagePayloadMetadata?,
     jsonFoldingEnabled: Boolean,
+    searchQuery: String,
 ) {
     val rawPreview = metadata?.rawPreview
     var viewMode by remember(rawPreview?.base64) { mutableStateOf(PayloadViewMode.DECODED) }
@@ -396,7 +404,7 @@ private fun DataTab(
             if (viewMode == PayloadViewMode.RAW && rawPreview != null) {
                 RawPayloadView(metadata)
             } else {
-                DecodedPayloadView(data, jsonFoldingEnabled)
+                DecodedPayloadView(data, jsonFoldingEnabled, searchQuery)
             }
         }
     }
@@ -406,6 +414,7 @@ private fun DataTab(
 private fun DecodedPayloadView(
     data: String?,
     jsonFoldingEnabled: Boolean,
+    searchQuery: String,
 ) {
     Box(
         modifier = Modifier
@@ -423,6 +432,7 @@ private fun DecodedPayloadView(
                 jsonString = data,
                 foldingEnabled = jsonFoldingEnabled,
                 modifier = Modifier.fillMaxSize(),
+                query = searchQuery,
             )
         }
     }

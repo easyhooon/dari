@@ -170,4 +170,21 @@ class AllCollapsiblePathsTest {
         )
         assertEquals(setOf("$/a", "$/a/b", "$/a/b/1"), allCollapsiblePaths(element))
     }
+
+    @Test
+    fun `match paths open only the containers that lead to the query`() {
+        val root = Json.parseToJsonElement("""{"a":{"b":[1,{"token":"Abc"}]},"x":{"y":{"z":2}}}""")
+
+        assertEquals(setOf("$", "$/a", "$/a/b", "$/a/b/1"), pathsContainingMatch(root, "abc"))
+        assertEquals(setOf("$", "$/a", "$/a/b", "$/a/b/1"), pathsContainingMatch(root, "TOKEN"))
+        assertEquals(emptySet<String>(), pathsContainingMatch(root, "missing"))
+        assertEquals(emptySet<String>(), pathsContainingMatch(root, " "))
+    }
+
+    @Test
+    fun `match ranges are case-insensitive and non-overlapping`() {
+        assertEquals(listOf(1..2, 4..5), matchRanges("xAbyab", "ab"))
+        assertEquals(listOf(0..1), matchRanges("aaa", "aa"))
+        assertEquals(emptyList<IntRange>(), matchRanges("abc", ""))
+    }
 }

@@ -21,6 +21,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -34,20 +37,40 @@ import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 
-/** JSON shows as a foldable tree; anything else falls back to a plain code block. */
+/**
+ * JSON shows as a foldable tree; anything else falls back to a plain code block. Occurrences of [query]
+ * are highlighted, and [onFirstMatchPlaced] reports where the first one landed so the caller can scroll to it.
+ */
 @Composable
-fun JsonPayload(text: String, foldingEnabled: Boolean, onCopy: () -> Unit, modifier: Modifier = Modifier) {
+fun JsonPayload(
+    text: String,
+    foldingEnabled: Boolean,
+    onCopy: () -> Unit,
+    modifier: Modifier = Modifier,
+    query: String = "",
+    onFirstMatchPlaced: (LayoutCoordinates) -> Unit = {},
+) {
     when (val content = remember(text) { parseJsonViewerContent(text) }) {
-        is JsonViewerContent.Structured -> JsonTree(content.element, foldingEnabled, onCopy, modifier)
-        is JsonViewerContent.PlainText -> CodeBlock(content.text, onCopy, modifier)
+        is JsonViewerContent.Structured -> JsonTree(content.element, foldingEnabled, onCopy, modifier, query, onFirstMatchPlaced)
+        is JsonViewerContent.PlainText -> CodeBlock(content.text, onCopy, modifier, query)
     }
 }
 
 @Composable
-private fun JsonTree(element: JsonElement, foldingEnabled: Boolean, onCopy: () -> Unit, modifier: Modifier) {
-    // Nodes deeper than two levels start folded, as in the in-app viewer.
-    var collapsed by remember(element) { mutableStateOf(defaultCollapsedPaths(element)) }
+private fun JsonTree(
+    element: JsonElement,
+    foldingEnabled: Boolean,
+    onCopy: () -> Unit,
+    modifier: Modifier,
+    query: String,
+    onFirstMatchPlaced: (LayoutCoordinates) -> Unit,
+) {
+    // Nodes deeper than two levels start folded, as in the in-app viewer, unless they hold a match.
+    var collapsed by remember(element, query) {
+        mutableStateOf(defaultCollapsedPaths(element) - pathsContainingMatch(element, query))
+    }
     val rows = remember(element, collapsed, foldingEnabled) { buildJsonTreeRows(element, collapsed, foldingEnabled) }
+    val firstMatch = remember(rows, query) { rows.indexOfFirst { matchRanges(it.text, query).isNotEmpty() } }
     val allPaths = remember(element) { allCollapsiblePaths(element) }
     val foldable = foldingEnabled && allPaths.isNotEmpty()
     Box(
@@ -69,8 +92,9 @@ private fun JsonTree(element: JsonElement, foldingEnabled: Boolean, onCopy: () -
             }
             // The first row is always "{" or "[", so the corner Copy button needs no reserved margin.
             Column(Modifier.padding(start = 4.dp, end = 12.dp, top = if (foldable) 0.dp else 8.dp, bottom = 8.dp)) {
-                rows.forEach { row ->
-                    JsonRow(row) { path ->
+                rows.forEachIndexed { index, row ->
+                    val placed = if (index == firstMatch) Modifier.onPlaced(onFirstMatchPlaced) else Modifier
+                    JsonRow(row, query, placed) { path ->
                         collapsed = if (path in collapsed) collapsed - path else collapsed + path
                     }
                 }
@@ -81,7 +105,7 @@ private fun JsonTree(element: JsonElement, foldingEnabled: Boolean, onCopy: () -
 }
 
 @Composable
-private fun JsonRow(row: JsonTreeRow, onToggle: (String) -> Unit) {
+private fun JsonRow(row: JsonTreeRow, query: String, modifier: Modifier, onToggle: (String) -> Unit) {
     val path = row.containerPath
     val toggle = if (path != null) {
         Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
@@ -90,7 +114,7 @@ private fun JsonRow(row: JsonTreeRow, onToggle: (String) -> Unit) {
     } else {
         Modifier
     }
-    Row(Modifier.padding(start = (row.depth * INDENT_DP).dp).then(toggle), verticalAlignment = Alignment.Top) {
+    Row(modifier.padding(start = (row.depth * INDENT_DP).dp).then(toggle), verticalAlignment = Alignment.Top) {
         Box(Modifier.width(14.dp)) {
             if (row.expanded != null) {
                 Text(
@@ -100,11 +124,11 @@ private fun JsonRow(row: JsonTreeRow, onToggle: (String) -> Unit) {
                 )
             }
         }
-        Text(highlight(row, Dari.colors), style = Dari.type.code)
+        Text(highlight(row, query, Dari.colors), style = Dari.type.code)
     }
 }
 
-private fun highlight(row: JsonTreeRow, colors: DariColors) = buildAnnotatedString {
+private fun highlight(row: JsonTreeRow, query: String, colors: DariColors) = buildAnnotatedString {
     val keyLength = row.key?.let { JsonPrimitive(it).toString().length } ?: 0
     if (keyLength > 0) {
         withStyle(SpanStyle(color = colors.text)) { append(row.text.take(keyLength)) }
@@ -114,6 +138,12 @@ private fun highlight(row: JsonTreeRow, colors: DariColors) = buildAnnotatedStri
     val value = rest.removeSuffix(",")
     withStyle(SpanStyle(color = row.tokenType.color(colors, collapsed = row.expanded == false))) { append(value) }
     if (rest.endsWith(",")) withStyle(SpanStyle(color = colors.textTertiary)) { append(",") }
+    markMatches(row.text, query, colors)
+}
+
+/** Backgrounds every occurrence of [query]; [text] must be what this builder already holds. */
+internal fun AnnotatedString.Builder.markMatches(text: String, query: String, colors: DariColors) {
+    matchRanges(text, query).forEach { addStyle(SpanStyle(background = colors.searchMatch), it.first, it.last + 1) }
 }
 
 private fun JsonTokenType.color(colors: DariColors, collapsed: Boolean): Color = when (this) {

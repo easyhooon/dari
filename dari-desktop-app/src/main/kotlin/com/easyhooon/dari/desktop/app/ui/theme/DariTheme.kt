@@ -41,6 +41,8 @@ data class DariColors(
     val syntaxString: Color,
     val syntaxNumber: Color,
     val syntaxKeyword: Color,
+    // Search matches in payloads, like a browser's find-in-page.
+    val searchMatch: Color,
 )
 
 val LightColors = DariColors(
@@ -61,6 +63,7 @@ val LightColors = DariColors(
     syntaxString = Color(0xFF2F6B4F),
     syntaxNumber = Color(0xFF2D5FA8),
     syntaxKeyword = Color(0xFF8A4B9C),
+    searchMatch = Color(0xFFFFE28A),
 )
 
 val DarkColors = DariColors(
@@ -81,6 +84,7 @@ val DarkColors = DariColors(
     syntaxString = Color(0xFF8CCBA6),
     syntaxNumber = Color(0xFF8FB8F0),
     syntaxKeyword = Color(0xFFC79AD6),
+    searchMatch = Color(0xFF6E5A14),
 )
 
 @Immutable
