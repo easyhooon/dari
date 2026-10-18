@@ -50,7 +50,7 @@ export interface DariWebOptions {
   hook?: (recorder: Recorder) => void | (() => void)
   /** Rewrites an entry before it is stored, e.g. to mask tokens. */
   redact?: (entry: MessageEntry) => MessageEntry
-  /** Groups entries when several bridges report to one tab. */
+  /** Groups entries when several bridges report to one panel. */
   tag?: string | null
   /** Oldest entries are dropped past this count. Default 500, same as the native side. */
   maxEntries?: number
@@ -58,7 +58,6 @@ export interface DariWebOptions {
   maxContentLength?: number
   /** Treat requests as finished on arrival when no response is expected. Default false. */
   fireAndForget?: boolean
-  /** Tab id and label in vConsole. */
-  pluginId?: string
-  pluginName?: string
+  /** `auto` follows the system setting. Default `auto`. */
+  theme?: 'auto' | 'light' | 'dark'
 }

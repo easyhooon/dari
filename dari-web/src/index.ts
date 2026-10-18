@@ -1,5 +1,5 @@
 export { install } from './install'
-export type { DariWeb, InstallOptions, VConsoleLike, VConsolePluginConstructor, VConsolePluginLike } from './install'
+export type { DariWeb } from './install'
 export { MessageStore, DEFAULT_MAX_CONTENT_LENGTH, DEFAULT_MAX_ENTRIES } from './store'
 export { sanitizePageUrl, pageOriginOf } from './url'
 export { toWireDetail } from './wire'

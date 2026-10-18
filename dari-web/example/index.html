@@ -11,14 +11,13 @@
 </head>
 <body>
   <h1>dari-web example</h1>
-  <p>A fake bridge stands in for the app. Open vConsole and pick the Dari tab.</p>
+  <p>A fake bridge stands in for the app. Tap the Dari button to see the traffic.</p>
   <button id="get-user">getUser</button>
   <button id="pay">pay (fails)</button>
   <button id="log">log (fire and forget)</button>
   <button id="push">App pushes onPush</button>
 
   <!-- Run `npm run build` first. -->
-  <script src="../node_modules/vconsole/dist/vconsole.min.js"></script>
   <script src="../dist/index.global.js"></script>
   <script>
     // Fake WKWebView bridge: the "app" answers through window.onBridgeResult.
@@ -32,8 +31,7 @@
     window.onBridgeResult = () => {}
     window.onAppMessage = (msg) => window.webkit.messageHandlers.bridge.postMessage({ name: 'ack', ackId: msg.id })
 
-    window.vConsole = new VConsole()
-    const dari = DariWeb.install(window.vConsole, {
+    window.dari = DariWeb.install({
       hook(recorder) {
         const handler = window.webkit.messageHandlers.bridge
         const post = handler.postMessage.bind(handler)

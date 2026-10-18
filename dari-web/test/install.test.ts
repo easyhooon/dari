@@ -1,119 +1,123 @@
-import { describe, expect, it, vi } from 'vitest'
-import { install, type VConsoleLike, type VConsolePluginLike } from '../src/install'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { install, type DariWeb } from '../src/install'
 
-class FakePlugin implements VConsolePluginLike {
-  readonly handlers = new Map<string, (data?: any) => void>()
-  constructor(readonly id: string, readonly name: string) {}
-  on(event: string, callback: (data?: any) => void) {
-    this.handlers.set(event, callback)
-    return this
-  }
+let dari: DariWeb | null = null
+
+function setup(...args: Parameters<typeof install>): DariWeb {
+  dari = install(...args)
+  return dari
 }
 
-class FakeVConsole implements VConsoleLike {
-  static VConsolePlugin = FakePlugin
-  readonly plugins = new Map<string, FakePlugin>()
-  tab: HTMLElement | null = null
-  tools: Array<{ name: string; onClick: () => void }> = []
-
-  addPlugin(plugin: VConsolePluginLike) {
-    const p = plugin as FakePlugin
-    if (this.plugins.has(p.id)) return false
-    this.plugins.set(p.id, p)
-    p.handlers.get('renderTab')?.((el: HTMLElement) => (this.tab = el))
-    p.handlers.get('addTool')?.((tools: typeof this.tools) => (this.tools = tools))
-    return true
-  }
-
-  removePlugin(id: string) {
-    this.plugins.get(id)?.handlers.get('remove')?.()
-    return this.plugins.delete(id)
-  }
+function shadow(): ShadowRoot {
+  return document.querySelector('[data-dari-web]')!.shadowRoot!
 }
+
+function el<T extends HTMLElement = HTMLElement>(selector: string): T {
+  return shadow().querySelector(selector) as T
+}
+
+afterEach(() => {
+  dari?.uninstall()
+  dari = null
+})
 
 describe('install', () => {
   it('records through hook and renders rows newest first', () => {
-    const vConsole = new FakeVConsole()
-    install(vConsole, {
+    setup({
       hook(recorder) {
         recorder.webToAppRequest({ handlerName: 'first' })
         recorder.webToAppRequest({ handlerName: 'second', requestId: '2' })
       },
     })
-    const names = [...vConsole.tab!.querySelectorAll('.dari-name')].map((el) => el.textContent)
+    const names = [...shadow().querySelectorAll('.dari-name')].map((e) => e.textContent)
     expect(names).toEqual(['second', 'first'])
+    expect(el('.dari-badge').textContent).toBe('2')
+  })
+
+  it('opens from the launcher and closes on Escape and the backdrop', () => {
+    setup()
+    expect(el('.dari-sheet').hidden).toBe(true)
+    el('.dari-launcher').click()
+    expect(el('.dari-sheet').hidden).toBe(false)
+    expect(el('.dari-launcher').hidden).toBe(true)
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    expect(el('.dari-sheet').hidden).toBe(true)
+    dari!.show()
+    el('.dari-backdrop').click()
+    expect(el('.dari-sheet').hidden).toBe(true)
+  })
+
+  it('marks the badge when a call fails', () => {
+    const { recorder } = setup()
+    recorder.webToAppRequest({ handlerName: 'pay', requestId: '1' })
+    expect(el('.dari-badge').classList.contains('dari-badge-error')).toBe(false)
+    recorder.webToAppResponse({ requestId: '1', isSuccess: false })
+    expect(el('.dari-badge').classList.contains('dari-badge-error')).toBe(true)
   })
 
   it('shows payloads as text, never as markup', () => {
-    const vConsole = new FakeVConsole()
-    const dari = install(vConsole)
-    dari.recorder.webToAppRequest({ handlerName: '<img src=x onerror=alert(1)>', data: '<b>hi</b>' })
-    const tab = vConsole.tab!
-    expect(tab.querySelector('img')).toBeNull()
-    ;(tab.querySelector('.dari-row') as HTMLElement).click()
-    expect(tab.querySelector('b')).toBeNull()
-    expect(tab.querySelector('.dari-pre')?.textContent).toBe('<b>hi</b>')
+    const { recorder } = setup()
+    recorder.webToAppRequest({ handlerName: '<img src=x onerror=alert(1)>', data: '<b>hi</b>' })
+    expect(shadow().querySelector('img')).toBeNull()
+    el('.dari-row').click()
+    expect(shadow().querySelector('b')).toBeNull()
+    expect(el('.dari-pre').textContent).toBe('<b>hi</b>')
   })
 
   it('opens detail, follows updates and goes back', () => {
-    const vConsole = new FakeVConsole()
-    const dari = install(vConsole)
-    dari.recorder.webToAppRequest({ handlerName: 'getUser', requestId: '1', data: { id: 1 } })
-    const tab = vConsole.tab!
-    ;(tab.querySelector('.dari-row') as HTMLElement).click()
-    expect(tab.querySelector('.dari-pre')?.textContent).toBe('{\n  "id": 1\n}')
-    dari.recorder.webToAppResponse({ requestId: '1', isSuccess: false, data: 'nope' })
-    expect(tab.querySelectorAll('.dari-pre')[1]?.textContent).toBe('nope')
-    ;(tab.querySelector('.dari-back') as HTMLElement).click()
-    expect(tab.querySelector('.dari-status')?.textContent).toBe('Error')
+    const { recorder } = setup()
+    recorder.webToAppRequest({ handlerName: 'getUser', requestId: '1', data: { id: 1 } })
+    el('.dari-row').click()
+    expect(el('.dari-pre').textContent).toBe('{\n  "id": 1\n}')
+    recorder.webToAppResponse({ requestId: '1', isSuccess: false, data: 'nope' })
+    expect(shadow().querySelectorAll('.dari-pre')[1]?.textContent).toBe('nope')
+    el('.dari-back').click()
+    expect(el('.dari-status').textContent).toBe('Error')
   })
 
-  it('filters rows and clears from the tool button', () => {
-    const vConsole = new FakeVConsole()
-    const dari = install(vConsole)
-    dari.recorder.webToAppRequest({ handlerName: 'getUser' })
-    dari.recorder.webToAppRequest({ handlerName: 'pay', data: 'card' })
-    const tab = vConsole.tab!
-    const filter = tab.querySelector('.dari-filter') as HTMLInputElement
+  it('filters rows and clears from the header', () => {
+    const { recorder } = setup()
+    recorder.webToAppRequest({ handlerName: 'getUser' })
+    recorder.webToAppRequest({ handlerName: 'pay', data: 'card' })
+    const filter = el<HTMLInputElement>('.dari-filter')
     filter.value = 'CARD'
     filter.dispatchEvent(new Event('input'))
-    expect(tab.querySelectorAll('.dari-row')).toHaveLength(1)
-    expect(tab.querySelector('.dari-count')?.textContent).toBe('1 / 2')
-    vConsole.tools.find((t) => t.name === 'Clear')!.onClick()
-    expect(dari.getEntries()).toHaveLength(0)
-    expect(tab.querySelector('.dari-empty')?.textContent).toBe('No bridge messages yet')
+    expect(shadow().querySelectorAll('.dari-row')).toHaveLength(1)
+    expect(el('.dari-count').textContent).toBe('1 / 2')
+    el('.dari-clear').click()
+    expect(dari!.getEntries()).toHaveLength(0)
+    expect(el('.dari-empty').textContent).toBe('No bridge messages yet')
   })
 
-  it('uninstall undoes the hook once and removes the tab', () => {
-    const vConsole = new FakeVConsole()
+  it('applies a fixed theme', () => {
+    setup({ theme: 'dark' })
+    expect(document.querySelector('[data-dari-web]')!.getAttribute('data-theme')).toBe('dark')
+  })
+
+  it('uninstall undoes the hook once and removes the panel', () => {
     const unhook = vi.fn()
-    const dari = install(vConsole, { hook: () => unhook })
-    dari.uninstall()
-    dari.uninstall()
+    const first = install({ hook: () => unhook })
+    first.uninstall()
+    first.uninstall()
     expect(unhook).toHaveBeenCalledTimes(1)
-    expect(vConsole.plugins.size).toBe(0)
+    expect(document.querySelector('[data-dari-web]')).toBeNull()
   })
 
-  it('removes the tab when hook throws', () => {
-    const vConsole = new FakeVConsole()
+  it('removes the panel when hook throws', () => {
     expect(() =>
-      install(vConsole, {
+      install({
         hook: () => {
           throw new Error('no bridge')
         },
       }),
     ).toThrow('no bridge')
-    expect(vConsole.plugins.size).toBe(0)
+    expect(document.querySelector('[data-dari-web]')).toBeNull()
+    setup()
   })
 
-  it('rejects a duplicate plugin id', () => {
-    const vConsole = new FakeVConsole()
-    install(vConsole)
-    expect(() => install(vConsole)).toThrow('already has a plugin')
-  })
-
-  it('fails clearly when VConsolePlugin cannot be found', () => {
-    const bare: VConsoleLike = { addPlugin: () => true, removePlugin: () => true }
-    expect(() => install(bare)).toThrow('VConsolePlugin not found')
+  it('rejects a second install until the first is removed', () => {
+    setup()
+    expect(() => install()).toThrow('already installed')
+    expect(document.querySelectorAll('[data-dari-web]')).toHaveLength(1)
   })
 })

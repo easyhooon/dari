@@ -1,6 +1,5 @@
 import type { MessageEntry } from './types'
 import type { MessageStore } from './store'
-import { STYLE } from './style'
 import { pageOriginOf } from './url'
 import { utf8Size } from './wire'
 
@@ -8,7 +7,7 @@ type Attrs = Record<string, string>
 type Child = Node | string | null | false
 
 // Payloads are untrusted page data, so everything goes through textContent, never innerHTML.
-function h(tag: string, attrs: Attrs = {}, ...children: Child[]): HTMLElement {
+export function h(tag: string, attrs: Attrs = {}, ...children: Child[]): HTMLElement {
   const el = document.createElement(tag)
   for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, value)
   for (const child of children) {
@@ -18,7 +17,7 @@ function h(tag: string, attrs: Attrs = {}, ...children: Child[]): HTMLElement {
   return el
 }
 
-/** List + detail UI for the vConsole tab. */
+/** List + detail UI shown inside the panel. */
 export class DariView {
   readonly root: HTMLElement
   private readonly content: HTMLElement
@@ -38,9 +37,7 @@ export class DariView {
     this.count = h('span', { class: 'dari-count' })
     this.bar = h('div', { class: 'dari-bar' }, this.filterInput, this.count)
     this.content = h('div')
-    const style = h('style')
-    style.textContent = STYLE
-    this.root = h('div', { class: 'dari-root' }, style, this.bar, this.content)
+    this.root = h('div', { class: 'dari-root' }, this.bar, this.content)
     this.unsubscribe = store.subscribe(() => this.render())
     this.render()
   }
