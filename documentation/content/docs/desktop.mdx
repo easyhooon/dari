@@ -104,7 +104,8 @@ Dari checks the releases page on launch and every six hours. When a newer versio
 
 - **macOS**: Dari downloads the new image, checks its `.sha256`, bundle ID, version and code signature, then quits and relaunches as the new version. If anything fails, the installed version is kept. This works when Dari sits in a folder you can write to, such as **Applications**; otherwise Dari tells you to move it to **Applications** and open it from there.
 - **Windows**: the button opens the download page. Quit Dari, then run the new `.exe` or `.msi`; either upgrades the installed copy. If Dari is still open, the installer stops with Error 1306 on `dari.lock`: quit Dari and click **Retry**.
-- **Linux**: the button opens the download page. Install the new `.deb` with `sudo apt install`, which upgrades the installed copy, or extract the new tarball in place of the old one.
+- **Linux tarball**: Dari downloads the new tarball, checks its `.sha256`, main class and version, then quits, swaps the new `Dari` folder in for the old one and relaunches. If the new version doesn't start, the old folder is put back. The folder and the one containing it must be writable by you.
+- **Linux `.deb`**: the copy in `/opt/dari` belongs to root, so the button explains that and offers the download page. Install the new `.deb` with `sudo apt install`, which upgrades the installed copy.
 
 ### Versions
 

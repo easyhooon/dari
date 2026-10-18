@@ -19,7 +19,7 @@ object ReleaseSource {
     val pageUrl: URI = URI("https://github.com/easyhooon/dari/releases")
     val downloadPageUrl: URI = URI("https://easyhooon.github.io/dari/download")
 
-    private const val MAX_DMG_BYTES = 400L * 1024 * 1024
+    private const val MAX_INSTALLER_BYTES = 400L * 1024 * 1024
     private const val MAX_CHECKSUM_BYTES = 1024L
     private const val MAX_REDIRECTS = 5
     private val ALLOWED_HOSTS = setOf("github.com", "release-assets.githubusercontent.com", "objects.githubusercontent.com")
@@ -48,7 +48,10 @@ object ReleaseSource {
 
     fun dmgUrl(version: SemanticVersion, arch: String): URI = URI("$pageUrl/download/$version/Dari-$version-$arch.dmg")
 
-    fun download(url: URI, target: Path) = download(url, target, MAX_DMG_BYTES)
+    fun tarballUrl(version: SemanticVersion, arch: String): URI =
+        URI("$pageUrl/download/$version/Dari-$version-linux-$arch.tar.gz")
+
+    fun download(url: URI, target: Path) = download(url, target, MAX_INSTALLER_BYTES)
 
     fun downloadChecksum(url: URI, target: Path) = download(url, target, MAX_CHECKSUM_BYTES)
 
