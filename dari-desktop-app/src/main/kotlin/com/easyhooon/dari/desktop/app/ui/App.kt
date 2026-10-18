@@ -348,12 +348,17 @@ private fun statusLine(state: ConnectionState): String = when (state) {
     ConnectionState.Idle -> "Not connected"
     is ConnectionState.Connecting -> state.reason?.let { "Waiting for app · $it" } ?: "Connecting…"
     // The library version stays in the tooltip; the desktop version is in About.
-    is ConnectionState.Connected -> with(state.app) { "$appName v$appVersion · API $sdkInt" }
+    is ConnectionState.Connected -> with(state.app) {
+        listOf("$appName v$appVersion", "API $sdkInt").plus(environment?.values.orEmpty()).joinToString(" · ")
+    }
 }
 
 private fun statusDetails(state: ConnectionState): String = when (state) {
     is ConnectionState.Connected -> with(state.app) {
-        "App: $appName ($applicationId) v$appVersion\nDevice: $deviceModel, Android API $sdkInt\nDari library: $dariVersion"
+        val env = environment?.takeIf { it.isNotEmpty() }
+            ?.entries?.joinToString(", ") { "${it.key}=${it.value}" }
+            ?.let { "\nEnvironment: $it" }.orEmpty()
+        "App: $appName ($applicationId) v$appVersion\nDevice: $deviceModel, Android API $sdkInt\nDari library: $dariVersion$env"
     }
     else -> statusLine(state)
 }

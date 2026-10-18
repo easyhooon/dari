@@ -45,5 +45,11 @@ object Dari {
     @Suppress("UNUSED_PARAMETER")
     fun setMaskingEnabled(enabled: Boolean) = Unit
 
+    @Suppress("UNUSED_PARAMETER")
+    fun setEnvironment(vararg labels: Pair<String, String>) = Unit
+
+    @Suppress("UNUSED_PARAMETER")
+    fun setEnvironment(labels: Map<String, String>) = Unit
+
     fun clear() = Unit
 }

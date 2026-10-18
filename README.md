@@ -322,6 +322,7 @@ are never sent. Turn it off in Settings → Privacy → **Send crash reports**.
 | `setShakeToOpenEnabled(enabled)` | Enable/disable shake-to-open at runtime (persisted) |
 | `setDarkMode(value)` | Override dark mode: `true` / `false` / `null` (system default). Persisted |
 | `setShowTagChip(show)` | Show/hide bridge tag chips in the message list. Persisted |
+| `setEnvironment(vararg labels)` | Label the capture (region, web build, flavor, …). Shown in both inspectors and exports; replaces earlier labels. Not persisted |
 | `showNotification()` | Show the notification (e.g., after permission grant) |
 | `clear()` | Clear all stored messages and dismiss notification |
 

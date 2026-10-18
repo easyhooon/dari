@@ -45,11 +45,21 @@ class MessageExportTest {
         assertEquals(2, root["format_version"]!!.jsonPrimitive.int)
         val meta = root["meta"]!!.jsonObject
         assertEquals(
-            listOf("application_id", "app_name", "app_version", "dari_version", "device_model", "sdk_int", "exported_at"),
+            listOf("application_id", "app_name", "app_version", "dari_version", "device_model", "sdk_int", "exported_at", "environment"),
             meta.keys.toList(),
         )
         assertEquals("Google Pixel 9", meta["device_model"]!!.jsonPrimitive.content)
         assertEquals(9_000, meta["exported_at"]!!.jsonPrimitive.long)
+    }
+
+    @Test
+    fun `environment labels appear in the header and meta`() {
+        val labeled = app.copy(environment = linkedMapOf("region" to "JP", "webBuild" to "rc1"))
+        val text = MessageExport.format(labeled, listOf(detail), ExportFormat.TEXT, 9_000, utc)
+        assertTrue("Dari: 2.5.0\nEnvironment: region=JP, webBuild=rc1\n" in text, text)
+        val meta = Json.parseToJsonElement(MessageExport.format(labeled, listOf(detail), ExportFormat.JSON, 9_000))
+            .jsonObject["meta"]!!.jsonObject
+        assertEquals(listOf("region", "webBuild"), meta["environment"]!!.jsonObject.keys.toList())
     }
 
     @Test

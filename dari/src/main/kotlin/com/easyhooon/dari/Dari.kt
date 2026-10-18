@@ -34,6 +34,9 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -74,6 +77,9 @@ object Dari {
 
     internal lateinit var preferences: DariPreferences
         private set
+
+    private val mutableEnvironment = MutableStateFlow<Map<String, String>>(emptyMap())
+    internal val environment: StateFlow<Map<String, String>> = mutableEnvironment.asStateFlow()
 
     /**
      * Initializes Dari.
@@ -165,6 +171,19 @@ object Dari {
         preferences.setMaskingEnabled(enabled)
     }
 
+    /**
+     * Labels such as region, web build or flavor, shown in both inspectors and in exports.
+     * Replaces the previous labels; a connected desktop picks them up when it reconnects.
+     */
+    fun setEnvironment(vararg labels: Pair<String, String>) {
+        mutableEnvironment.value = linkedMapOf(*labels)
+    }
+
+    /** [setEnvironment] for labels already in a map. Iteration order is kept. */
+    fun setEnvironment(labels: Map<String, String>) {
+        mutableEnvironment.value = LinkedHashMap(labels)
+    }
+
     @Synchronized
     private fun startDesktopInspector() {
         if (inspectorServer != null || !DesktopInspectorGate.isAllowed(context)) return
@@ -175,9 +194,9 @@ object Dari {
             override fun clear() = this@Dari.clear()
         }
         val redactor = DariPayloadRedactor { entry -> payloadRedactor?.redact(entry) ?: entry }
-        val appInfo = inspectorAppInfo(context)
         val server = DariInspectorServer(InspectorProtocol.socketName(context.packageName)) { input, output ->
-            InspectorSession(input, output, appInfo, source, redactor, scope).run()
+            // Built per connection so a reconnect carries the latest environment.
+            InspectorSession(input, output, inspectorAppInfo(context), source, redactor, scope).run()
         }
         inspectorServer = server.also { it.start() }
         // Shake registration touches the process lifecycle, which only allows the main thread.

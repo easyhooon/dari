@@ -32,4 +32,6 @@ data class AppInfo(
     val dariVersion: String,
     val deviceModel: String,
     val sdkInt: Int,
+    /** Labels from `Dari.setEnvironment`; null from older apps or when none are set. */
+    val environment: Map<String, String>? = null,
 )

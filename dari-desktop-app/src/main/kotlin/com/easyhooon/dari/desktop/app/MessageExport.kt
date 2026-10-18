@@ -56,6 +56,9 @@ object MessageExport {
         appendLine("App: $name (${app.applicationId})")
         appendLine("Device: ${app.deviceModel}, SDK ${app.sdkInt}")
         appendLine("Dari: ${app.dariVersion}")
+        app.environment?.takeIf { it.isNotEmpty() }?.let { env ->
+            appendLine("Environment: ${env.entries.joinToString(", ") { "${it.key}=${it.value}" }}")
+        }
         appendLine("Exported: ${dateFormat.format(Date(exportedAt))}")
     }
 
@@ -69,6 +72,7 @@ object MessageExport {
             "device_model" to JsonPrimitive(app.deviceModel),
             "sdk_int" to JsonPrimitive(app.sdkInt),
             "exported_at" to JsonPrimitive(exportedAt),
+            "environment" to (app.environment?.let { env -> JsonObject(env.mapValues { JsonPrimitive(it.value) }) } ?: JsonNull),
         ),
     )
 

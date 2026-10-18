@@ -34,6 +34,16 @@ class FrameCodecTest {
     }
 
     @Test
+    fun `app info environment is optional on the wire`() {
+        val json = InspectorProtocol.json
+        val old = """{"applicationId":"a","appName":"A","appVersion":"1","dariVersion":"2.2.1","deviceModel":"P","sdkInt":36}"""
+        assertNull(json.decodeFromString(AppInfo.serializer(), old).environment)
+
+        val labeled = json.decodeFromString(AppInfo.serializer(), old).copy(environment = linkedMapOf("region" to "JP"))
+        assertEquals(labeled, json.decodeFromString(AppInfo.serializer(), json.encodeToString(AppInfo.serializer(), labeled)))
+    }
+
+    @Test
     fun `frame type is encoded as a discriminator`() {
         val text = InspectorProtocol.json.encodeToString(
             InspectorFrame.serializer(),

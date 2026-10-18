@@ -322,6 +322,7 @@ Dari는 디버그 빌드와 내부 빌드용입니다. 브릿지 페이로드에
 | `setShakeToOpenEnabled(enabled)` | 런타임에 흔들어서 열기 켜기/끄기(저장됨) |
 | `setDarkMode(value)` | 다크 모드 재정의: `true` / `false` / `null`(시스템 기본값). 저장됨 |
 | `setShowTagChip(show)` | 메시지 목록의 브릿지 태그 칩 표시/숨김. 저장됨 |
+| `setEnvironment(vararg labels)` | 캡처 환경 라벨(리전, 웹 빌드, flavor 등). 두 인스펙터와 export에 표시되고, 다시 호출하면 교체됨. 저장되지 않음 |
 | `showNotification()` | 알림 표시(예: 권한 허용 후) |
 | `clear()` | 저장된 모든 메시지를 지우고 알림 닫기 |
 
