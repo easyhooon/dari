@@ -18,6 +18,7 @@ internal fun MessageEntry.toWireSummary(wireId: Long): WireMessageSummary = Wire
     responseTimestamp = responseTimestamp,
     requestSizeBytes = requestSizeBytes,
     responseSizeBytes = responseSizeBytes,
+    pageUrl = pageUrl,
 )
 
 internal fun MessageEntry.toWireDetail(wireId: Long): WireMessageDetail = WireMessageDetail(

@@ -129,6 +129,16 @@ class DariExporterTest {
     }
 
     @Test
+    fun `page url appears in text and json exports`() {
+        val entry = createEntry().copy(pageUrl = "https://jp.example.com/cart")
+
+        assertTrue(DariExporter.formatSingleEntry(entry).contains("Tag: -\nPage: https://jp.example.com/cart\n"))
+        val json = exportJson.parseToJsonElement(DariExporter.formatExport(app, listOf(entry), ExportFormat.JSON, 0L))
+        val message = json.jsonObject["messages"]!!.jsonArray[0].jsonObject
+        assertEquals("https://jp.example.com/cart", message["page_url"]!!.jsonPrimitive.content)
+    }
+
+    @Test
     fun `formatSingleEntry contains direction for WEB_TO_APP`() {
         val text = DariExporter.formatSingleEntry(createEntry(direction = MessageDirection.WEB_TO_APP))
         assertTrue(text.contains("Web \u2192 App"))

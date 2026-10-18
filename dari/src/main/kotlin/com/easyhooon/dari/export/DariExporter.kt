@@ -221,6 +221,7 @@ internal object DariExporter {
             appendLine("Direction: $direction")
             appendLine("Status: ${entry.status}")
             appendLine("Tag: ${entry.tag ?: "-"}")
+            entry.pageUrl?.let { appendLine("Page: $it") }
             appendLine("Request ID: ${entry.requestId ?: "-"}")
             appendLine()
             appendLine("Request time: ${dateFormat.format(Date(entry.requestTimestamp))}")

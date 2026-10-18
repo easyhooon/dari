@@ -9,6 +9,7 @@ package com.easyhooon.dari
  *                     When null, the entry is treated as a standalone (fire-and-forget) message.
  * @property handlerName Stable bridge handler identifier.
  * @property displayName Optional human-readable handler description.
+ * @property pageUrl Page the WebView showed when the request was captured, without query or fragment.
  */
 data class MessageEntry(
     val id: Long = 0L,
@@ -26,7 +27,44 @@ data class MessageEntry(
     val requestPayloadMetadata: MessagePayloadMetadata? = null,
     val responsePayloadMetadata: MessagePayloadMetadata? = null,
     val displayName: String? = null,
+    val pageUrl: String? = null,
 ) {
+
+    /** Preserves the pre-page-URL constructor signature for binary callers. */
+    constructor(
+        id: Long,
+        requestId: String?,
+        handlerName: String,
+        direction: MessageDirection,
+        tag: String?,
+        requestData: String?,
+        responseData: String?,
+        requestDataTruncated: Boolean,
+        responseDataTruncated: Boolean,
+        status: MessageStatus,
+        requestTimestamp: Long,
+        responseTimestamp: Long?,
+        requestPayloadMetadata: MessagePayloadMetadata?,
+        responsePayloadMetadata: MessagePayloadMetadata?,
+        displayName: String?,
+    ) : this(
+        id = id,
+        requestId = requestId,
+        handlerName = handlerName,
+        direction = direction,
+        tag = tag,
+        requestData = requestData,
+        responseData = responseData,
+        requestDataTruncated = requestDataTruncated,
+        responseDataTruncated = responseDataTruncated,
+        status = status,
+        requestTimestamp = requestTimestamp,
+        responseTimestamp = responseTimestamp,
+        requestPayloadMetadata = requestPayloadMetadata,
+        responsePayloadMetadata = responsePayloadMetadata,
+        displayName = displayName,
+        pageUrl = null,
+    )
 
     /** Preserves the pre-display-name constructor signature for binary callers. */
     constructor(
@@ -133,17 +171,38 @@ data class MessageEntry(
     val totalSizeBytes: Int
         get() = requestSizeBytes + responseSizeBytes
 
+    /** `scheme://host[:port]` of [pageUrl], or null when there is none. */
+    val pageOrigin: String?
+        get() = pageUrl?.let(::originOf)
+
     companion object {
         /**
          * Truncates [data] to [maxLength] characters if it exceeds the limit.
          * Returns a Pair of (truncated data, wasTruncated).
          */
+        /**
+         * Drops the query and fragment, which can carry tokens, so only origin and path are kept.
+         * Returns null for blank input.
+         */
+        fun sanitizePageUrl(url: String?): String? =
+            url?.substringBefore('#')?.substringBefore('?')?.takeIf { it.isNotBlank() }
+
         fun truncateIfNeeded(data: String?, maxLength: Int): Pair<String?, Boolean> {
             if (data == null || data.length <= maxLength) return data to false
             val truncated = data.take(maxLength) + "\n\n...[truncated, original length: ${data.length} chars]"
             return truncated to true
         }
     }
+}
+
+private fun originOf(url: String): String? {
+    val schemeEnd = url.indexOf("://")
+    if (schemeEnd <= 0) return null
+    val authorityStart = schemeEnd + 3
+    val authorityEnd = url.indexOfAny(charArrayOf('/', '?', '#'), authorityStart).let { if (it < 0) url.length else it }
+    // Drop any user info so credentials never reach a chip or an export.
+    val host = url.substring(authorityStart, authorityEnd).substringAfterLast('@')
+    return url.substring(0, authorityStart).lowercase() + host.lowercase()
 }
 
 private fun String?.utf8Size(): Int = this?.encodeToByteArray()?.size ?: 0

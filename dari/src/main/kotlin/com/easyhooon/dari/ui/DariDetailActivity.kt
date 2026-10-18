@@ -309,6 +309,7 @@ private fun OverviewTab(entry: MessageEntry) {
         OverviewRow("Direction", direction)
         OverviewRow("Status", entry.status.name)
         OverviewRow("Tag", entry.tag ?: "-")
+        entry.pageUrl?.let { OverviewRow("Page", it) }
         OverviewRow("Request ID", entry.requestId ?: "-")
 
         Spacer(modifier = Modifier.height(8.dp))

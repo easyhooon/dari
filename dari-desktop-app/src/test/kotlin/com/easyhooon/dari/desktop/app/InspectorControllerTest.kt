@@ -15,6 +15,7 @@ class InspectorControllerTest {
         direction: String = "WEB_TO_APP",
         status: String = "SUCCESS",
         tag: String? = null,
+        pageUrl: String? = null,
     ) = WireMessageSummary(
         id = id,
         handlerName = "handler$id",
@@ -24,6 +25,7 @@ class InspectorControllerTest {
         requestTimestamp = id,
         requestSizeBytes = 0,
         responseSizeBytes = 0,
+        pageUrl = pageUrl,
     )
 
     private fun addAll(vararg ids: Long) = ids.forEach { controller.apply(ObserveEvent.Added(message(it))) }
@@ -91,6 +93,16 @@ class InspectorControllerTest {
         assertEquals(listOf("checkout", "main"), controller.availableTags)
 
         controller.tagFilter = "checkout"
+        assertEquals(listOf(4L, 1L), controller.visibleMessages().map { it.id })
+    }
+
+    @Test
+    fun `origin filter keeps only that origin and lists origins in first-seen order`() {
+        listOf(1L to "https://jp.example.com/a", 2L to null, 3L to "https://kr.example.com/", 4L to "https://jp.example.com/b")
+            .forEach { (id, url) -> controller.apply(ObserveEvent.Added(message(id, pageUrl = url))) }
+        assertEquals(listOf("https://jp.example.com", "https://kr.example.com"), controller.availableOrigins)
+
+        controller.originFilter = "https://jp.example.com"
         assertEquals(listOf(4L, 1L), controller.visibleMessages().map { it.id })
     }
 }

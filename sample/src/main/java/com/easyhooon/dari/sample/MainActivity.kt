@@ -82,7 +82,12 @@ class MainActivity : ComponentActivity() {
             settings.allowContentAccess = false
             settings.allowFileAccessFromFileURLs = false
             settings.allowUniversalAccessFromFileURLs = false
-            webViewClient = WebViewClient()
+            webViewClient = object : WebViewClient() {
+                // Also fires on SPA history changes, so each request records the page it came from.
+                override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
+                    interceptor?.onPageUrlChanged(url)
+                }
+            }
             addJavascriptInterface(BridgeInterface(), "Android")
             loadUrl("file:///android_asset/sample.html")
         }

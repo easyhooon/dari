@@ -73,9 +73,13 @@ class InspectorController(
     var directionFilter by mutableStateOf<String?>(null)
     var statusFilter by mutableStateOf<String?>(null)
     var tagFilter by mutableStateOf<String?>(null)
+    var originFilter by mutableStateOf<String?>(null)
 
     /** Tags seen in this session, in order of first appearance. */
     val availableTags: List<String> get() = messages.values.mapNotNull { it.tag }.distinct()
+
+    /** Page origins seen in this session, in order of first appearance. */
+    val availableOrigins: List<String> get() = messages.values.mapNotNull { it.pageOrigin }.distinct()
 
     /** The connected app's dari predates 2.2.0 and masks regardless of the setting. */
     var appAlwaysMasks by mutableStateOf(false)
@@ -302,16 +306,17 @@ class InspectorController(
         }
     }
 
-    /** Newest first, after the search, direction, status and tag facets. */
+    /** Newest first, after the search, direction, status, tag and origin facets. */
     fun visibleMessages(): List<WireMessageSummary> {
         val query = filter.trim()
         return messages.values.reversed().filter { message ->
             (directionFilter == null || message.direction == directionFilter) &&
                 (statusFilter == null || message.status == statusFilter) &&
                 (tagFilter == null || message.tag == tagFilter) &&
+                (originFilter == null || message.pageOrigin == originFilter) &&
                 (
                     query.isEmpty() ||
-                        listOfNotNull(message.handlerName, message.displayName, message.tag, message.requestId)
+                        listOfNotNull(message.handlerName, message.displayName, message.tag, message.requestId, message.pageUrl)
                             .any { it.contains(query, ignoreCase = true) } ||
                         (payloadMatches.first == query && message.id in payloadMatches.second)
                     )

@@ -225,6 +225,7 @@ private fun summaryLine(detail: WireMessageDetail): String {
     return listOfNotNull(
         s.handlerName.takeIf { s.displayName != null },
         s.tag,
+        s.pageUrl,
         s.requestId,
         formatTime(s.requestTimestamp),
         durationLabel(s),

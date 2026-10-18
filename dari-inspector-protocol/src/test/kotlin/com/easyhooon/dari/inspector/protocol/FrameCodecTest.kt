@@ -79,4 +79,21 @@ class FrameCodecTest {
             FrameReader(ByteArrayInputStream(buffer.toByteArray())).readText()
         }
     }
+
+    @Test
+    fun `summary page url is optional on the wire`() {
+        val old = InspectorProtocol.json.decodeFromString(
+            WireMessageSummary.serializer(),
+            """{"id":1,"handlerName":"h","direction":"WEB_TO_APP","status":"SUCCESS",""" +
+                """"requestTimestamp":0,"requestSizeBytes":0,"responseSizeBytes":0}""",
+        )
+        assertNull(old.pageUrl)
+
+        val summary = old.copy(pageUrl = "https://jp.example.com/cart")
+        val restored = InspectorProtocol.json.decodeFromString(
+            WireMessageSummary.serializer(),
+            InspectorProtocol.json.encodeToString(WireMessageSummary.serializer(), summary),
+        )
+        assertEquals("https://jp.example.com", restored.pageOrigin)
+    }
 }

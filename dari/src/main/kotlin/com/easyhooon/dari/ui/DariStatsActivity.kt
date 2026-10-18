@@ -48,13 +48,14 @@ import com.easyhooon.dari.ui.theme.DariTopBarColors
 import com.easyhooon.dari.ui.theme.Green500
 import com.easyhooon.dari.ui.theme.palette
 
-/** Response time statistics per handler, scoped to the tag selected on the list screen. */
+/** Response time statistics per handler, scoped to the tag and origin selected on the list screen. */
 class DariStatsActivity : ComponentActivity() {
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val tag = intent.getStringExtra(EXTRA_TAG)
+        val origin = intent.getStringExtra(EXTRA_ORIGIN)
 
         setContent {
             val darkMode by Dari.preferences.darkModeFlow().collectAsStateWithLifecycle(
@@ -63,8 +64,9 @@ class DariStatsActivity : ComponentActivity() {
             ApplyDariSystemBars(darkMode ?: isSystemInDarkTheme())
             DariTheme(darkTheme = darkMode) {
                 val entries by Dari.repository.entries.collectAsStateWithLifecycle()
-                val stats = remember(entries, tag) {
-                    entries.filter { tag == null || it.tag == tag }.handlerStats()
+                val stats = remember(entries, tag, origin) {
+                    entries.filter { (tag == null || it.tag == tag) && (origin == null || it.pageOrigin == origin) }
+                        .handlerStats()
                 }
 
                 Scaffold(
@@ -73,8 +75,8 @@ class DariStatsActivity : ComponentActivity() {
                             title = {
                                 Column {
                                     Text("Response Time")
-                                    tag?.let {
-                                        Text(it, style = MaterialTheme.typography.bodySmall)
+                                    listOfNotNull(tag, origin).takeIf { it.isNotEmpty() }?.let {
+                                        Text(it.joinToString(" · "), style = MaterialTheme.typography.bodySmall)
                                     }
                                 }
                             },
@@ -124,6 +126,7 @@ class DariStatsActivity : ComponentActivity() {
 
     internal companion object {
         const val EXTRA_TAG = "tag"
+        const val EXTRA_ORIGIN = "origin"
     }
 }
 
