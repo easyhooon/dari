@@ -117,17 +117,16 @@ Dari는 두 값을 분리하여 저장·내보내고 검색 시 두 값 모두�
 
 ## 페이지 URL과 origin
 
-페이지를 전달하면 각 메시지에 어느 웹 배포에서 왔는지 기록됩니다. `doUpdateVisitedHistory`는 SPA 히스토리 변경에도 호출됩니다:
+페이지를 전달하면 각 메시지에 어느 웹 배포에서 왔는지 기록됩니다. SPA 히스토리 변경에도 호출되는 `doUpdateVisitedHistory`를 WebView가 이미 쓰는 `WebViewClient`에 추가하세요. 새 client를 지정하면 기존 내비게이션·인증 콜백이 사라집니다:
 
 ```kotlin
-webView.webViewClient = object : WebViewClient() {
-    override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
-        interceptor?.onPageUrlChanged(url)
-    }
+override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
+    super.doUpdateVisitedHistory(view, url, isReload)
+    interceptor?.onPageUrlChanged(url)
 }
 ```
 
-이후 캡처되는 요청에는 토큰이 담길 수 있는 query와 fragment를 뺀 URL이 저장됩니다. 두 인스펙터 모두 상세 화면에 표시하고, origin이 둘 이상이면 origin 필터를 보여주며, Response Time 통계도 선택한 origin 기준으로 계산합니다. export에는 `page_url`로 포함됩니다. 페이지끼리 덮어쓰지 않도록 WebView마다 인터셉터를 하나씩 쓰세요.
+이후 캡처되는 요청에는 자격 증명이나 토큰이 담길 수 있는 user info, query, fragment를 뺀 URL이 저장됩니다. 두 인스펙터 모두 상세 화면에 표시하고, origin이 둘 이상이면 origin 필터를 보여주며, Response Time 통계도 선택한 origin 기준으로 계산합니다. export에는 `page_url`로 포함됩니다. 페이지끼리 덮어쓰지 않도록 WebView마다 인터셉터를 하나씩 쓰세요.
 
 ## Fire-and-Forget (단방향 호출)
 

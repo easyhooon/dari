@@ -376,7 +376,7 @@ class DariActivity : ComponentActivity() {
                                 )
                                 availableOrigins.forEach { origin ->
                                     FilterChip(
-                                        label = origin.substringAfter("://"),
+                                        label = origin,
                                         selected = selectedOrigin == origin,
                                         onClick = {
                                             selectedOrigin = if (selectedOrigin == origin) null else origin

@@ -68,6 +68,9 @@ class MessageEntryTest {
     @Test
     fun `sanitized page url drops query and fragment`() {
         assertEquals("https://a.com/p", MessageEntry.sanitizePageUrl("https://a.com/p?token=x#top"))
+        assertEquals("https://a.com/p", MessageEntry.sanitizePageUrl("https://user:secret@a.com/p"))
+        assertEquals("https://a.com/p@x", MessageEntry.sanitizePageUrl("https://a.com/p@x"))
+        assertEquals("file:///android_asset/a.html", MessageEntry.sanitizePageUrl("file:///android_asset/a.html"))
         assertEquals(null, MessageEntry.sanitizePageUrl(" "))
         assertEquals(null, MessageEntry.sanitizePageUrl(null))
     }

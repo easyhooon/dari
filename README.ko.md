@@ -334,7 +334,7 @@ Dari는 디버그 빌드와 내부 빌드용입니다. 브릿지 페이로드에
 | `onWebToAppResponse()` | Web-to-App 요청에 대한 응답 기록. `requestId`가 null이면 건너뜁니다. |
 | `onAppToWebRequest()` | App-to-Web 메시지 기록. 별도의 `displayName`(선택)을 받는 오버로드가 있습니다. |
 | `onAppToWebResponse()` | App-to-Web 메시지에 대한 응답 기록. `requestId`가 null이면 건너뜁니다. |
-| `onPageUrlChanged(url)` | WebView의 현재 페이지 전달(예: `doUpdateVisitedHistory`). 이후 요청에 기록되어 origin 필터에 쓰입니다. query와 fragment는 저장하지 않습니다. |
+| `onPageUrlChanged(url)` | WebView의 현재 페이지 전달(예: `doUpdateVisitedHistory`). 이후 요청에 기록되어 origin 필터에 쓰입니다. user info, query, fragment는 저장하지 않습니다. |
 
 `ProtobufDariInterceptor`는 이 인터페이스를 확장해 `ByteArray` 페이로드를 받는 `on*ProtobufRequest()`, `on*ProtobufResponse()` 메서드를 제공합니다.
 
