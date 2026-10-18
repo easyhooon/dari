@@ -1,5 +1,6 @@
 package com.easyhooon.dari.desktop.app.update
 
+import org.junit.Assume.assumeFalse
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.test.Test
@@ -39,6 +40,8 @@ class UpdaterTest {
 
     @Test
     fun `the deb install, build outputs and read-only folders on Linux are updated by hand`() {
+        // Linux paths only; Windows renders them with backslashes.
+        assumeFalse(System.getProperty("os.name").startsWith("Windows"))
         val deb = assertNotNull(Updater.linuxInstallBlocker(Paths.get("/opt/dari")))
         assertTrue("apt install" in deb)
         assertNotNull(Updater.linuxInstallBlocker(Paths.get("/repo/dari-desktop-app/build/compose/binaries/main/app/Dari")))
