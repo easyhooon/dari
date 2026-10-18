@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
 
 /**
  * Composable that displays valid JSON as an expandable tree.
@@ -56,6 +58,7 @@ internal fun JsonViewer(
     jsonString: String,
     foldingEnabled: Boolean,
     modifier: Modifier = Modifier,
+    query: String = "",
 ) {
     val content = remember(jsonString) { parseJsonViewerContent(jsonString) }
     when (content) {
@@ -63,13 +66,14 @@ internal fun JsonViewer(
             element = content.element,
             stateKey = jsonString,
             foldingEnabled = foldingEnabled,
+            query = query,
             modifier = modifier,
         )
 
         is JsonViewerContent.PlainText -> Box(
             modifier = modifier.verticalScroll(rememberScrollState()),
         ) {
-            CodeViewer(content.text)
+            CodeViewer(content.text, query)
         }
     }
 }
@@ -79,12 +83,14 @@ private fun JsonTreeViewer(
     element: JsonElement,
     stateKey: String,
     foldingEnabled: Boolean,
+    query: String,
     modifier: Modifier = Modifier,
 ) {
-    val collapsedPaths = remember(stateKey, foldingEnabled) {
+    // Nodes holding a search match start open so the match is visible.
+    val collapsedPaths = remember(stateKey, foldingEnabled, query) {
         mutableStateMapOf<String, Unit>().apply {
             if (foldingEnabled) {
-                defaultCollapsedPaths(element).forEach { path -> this[path] = Unit }
+                (defaultCollapsedPaths(element) - pathsContainingMatch(element, query)).forEach { path -> this[path] = Unit }
             }
         }
     }
@@ -95,7 +101,12 @@ private fun JsonTreeViewer(
     )
     val allPaths = remember(element) { allCollapsiblePaths(element) }
     val horizontalScrollState = rememberScrollState()
+    val listState = rememberLazyListState()
     val shape = RoundedCornerShape(8.dp)
+    LaunchedEffect(stateKey, query) {
+        val firstMatch = rows.indexOfFirst { matchRanges(it.text, query).isNotEmpty() }
+        if (firstMatch >= 0) listState.scrollToItem(firstMatch)
+    }
 
     // The block wraps its rows (up to the space available), so collapsing shrinks it instead of
     // leaving an empty grey area the size of the expanded tree.
@@ -127,6 +138,7 @@ private fun JsonTreeViewer(
             val viewportWidth = maxWidth
             Row(modifier = Modifier.horizontalScroll(horizontalScrollState)) {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .widthIn(min = viewportWidth)
                         .padding(vertical = 8.dp),
@@ -138,6 +150,7 @@ private fun JsonTreeViewer(
                     ) { row ->
                         JsonTreeLine(
                             row = row,
+                            query = query,
                             showDisclosureGutter = foldingEnabled,
                             onToggle = { path, expanded ->
                                 if (expanded) {
@@ -158,6 +171,7 @@ private fun JsonTreeViewer(
 @Composable
 private fun JsonTreeLine(
     row: JsonTreeRow,
+    query: String,
     showDisclosureGutter: Boolean,
     onToggle: (path: String, expanded: Boolean) -> Unit,
 ) {
@@ -176,8 +190,8 @@ private fun JsonTreeLine(
         Modifier
     }
     val syntaxColors = jsonSyntaxColors()
-    val highlightedText = remember(row, syntaxColors) {
-        row.toAnnotatedString(syntaxColors)
+    val highlightedText = remember(row, query, syntaxColors) {
+        row.toAnnotatedString(syntaxColors, query)
     }
 
     Row(
@@ -220,6 +234,7 @@ private data class JsonSyntaxColors(
     val nullValue: Color,
     val container: Color,
     val punctuation: Color,
+    val searchMatch: Color,
 )
 
 @Composable
@@ -234,10 +249,19 @@ private fun jsonSyntaxColors(): JsonSyntaxColors {
         nullValue = if (isDark) Color(0xFFBDBDBD) else Color(0xFF757575),
         container = colorScheme.onSurface,
         punctuation = colorScheme.onSurfaceVariant,
+        searchMatch = searchMatchColor(isDark),
     )
 }
 
-private fun JsonTreeRow.toAnnotatedString(colors: JsonSyntaxColors): AnnotatedString = buildAnnotatedString {
+// Like a browser's find-in-page highlight.
+private fun searchMatchColor(isDark: Boolean): Color = if (isDark) Color(0xFF6E5A14) else Color(0xFFFFE28A)
+
+/** Backgrounds every occurrence of [query]; [text] must be what this builder already holds. */
+private fun AnnotatedString.Builder.markMatches(text: String, query: String, color: Color) {
+    matchRanges(text, query).forEach { addStyle(SpanStyle(background = color), it.first, it.last + 1) }
+}
+
+private fun JsonTreeRow.toAnnotatedString(colors: JsonSyntaxColors, query: String): AnnotatedString = buildAnnotatedString {
     val keyText = key?.let { JsonPrimitive(it).toString() }
     val prefix = keyText?.let { "$it: " }.orEmpty()
     if (keyText != null) {
@@ -252,6 +276,7 @@ private fun JsonTreeRow.toAnnotatedString(colors: JsonSyntaxColors): AnnotatedSt
     if (hasTrailingComma) {
         withStyle(SpanStyle(color = colors.punctuation)) { append(',') }
     }
+    markMatches(text, query, colors.searchMatch)
 }
 
 private fun JsonSyntaxColors.colorFor(tokenType: JsonTokenType): Color = when (tokenType) {
@@ -264,9 +289,15 @@ private fun JsonSyntaxColors.colorFor(tokenType: JsonTokenType): Color = when (t
 }
 
 @Composable
-internal fun CodeViewer(text: String) {
+internal fun CodeViewer(text: String, query: String = "") {
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     Text(
-        text = text,
+        text = remember(text, query, isDark) {
+            buildAnnotatedString {
+                append(text)
+                markMatches(text, query, searchMatchColor(isDark))
+            }
+        },
         modifier = Modifier
             .fillMaxWidth()
             .background(

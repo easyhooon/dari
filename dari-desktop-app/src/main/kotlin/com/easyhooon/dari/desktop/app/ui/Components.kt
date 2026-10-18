@@ -45,9 +45,11 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.easyhooon.dari.desktop.app.ui.json.markMatches
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
 
@@ -302,14 +304,20 @@ fun DariMenuItem(text: String, onClick: () -> Unit, checked: Boolean = false) {
 
 /** Code block with a copy button that appears on hover. */
 @Composable
-fun CodeBlock(text: String, onCopy: () -> Unit, modifier: Modifier = Modifier) {
+fun CodeBlock(text: String, onCopy: () -> Unit, modifier: Modifier = Modifier, query: String = "") {
     Box(
         modifier.fillMaxWidth()
             .background(Dari.colors.codeBackground, RoundedCornerShape(DariMetrics.radius))
             .border(1.dp, Dari.colors.border, RoundedCornerShape(DariMetrics.radius)),
     ) {
+        val colors = Dari.colors
         Text(
-            text,
+            remember(text, query, colors) {
+                buildAnnotatedString {
+                    append(text)
+                    markMatches(text, query, colors)
+                }
+            },
             style = Dari.type.code,
             color = Dari.colors.text,
             modifier = Modifier.padding(start = 12.dp, end = 72.dp, top = 8.dp, bottom = 8.dp),

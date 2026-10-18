@@ -34,8 +34,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,6 +68,7 @@ fun DetailPane(
     modifier: Modifier = Modifier,
     newerCount: Int = 0,
     onShowLatest: () -> Unit = {},
+    searchQuery: String = "",
 ) {
     Column(modifier.background(Dari.colors.surface)) {
         if (detail == null) {
@@ -113,6 +117,7 @@ fun DetailPane(
                     detail.requestDataTruncated,
                     detail.requestPayloadMetadata,
                     jsonFoldingEnabled,
+                    searchQuery,
                     onCopyPayload,
                     it,
                 )
@@ -125,6 +130,7 @@ fun DetailPane(
                     detail.responseDataTruncated,
                     detail.responsePayloadMetadata,
                     jsonFoldingEnabled,
+                    searchQuery,
                     onCopyPayload,
                     it,
                 )
@@ -234,6 +240,7 @@ private fun PayloadColumn(
     truncated: Boolean,
     metadata: WirePayloadMetadata?,
     jsonFoldingEnabled: Boolean,
+    query: String,
     onCopy: (text: String, what: String) -> Unit,
     modifier: Modifier,
 ) {
@@ -241,7 +248,21 @@ private fun PayloadColumn(
     // payload text. Drag is left to selection; the wheel, trackpad and scrollbar scroll instead.
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
-    val wheelStep = with(LocalDensity.current) { (if (isMacOs) 10.dp else 48.dp).toPx() }
+    val density = LocalDensity.current
+    val wheelStep = with(density) { (if (isMacOs) 10.dp else 48.dp).toPx() }
+    // Scrolls to the first match once per payload and query, not on every later layout.
+    var content by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var scrolledToMatch by remember(data, query) { mutableStateOf(false) }
+    val scrollToMatch: (LayoutCoordinates) -> Unit = { match ->
+        if (!scrolledToMatch) {
+            scrolledToMatch = true
+            scope.launch {
+                val parent = content?.takeIf { it.isAttached && match.isAttached } ?: return@launch
+                val top = parent.localPositionOf(match, Offset.Zero).y - with(density) { MATCH_TOP_MARGIN.toPx() }
+                scroll.scrollTo(top.toInt().coerceAtLeast(0))
+            }
+        }
+    }
     Box(modifier) {
         Column(
             Modifier.fillMaxSize()
@@ -250,6 +271,7 @@ private fun PayloadColumn(
                     scope.launch { scroll.scrollBy(delta) }
                 }
                 .verticalScroll(scroll, enabled = false)
+                .onPlaced { content = it }
                 .padding(12.dp),
         ) {
             Row(
@@ -274,7 +296,13 @@ private fun PayloadColumn(
                 Text("No payload", style = Dari.type.caption, color = Dari.colors.textTertiary)
             } else {
                 SelectionContainer {
-                    JsonPayload(data, jsonFoldingEnabled, onCopy = { onCopy(MessageExport.payload(data), title.lowercase()) })
+                    JsonPayload(
+                        data,
+                        jsonFoldingEnabled,
+                        onCopy = { onCopy(MessageExport.payload(data), title.lowercase()) },
+                        query = query,
+                        onFirstMatchPlaced = scrollToMatch,
+                    )
                 }
             }
         }
@@ -283,3 +311,4 @@ private fun PayloadColumn(
 }
 
 private val SIDE_BY_SIDE_MIN_WIDTH = 640.dp
+private val MATCH_TOP_MARGIN = 48.dp

@@ -333,6 +333,7 @@ private fun Workspace(controller: InspectorController, settings: DesktopSettings
                     .fillMaxHeight(),
                 newerCount = controller.newerCount(visible),
                 onShowLatest = { visible.firstOrNull()?.let { controller.select(it.id) } },
+                searchQuery = controller.filter.trim(),
             )
         }
     }

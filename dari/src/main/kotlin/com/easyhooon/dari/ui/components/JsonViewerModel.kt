@@ -263,6 +263,34 @@ private fun MutableSet<String>.collectCollapsiblePaths(
     }
 }
 
+/** Container paths whose subtree has [query] in a rendered key or value; they open so the match is visible. */
+internal fun pathsContainingMatch(element: JsonElement, query: String): Set<String> =
+    if (query.isBlank()) emptySet() else buildSet { collectMatchPaths(element, ROOT_PATH, query) }
+
+/** Case-insensitive, non-overlapping occurrences of [query] in [text]. */
+internal fun matchRanges(text: String, query: String): List<IntRange> {
+    if (query.isEmpty()) return emptyList()
+    return buildList {
+        var start = text.indexOf(query, ignoreCase = true)
+        while (start >= 0) {
+            add(start until start + query.length)
+            start = text.indexOf(query, start + query.length, ignoreCase = true)
+        }
+    }
+}
+
+private fun MutableSet<String>.collectMatchPaths(element: JsonElement, path: String, query: String): Boolean {
+    val children = when (element) {
+        is JsonArray -> element.mapIndexed { index, child -> "$path/$index" to child }
+        is JsonObject -> element.map { (childKey, child) -> "$path/${childKey.toJsonPointerSegment()}" to child }
+        else -> return element.toString().contains(query, ignoreCase = true)
+    }
+    val keyMatch = (element as? JsonObject)?.keys?.any { JsonPrimitive(it).toString().contains(query, ignoreCase = true) } == true
+    // No short-circuit: every matching branch should open, not just the first.
+    val childMatch = children.map { (childPath, child) -> collectMatchPaths(child, childPath, query) }.any { it }
+    return (keyMatch || childMatch).also { if (it) add(path) }
+}
+
 private fun JsonElement.tokenType(): JsonTokenType = when (this) {
     JsonNull -> JsonTokenType.NULL
     is JsonPrimitive -> when {
