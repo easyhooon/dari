@@ -196,6 +196,9 @@ internal object DariExporter {
         appendLine("App: $name (${app.applicationId})")
         appendLine("Device: ${app.deviceModel}, SDK ${app.sdkInt}")
         appendLine("Dari: ${app.dariVersion}")
+        app.environment?.takeIf { it.isNotEmpty() }?.let { env ->
+            appendLine("Environment: ${env.entries.joinToString(", ") { "${it.key}=${it.value}" }}")
+        }
         appendLine("Exported: ${dateFormat.format(Date(exportedAt))}")
     }
 

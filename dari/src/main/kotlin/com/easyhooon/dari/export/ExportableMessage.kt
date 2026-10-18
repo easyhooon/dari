@@ -90,6 +90,7 @@ internal data class ExportMeta(
     @SerialName("device_model") val deviceModel: String,
     @SerialName("sdk_int") val sdkInt: Int,
     @SerialName("exported_at") val exportedAt: Long,
+    val environment: Map<String, String>? = null,
 )
 
 // 1 was the bare message array.
@@ -103,4 +104,5 @@ internal fun AppInfo.toExportMeta(exportedAt: Long): ExportMeta = ExportMeta(
     deviceModel = deviceModel,
     sdkInt = sdkInt,
     exportedAt = exportedAt,
+    environment = environment,
 )

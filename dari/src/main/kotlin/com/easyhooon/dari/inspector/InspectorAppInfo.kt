@@ -3,6 +3,7 @@ package com.easyhooon.dari.inspector
 import android.content.Context
 import android.os.Build
 import com.easyhooon.dari.BuildConfig
+import com.easyhooon.dari.Dari
 import com.easyhooon.dari.inspector.protocol.AppInfo
 
 internal fun inspectorAppInfo(context: Context): AppInfo {
@@ -17,5 +18,6 @@ internal fun inspectorAppInfo(context: Context): AppInfo {
         dariVersion = BuildConfig.DARI_VERSION,
         deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}",
         sdkInt = Build.VERSION.SDK_INT,
+        environment = Dari.environment.value.ifEmpty { null },
     )
 }

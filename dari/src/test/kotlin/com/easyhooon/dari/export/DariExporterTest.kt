@@ -70,7 +70,7 @@ class DariExporterTest {
         assertEquals(2, root["format_version"]!!.jsonPrimitive.int)
         val meta = root["meta"]!!.jsonObject
         assertEquals(
-            listOf("application_id", "app_name", "app_version", "dari_version", "device_model", "sdk_int", "exported_at"),
+            listOf("application_id", "app_name", "app_version", "dari_version", "device_model", "sdk_int", "exported_at", "environment"),
             meta.keys.toList(),
         )
         assertEquals("com.example", meta["application_id"]!!.jsonPrimitive.content)
@@ -93,6 +93,17 @@ class DariExporterTest {
                     "=".repeat(60) + "\n\nHandler: getAppInfo",
             ),
         )
+    }
+
+    @Test
+    fun `environment labels appear in the text header and json meta`() {
+        val labeled = app.copy(environment = linkedMapOf("region" to "JP", "webBuild" to "rc1"))
+
+        val header = DariExporter.formatHeader(labeled, 0L, utc)
+        assertTrue(header.contains("Dari: 2.5.0\nEnvironment: region=JP, webBuild=rc1\nExported: "))
+        val meta = Json.parseToJsonElement(DariExporter.formatExport(labeled, emptyList(), ExportFormat.JSON, 0L))
+            .jsonObject["meta"]!!.jsonObject
+        assertEquals("JP", meta["environment"]!!.jsonObject["region"]!!.jsonPrimitive.content)
     }
 
     @Test

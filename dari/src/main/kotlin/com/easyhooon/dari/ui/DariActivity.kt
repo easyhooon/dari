@@ -165,6 +165,7 @@ class DariActivity : ComponentActivity() {
                 val showTagChip by Dari.preferences.showTagChipFlow().collectAsStateWithLifecycle(
                     initialValue = Dari.preferences.showTagChip,
                 )
+                val environment by Dari.environment.collectAsStateWithLifecycle()
                 val maskingEnabled by Dari.preferences.maskingEnabledFlow()
                     .collectAsStateWithLifecycle(
                         initialValue = Dari.preferences.maskingEnabled,
@@ -337,6 +338,11 @@ class DariActivity : ComponentActivity() {
                             .padding(padding),
                     ) {
                         Column {
+                        if (environment.isNotEmpty()) {
+                            FilterChipRow {
+                                environment.forEach { (key, value) -> EnvironmentChip("$key: $value") }
+                            }
+                        }
                         if (availableTags.isNotEmpty()) {
                             FilterChipRow {
                                 FilterChip(
@@ -535,6 +541,20 @@ private fun ChipRowDivider() {
         modifier = Modifier
             .size(width = 1.dp, height = 20.dp)
             .background(MaterialTheme.colorScheme.outlineVariant),
+    )
+}
+
+@Composable
+private fun EnvironmentChip(label: String) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSecondaryContainer,
+        maxLines = 1,
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
     )
 }
 
