@@ -1,6 +1,8 @@
+import { h } from './dom'
+import { loadSettings, saveSettings, type Settings, type Theme } from './settings'
 import type { MessageStore } from './store'
 import { STYLE } from './style'
-import { DariView, h } from './view'
+import { DariView } from './view'
 
 const DRAG_THRESHOLD = 5
 const EDGE = 8
@@ -17,14 +19,18 @@ export class DariPanel {
   private readonly onKeydown = (event: KeyboardEvent) => {
     if (event.key === 'Escape' && this.isOpen) this.hide()
   }
+  private readonly onResize = () => this.placeLauncher()
+  private settings: Settings
   private dragged = false
 
   constructor(
     private readonly store: MessageStore,
-    theme: 'auto' | 'light' | 'dark' = 'auto',
+    theme?: Theme,
   ) {
+    // A viewer's saved choice beats the theme the page was installed with.
+    this.settings = loadSettings(theme ? { theme } : {})
     this.host = h('div', { 'data-dari-web': '' })
-    if (theme !== 'auto') this.host.setAttribute('data-theme', theme)
+    this.applyTheme()
     const shadow = this.host.attachShadow({ mode: 'open' })
 
     this.badge = h('span', { class: 'dari-badge' }, '0')
@@ -35,20 +41,14 @@ export class DariPanel {
     })
     this.enableDrag(this.launcher)
 
-    const clear = h('button', { class: 'dari-icon-btn dari-clear', type: 'button' }, 'Clear')
-    clear.addEventListener('click', () => store.clear())
-    const close = h('button', { class: 'dari-icon-btn dari-close', type: 'button', 'aria-label': 'Close' }, '✕')
-    close.addEventListener('click', () => this.hide())
-
-    this.view = new DariView(store)
+    this.view = new DariView(store, {
+      settings: () => this.settings,
+      updateSettings: (patch) => this.updateSettings(patch),
+      close: () => this.hide(),
+    })
     this.backdrop = h('div', { class: 'dari-backdrop' })
     this.backdrop.addEventListener('click', () => this.hide())
-    this.sheet = h(
-      'div',
-      { class: 'dari-sheet', role: 'dialog', 'aria-label': 'Dari' },
-      h('div', { class: 'dari-header' }, h('span', { class: 'dari-header-title' }, 'Dari'), clear, close),
-      h('div', { class: 'dari-body' }, this.view.root),
-    )
+    this.sheet = h('div', { class: 'dari-sheet', role: 'dialog', 'aria-label': 'Dari' }, this.view.root)
     this.backdrop.hidden = true
     this.sheet.hidden = true
 
@@ -59,6 +59,9 @@ export class DariPanel {
     this.unsubscribe = store.subscribe(() => this.updateBadge())
     this.updateBadge()
     document.addEventListener('keydown', this.onKeydown)
+    window.addEventListener('resize', this.onResize)
+    // Needs layout for the launcher size, so wait until the host is mounted.
+    requestAnimationFrame(() => this.placeLauncher())
   }
 
   get isOpen(): boolean {
@@ -75,13 +78,28 @@ export class DariPanel {
     this.launcher.hidden = false
     this.backdrop.hidden = true
     this.sheet.hidden = true
+    this.placeLauncher()
   }
 
   destroy(): void {
     this.unsubscribe()
     this.view.destroy()
     document.removeEventListener('keydown', this.onKeydown)
+    window.removeEventListener('resize', this.onResize)
     this.host.remove()
+  }
+
+  private updateSettings(patch: Partial<Settings>): void {
+    this.settings = { ...this.settings, ...patch }
+    saveSettings(this.settings)
+    if ('theme' in patch) this.applyTheme()
+    if ('launcher' in patch) this.placeLauncher()
+    if ('foldJson' in patch || 'showTags' in patch) this.view.refresh()
+  }
+
+  private applyTheme(): void {
+    if (this.settings.theme === 'auto') this.host.removeAttribute('data-theme')
+    else this.host.setAttribute('data-theme', this.settings.theme)
   }
 
   private updateBadge(): void {
@@ -91,6 +109,21 @@ export class DariPanel {
       'dari-badge-error',
       entries.some((e) => e.status === 'ERROR'),
     )
+  }
+
+  // Saved positions are clamped, since the viewport may have shrunk since (rotation, split screen).
+  private placeLauncher(): void {
+    const el = this.launcher
+    const saved = this.settings.launcher
+    if (!saved) {
+      el.style.left = el.style.top = el.style.right = el.style.bottom = ''
+      return
+    }
+    if (el.hidden) return
+    el.style.left = `${clamp(saved.left, EDGE, window.innerWidth - el.offsetWidth - EDGE)}px`
+    el.style.top = `${clamp(saved.top, EDGE, window.innerHeight - el.offsetHeight - EDGE)}px`
+    el.style.right = 'auto'
+    el.style.bottom = 'auto'
   }
 
   // The launcher can be dragged out of the way of the page's own controls.
@@ -116,6 +149,11 @@ export class DariPanel {
       el.style.bottom = 'auto'
     })
     const end = () => {
+      if (start && this.dragged) {
+        const rect = el.getBoundingClientRect()
+        this.settings = { ...this.settings, launcher: { left: Math.round(rect.left), top: Math.round(rect.top) } }
+        saveSettings(this.settings)
+      }
       start = null
     }
     el.addEventListener('pointerup', end)

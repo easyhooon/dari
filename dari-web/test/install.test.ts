@@ -19,6 +19,7 @@ function el<T extends HTMLElement = HTMLElement>(selector: string): T {
 afterEach(() => {
   dari?.uninstall()
   dari = null
+  localStorage.clear()
 })
 
 describe('install', () => {
@@ -68,7 +69,7 @@ describe('install', () => {
     const { recorder } = setup()
     recorder.webToAppRequest({ handlerName: 'getUser', requestId: '1', data: { id: 1 } })
     el('.dari-row').click()
-    expect(el('.dari-pre').textContent).toBe('{\n  "id": 1\n}')
+    expect(el('.dari-j-number').textContent).toBe('1')
     recorder.webToAppResponse({ requestId: '1', isSuccess: false, data: 'nope' })
     expect(shadow().querySelectorAll('.dari-pre')[1]?.textContent).toBe('nope')
     el('.dari-back').click()
@@ -87,6 +88,71 @@ describe('install', () => {
     el('.dari-clear').click()
     expect(dari!.getEntries()).toHaveLength(0)
     expect(el('.dari-empty').textContent).toBe('No bridge messages yet')
+  })
+
+  it('filters by status and highlights search hits', () => {
+    const { recorder } = setup()
+    recorder.webToAppRequest({ handlerName: 'getUser', requestId: '1', data: { name: 'Kim' } })
+    recorder.webToAppRequest({ handlerName: 'pay', requestId: '2' })
+    recorder.webToAppResponse({ requestId: '2', isSuccess: false })
+    const status = el<HTMLSelectElement>('select[aria-label="Status"]')
+    status.value = 'ERROR'
+    status.dispatchEvent(new Event('change'))
+    expect([...shadow().querySelectorAll('.dari-name')].map((e) => e.textContent)).toEqual(['pay'])
+    status.value = ''
+    status.dispatchEvent(new Event('change'))
+    const filter = el<HTMLInputElement>('.dari-filter')
+    filter.value = 'kim'
+    filter.dispatchEvent(new Event('input'))
+    el('.dari-row').click()
+    expect(el('.dari-match').textContent).toBe('Kim')
+  })
+
+  it('shows the tag picker once tags exist and keeps origin hidden for one page', () => {
+    setup({ tag: 'web' }).recorder.webToAppRequest({ handlerName: 'a' })
+    expect(el('select[aria-label="Tag"]').hidden).toBe(false)
+    expect(el('select[aria-label="Origin"]').hidden).toBe(true)
+  })
+
+  it('folds nested JSON and expands it on demand', () => {
+    const { recorder } = setup()
+    recorder.webToAppRequest({ handlerName: 'deep', data: { a: { b: { c: 1 } } } })
+    el('.dari-row').click()
+    expect(el('.dari-j-summary').textContent).toBe('{1 field}')
+    el('.dari-j-summary').parentElement!.querySelector<HTMLElement>('.dari-j-toggle')!.click()
+    expect(el('.dari-j-summary')).toBeNull()
+    expect(el('.dari-j-number').textContent).toBe('1')
+    const collapseAll = [...shadow().querySelectorAll<HTMLElement>('.dari-link')].find((b) => b.textContent === 'Collapse all')!
+    collapseAll.click()
+    expect(el('.dari-j-summary').textContent).toBe('{1 field}')
+  })
+
+  it('shows response time stats from the menu', () => {
+    const now = vi.spyOn(Date, 'now')
+    const { recorder } = setup()
+    now.mockReturnValue(1000)
+    recorder.webToAppRequest({ handlerName: 'slow', requestId: '1' })
+    now.mockReturnValue(1800)
+    recorder.webToAppResponse({ requestId: '1', isSuccess: true })
+    now.mockRestore()
+    el('.dari-more').click()
+    expect(el('.dari-menu').hidden).toBe(false)
+    const item = [...shadow().querySelectorAll<HTMLElement>('.dari-menu-item')].find((b) => b.textContent === 'Response Time')!
+    item.click()
+    expect(el('.dari-stats-slow').textContent).toBe('800 ms')
+  })
+
+  it('saves settings and restores them on the next install', () => {
+    setup()
+    el('.dari-more').click()
+    ;[...shadow().querySelectorAll<HTMLElement>('.dari-menu-item')].find((b) => b.textContent === 'Settings')!.click()
+    const theme = el<HTMLSelectElement>('select[aria-label="Theme"]')
+    theme.value = 'dark'
+    theme.dispatchEvent(new Event('change'))
+    expect(document.querySelector('[data-dari-web]')!.getAttribute('data-theme')).toBe('dark')
+    dari!.uninstall()
+    setup({ theme: 'light' })
+    expect(document.querySelector('[data-dari-web]')!.getAttribute('data-theme')).toBe('dark')
   })
 
   it('applies a fixed theme', () => {
