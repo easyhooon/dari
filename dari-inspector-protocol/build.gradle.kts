@@ -21,6 +21,10 @@ tasks.test {
     systemProperty("dari.iosFixtures", fixtures.absolutePath)
     systemProperty("dari.updateIosFixtures", providers.gradleProperty("dari.updateIosFixtures").isPresent)
     inputs.dir(fixtures).withPropertyName("iosFixtures")
+    // Shared with dari-web; see fixtures/messages/README.md.
+    val sharedFixtures = rootProject.layout.projectDirectory.dir("fixtures/messages")
+    inputs.dir(sharedFixtures).withPropertyName("sharedFixtures").withPathSensitivity(PathSensitivity.RELATIVE)
+    systemProperty("dari.fixtures.dir", sharedFixtures.asFile.absolutePath)
 }
 
 dependencies {

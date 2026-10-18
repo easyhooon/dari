@@ -1,0 +1,21 @@
+{
+  "description": "Payloads past maxContentLength are cut with the native truncation marker; tag is carried on every entry.",
+  "options": { "maxContentLength": 5, "tag": "main" },
+  "events": [
+    { "at": 3000, "type": "webToAppRequest", "handlerName": "upload", "requestId": "u1", "data": "abcdefghij" },
+    { "at": 3005, "type": "webToAppResponse", "requestId": "u1", "isSuccess": true, "data": "ok" }
+  ],
+  "expected": [
+    {
+      "summary": {
+        "id": 1, "requestId": "u1", "handlerName": "upload", "direction": "WEB_TO_APP", "tag": "main",
+        "status": "SUCCESS", "requestTimestamp": 3000, "responseTimestamp": 3005,
+        "requestSizeBytes": 48, "responseSizeBytes": 2
+      },
+      "requestData": "abcde\n\n...[truncated, original length: 10 chars]",
+      "responseData": "ok",
+      "requestDataTruncated": true,
+      "responseDataTruncated": false
+    }
+  ]
+}
