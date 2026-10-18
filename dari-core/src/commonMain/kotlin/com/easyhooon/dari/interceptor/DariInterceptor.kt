@@ -46,4 +46,10 @@ interface DariInterceptor {
 
     /** Called when a web response is received for an App -> Web request */
     fun onAppToWebResponse(requestId: String?, isSuccess: Boolean, responseData: String?)
+
+    /**
+     * Called when the WebView moves to a new page, e.g. from `WebViewClient.doUpdateVisitedHistory`.
+     * Requests captured afterwards record this URL, so use one interceptor per WebView.
+     */
+    fun onPageUrlChanged(url: String?) = Unit
 }

@@ -115,6 +115,20 @@ interceptor?.onWebToAppRequest(
 
 Dari stores and exports both values separately, searches both, and renders `N:4-1(Today's health goal)` in the message list and notification. Blank display names behave like `null`. The same overload is available for App-to-Web and protobuf requests; existing signatures remain supported.
 
+## Page URL and origin
+
+Report the page so each message records which web deployment sent it. `doUpdateVisitedHistory` also fires on SPA history changes:
+
+```kotlin
+webView.webViewClient = object : WebViewClient() {
+    override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
+        interceptor?.onPageUrlChanged(url)
+    }
+}
+```
+
+Requests captured afterwards store the URL without its query or fragment, which can carry tokens. Both inspectors show it in the detail view, add an origin filter once more than one origin appears, and scope Response Time stats to the picked origin. Exports include it as `page_url`. Use one interceptor per WebView so pages don't overwrite each other.
+
 ## Fire-and-Forget
 
 One-way calls that never receive a response can be marked so they immediately resolve to `SUCCESS`:

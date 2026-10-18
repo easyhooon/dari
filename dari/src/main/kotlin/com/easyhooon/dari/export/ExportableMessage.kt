@@ -15,6 +15,7 @@ internal data class ExportableMessage(
     @SerialName("display_name") val displayName: String? = null,
     val direction: String,
     val tag: String? = null,
+    @SerialName("page_url") val pageUrl: String? = null,
     @SerialName("request_data") val requestData: String? = null,
     @SerialName("response_data") val responseData: String? = null,
     @SerialName("request_data_truncated") val requestDataTruncated: Boolean = false,
@@ -47,6 +48,7 @@ internal fun MessageEntry.toExportable(): ExportableMessage = ExportableMessage(
         MessageDirection.APP_TO_WEB -> "APP_TO_WEB"
     },
     tag = tag,
+    pageUrl = pageUrl,
     requestData = requestData,
     responseData = responseData,
     requestDataTruncated = requestDataTruncated,

@@ -92,6 +92,7 @@ object MessageExport {
             appendLine("Direction: $direction")
             appendLine("Status: ${s.status}")
             appendLine("Tag: ${s.tag ?: "-"}")
+            s.pageUrl?.let { appendLine("Page: $it") }
             appendLine("Request ID: ${s.requestId ?: "-"}")
             appendLine()
             appendLine("Request time: ${dateFormat.format(Date(s.requestTimestamp))}")
@@ -145,6 +146,7 @@ object MessageExport {
                 "display_name" to JsonPrimitive(s.displayName),
                 "direction" to JsonPrimitive(s.direction),
                 "tag" to JsonPrimitive(s.tag),
+                "page_url" to JsonPrimitive(s.pageUrl),
                 "request_data" to JsonPrimitive(detail.requestData),
                 "response_data" to JsonPrimitive(detail.responseData),
                 "request_data_truncated" to JsonPrimitive(detail.requestDataTruncated),

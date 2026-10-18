@@ -26,6 +26,17 @@ class MessageEntityTest {
     }
 
     @Test
+    fun `page url survives entity round trip`() {
+        val entry = MessageEntry(
+            handlerName = "getUser",
+            direction = MessageDirection.WEB_TO_APP,
+            pageUrl = "https://jp.example.com/cart",
+        )
+
+        assertEquals("https://jp.example.com/cart", entry.toEntity().toMessageEntry().pageUrl)
+    }
+
+    @Test
     fun `protobuf metadata survives entity round trip`() {
         val metadata = MessagePayloadMetadata(
             contentType = PayloadContentType.PROTOBUF,

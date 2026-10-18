@@ -18,7 +18,22 @@ data class WireMessageSummary(
     val responseTimestamp: Long? = null,
     val requestSizeBytes: Int,
     val responseSizeBytes: Int,
-)
+    /** Page URL without query or fragment; null from older apps or bridges that don't report it. */
+    val pageUrl: String? = null,
+) {
+    /** `scheme://host[:port]` of [pageUrl]. Mirrors `MessageEntry.pageOrigin`, which this module can't see. */
+    val pageOrigin: String?
+        get() = pageUrl?.let(::originOf)
+}
+
+private fun originOf(url: String): String? {
+    val schemeEnd = url.indexOf("://")
+    if (schemeEnd <= 0) return null
+    val authorityStart = schemeEnd + 3
+    val authorityEnd = url.indexOfAny(charArrayOf('/', '?', '#'), authorityStart).let { if (it < 0) url.length else it }
+    val host = url.substring(authorityStart, authorityEnd).substringAfterLast('@')
+    return url.substring(0, authorityStart).lowercase() + host.lowercase()
+}
 
 @Serializable
 data class WireMessageDetail(

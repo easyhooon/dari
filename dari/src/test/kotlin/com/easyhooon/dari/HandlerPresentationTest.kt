@@ -82,4 +82,17 @@ class HandlerPresentationTest {
         assertFalse(entry.matchesFilters("", null, MessageStatus.SUCCESS, null))
         assertFalse(entry.matchesFilters("profile", null, null, null))
     }
+
+    @Test
+    fun `origin filter and search use the page url`() {
+        val entry = MessageEntry(
+            handlerName = "getUser",
+            direction = MessageDirection.WEB_TO_APP,
+            pageUrl = "https://jp.example.com/cart",
+        )
+
+        assertTrue(entry.matchesFilters("", null, null, null, "https://jp.example.com"))
+        assertFalse(entry.matchesFilters("", null, null, null, "https://kr.example.com"))
+        assertTrue(entry.matchesQuery("jp.example"))
+    }
 }

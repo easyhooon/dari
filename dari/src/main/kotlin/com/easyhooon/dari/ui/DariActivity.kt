@@ -173,6 +173,7 @@ class DariActivity : ComponentActivity() {
                 var isSearchMode by rememberSaveable { mutableStateOf(false) }
                 var searchQuery by rememberSaveable { mutableStateOf("") }
                 var selectedTag by rememberSaveable { mutableStateOf<String?>(null) }
+                var selectedOrigin by rememberSaveable { mutableStateOf<String?>(null) }
                 var selectedStatus by rememberSaveable { mutableStateOf<MessageStatus?>(null) }
                 var selectedDirection by rememberSaveable { mutableStateOf<MessageDirection?>(null) }
                 var showClearDialog by rememberSaveable { mutableStateOf(false) }
@@ -195,16 +196,19 @@ class DariActivity : ComponentActivity() {
                 }
 
                 val availableTags = entries.mapNotNull { it.tag }.distinct()
+                val availableOrigins = entries.mapNotNull { it.pageOrigin }.distinct()
 
                 // Search what the list shows: masked payloads when masking is on.
                 val searchable = remember(entries, maskingEnabled, searchQuery.isNotBlank()) {
                     if (maskingEnabled && searchQuery.isNotBlank()) entries.maskedIf(true) else entries
                 }
                 val filteredEntries = entries.indices.reversed()
-                    .filter { searchable[it].matchesFilters(searchQuery, selectedTag, selectedStatus, selectedDirection) }
+                    .filter {
+                        searchable[it].matchesFilters(searchQuery, selectedTag, selectedStatus, selectedDirection, selectedOrigin)
+                    }
                     .map { entries[it] }
                 val hasActiveFilters = searchQuery.isNotBlank() || selectedTag != null ||
-                    selectedStatus != null || selectedDirection != null
+                    selectedStatus != null || selectedDirection != null || selectedOrigin != null
 
                 Scaffold(
                     topBar = {
@@ -265,6 +269,7 @@ class DariActivity : ComponentActivity() {
                                     IconButton(onClick = {
                                         val intent = Intent(this@DariActivity, DariStatsActivity::class.java)
                                             .putExtra(DariStatsActivity.EXTRA_TAG, selectedTag)
+                                            .putExtra(DariStatsActivity.EXTRA_ORIGIN, selectedOrigin)
                                         startActivity(intent)
                                     }) {
                                         Icon(Icons.Default.BarChart, contentDescription = "Response time stats")
@@ -356,6 +361,25 @@ class DariActivity : ComponentActivity() {
                                         selected = selectedTag == tag,
                                         onClick = {
                                             selectedTag = if (selectedTag == tag) null else tag
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                        // A single origin is just noise; the detail screen still shows it.
+                        if (availableOrigins.size > 1 || selectedOrigin != null) {
+                            FilterChipRow {
+                                FilterChip(
+                                    label = "All origins",
+                                    selected = selectedOrigin == null,
+                                    onClick = { selectedOrigin = null },
+                                )
+                                availableOrigins.forEach { origin ->
+                                    FilterChip(
+                                        label = origin.substringAfter("://"),
+                                        selected = selectedOrigin == origin,
+                                        onClick = {
+                                            selectedOrigin = if (selectedOrigin == origin) null else origin
                                         },
                                     )
                                 }

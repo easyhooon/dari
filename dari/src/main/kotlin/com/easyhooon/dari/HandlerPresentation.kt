@@ -7,7 +7,7 @@ internal fun handlerLabel(handlerName: String, displayName: String?): String {
 
 /** Handler, display name, tag, request ID and payloads; the desktop runs the same match via `messages.search`. */
 internal fun MessageEntry.matchesQuery(query: String): Boolean =
-    listOfNotNull(handlerName, displayName, tag, requestId, requestData, responseData)
+    listOfNotNull(handlerName, displayName, tag, requestId, pageUrl, requestData, responseData)
         .any { it.contains(query, ignoreCase = true) }
 
 internal fun MessageEntry.matchesFilters(
@@ -15,8 +15,10 @@ internal fun MessageEntry.matchesFilters(
     tag: String?,
     status: MessageStatus?,
     direction: MessageDirection?,
+    origin: String? = null,
 ): Boolean =
     (query.isBlank() || matchesQuery(query.trim())) &&
         (tag == null || this.tag == tag) &&
         (status == null || this.status == status) &&
-        (direction == null || this.direction == direction)
+        (direction == null || this.direction == direction) &&
+        (origin == null || pageOrigin == origin)

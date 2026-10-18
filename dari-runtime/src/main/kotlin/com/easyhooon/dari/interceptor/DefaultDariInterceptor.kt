@@ -23,6 +23,14 @@ class DefaultDariInterceptor(
     private val maxContentLength: Int
         get() = DariRuntime.config.maxContentLength
 
+    // Written on the main thread by WebViewClient callbacks, read on the JavaBridge thread.
+    @Volatile
+    private var pageUrl: String? = null
+
+    override fun onPageUrlChanged(url: String?) {
+        pageUrl = MessageEntry.sanitizePageUrl(url)
+    }
+
     override fun onWebToAppRequest(
         handlerName: String,
         requestId: String?,
@@ -48,6 +56,7 @@ class DefaultDariInterceptor(
             requestDataTruncated = wasTruncated,
             status = if (resolvedAsSuccess) MessageStatus.SUCCESS else MessageStatus.IN_PROGRESS,
             displayName = displayName.normalized(),
+            pageUrl = pageUrl,
         )
         DariRuntime.repository.addEntry(entry)
     }
@@ -97,6 +106,7 @@ class DefaultDariInterceptor(
             requestDataTruncated = wasTruncated,
             status = if (resolvedAsSuccess) MessageStatus.SUCCESS else MessageStatus.IN_PROGRESS,
             displayName = displayName.normalized(),
+            pageUrl = pageUrl,
         )
         DariRuntime.repository.addEntry(entry)
     }
@@ -147,6 +157,7 @@ class DefaultDariInterceptor(
             requestPayloadMetadata = rendered.metadata,
             status = if (resolvedAsSuccess) MessageStatus.SUCCESS else MessageStatus.IN_PROGRESS,
             displayName = displayName.normalized(),
+            pageUrl = pageUrl,
         )
         DariRuntime.repository.addEntry(entry)
     }
@@ -207,6 +218,7 @@ class DefaultDariInterceptor(
             requestPayloadMetadata = rendered.metadata,
             status = if (resolvedAsSuccess) MessageStatus.SUCCESS else MessageStatus.IN_PROGRESS,
             displayName = displayName.normalized(),
+            pageUrl = pageUrl,
         )
         DariRuntime.repository.addEntry(entry)
     }

@@ -277,6 +277,17 @@ private fun FilterBar(controller: InspectorController, openStats: () -> Unit) {
                 onPick = { controller.tagFilter = it },
             )
         }
+        // A single origin is just noise; the detail pane still shows the page.
+        val origins = controller.availableOrigins
+        if (origins.size > 1 || controller.originFilter != null) {
+            Picker(
+                label = controller.originFilter?.substringAfter("://") ?: "All origins",
+                options = listOf(null) + origins,
+                isSelected = { it == controller.originFilter },
+                optionLabel = { it?.substringAfter("://") ?: "All origins" },
+                onPick = { controller.originFilter = it },
+            )
+        }
         Spacer(Modifier.weight(1f))
         controller.notice?.let { Text(it, style = Dari.type.caption, color = Dari.colors.accent) }
         Text(

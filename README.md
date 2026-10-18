@@ -334,6 +334,7 @@ are never sent. Turn it off in Settings → Privacy → **Send crash reports**.
 | `onWebToAppResponse()` | Log the response to a Web-to-App request. Skipped if `requestId` is null. |
 | `onAppToWebRequest()` | Log an App-to-Web message. An overload accepts a separate optional `displayName`. |
 | `onAppToWebResponse()` | Log the response to an App-to-Web message. Skipped if `requestId` is null. |
+| `onPageUrlChanged(url)` | Report the WebView's current page, e.g. from `doUpdateVisitedHistory`. Later requests record it (query and fragment dropped) for the origin filter. |
 
 `ProtobufDariInterceptor` extends this interface with matching `on*ProtobufRequest()` and `on*ProtobufResponse()` methods that accept `ByteArray` payloads.
 
