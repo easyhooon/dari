@@ -4,6 +4,7 @@ import org.junit.Assume.assumeFalse
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -46,5 +47,21 @@ class UpdaterTest {
         assertTrue("apt install" in deb)
         assertNotNull(Updater.linuxInstallBlocker(Paths.get("/repo/dari-desktop-app/build/compose/binaries/main/app/Dari")))
         assertNotNull(Updater.linuxInstallBlocker(Paths.get("/nonexistent-dari-folder/Dari")))
+    }
+
+    @Test
+    fun `a Windows copy installed under LOCALAPPDATA can update itself`() {
+        val localAppData = Files.createTempDirectory("dari-local")
+        assertNull(Updater.windowsInstallBlocker(localAppData.resolve("Dari"), localAppData.toString()))
+    }
+
+    @Test
+    fun `a Windows copy outside LOCALAPPDATA or a build output is updated by hand`() {
+        val localAppData = Files.createTempDirectory("dari-local").toString()
+        val elsewhere = assertNotNull(Updater.windowsInstallBlocker(Paths.get("/Program Files/Dari"), localAppData))
+        assertTrue(".exe" in elsewhere)
+        assertNotNull(Updater.windowsInstallBlocker(Paths.get("/Program Files/Dari"), null))
+        val build = Paths.get(localAppData, "repo", "build", "compose", "binaries", "main", "app", "Dari")
+        assertEquals("Development builds don't update themselves.", Updater.windowsInstallBlocker(build, localAppData))
     }
 }

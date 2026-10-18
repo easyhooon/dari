@@ -48,6 +48,8 @@ object ReleaseSource {
 
     fun dmgUrl(version: SemanticVersion, arch: String): URI = URI("$pageUrl/download/$version/Dari-$version-$arch.dmg")
 
+    fun msiUrl(version: SemanticVersion): URI = URI("$pageUrl/download/$version/Dari-$version-x64.msi")
+
     fun tarballUrl(version: SemanticVersion, arch: String): URI =
         URI("$pageUrl/download/$version/Dari-$version-linux-$arch.tar.gz")
 

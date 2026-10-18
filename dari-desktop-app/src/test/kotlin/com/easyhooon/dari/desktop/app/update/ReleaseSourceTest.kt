@@ -30,6 +30,10 @@ class ReleaseSourceTest {
             URI("https://github.com/easyhooon/dari/releases/download/2.1.0/Dari-2.1.0-linux-x64.tar.gz"),
             ReleaseSource.tarballUrl(SemanticVersion(2, 1, 0), "x64"),
         )
+        assertEquals(
+            URI("https://github.com/easyhooon/dari/releases/download/2.1.0/Dari-2.1.0-x64.msi"),
+            ReleaseSource.msiUrl(SemanticVersion(2, 1, 0)),
+        )
     }
 
     @Test
