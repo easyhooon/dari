@@ -131,6 +131,20 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
 
 ## Setup
 
+### Two Ways to Capture
+
+| | Manual (default) | Gradle plugin (new in 2.6.0, optional) |
+| --- | --- | --- |
+| Dependencies | `dari` + `dari-noop` | The same `dari` + `dari-noop` |
+| Extra setup | None | `mavenCentral()` in `pluginManagement` of `settings.gradle.kts`, and `plugins { id("io.github.easyhooon.dari") }` plus a `dari { }` mapping in the app module's `build.gradle.kts` |
+| Bridge code | Interceptor calls where requests enter and responses leave | No Dari calls |
+
+- **The dependency alone doesn't turn on the plugin way.** Adding or upgrading `dari` changes nothing until you also apply the plugin and write `dari { }`. Without them, only your own interceptor calls are recorded.
+- **Upgrading with manual calls:** bump the version. No code changes.
+- **Pick one way per bridge.** If a mapped method already calls `DariInterceptor`, the plugin skips that method and prints a build warning. It only checks the mapped method's own body, so a manual call elsewhere on the same path, such as in a handler, is recorded a second time.
+
+The steps below set up the manual way. For the plugin, also follow [Optional: Gradle Plugin](#optional-gradle-plugin).
+
 ### Gradle
 
 Add the `dari` (debug) and `dari-noop` (release) dependencies to your app's `build.gradle.kts`:

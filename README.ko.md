@@ -132,6 +132,20 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
 
 ## 설정
 
+### 캡처하는 두 가지 방법
+
+| | 직접 호출(기본) | Gradle 플러그인(2.6.0 신규, 선택) |
+| --- | --- | --- |
+| 의존성 | `dari` + `dari-noop` | 같은 `dari` + `dari-noop` |
+| 추가 설정 | 없음 | `settings.gradle.kts`의 `pluginManagement`에 `mavenCentral()`, 앱 모듈 `build.gradle.kts`에 `plugins { id("io.github.easyhooon.dari") }`와 `dari { }` 매핑 |
+| 브릿지 코드 | 요청이 들어오고 응답이 나가는 곳에서 인터셉터 호출 | Dari 호출 없음 |
+
+- **의존성만으로는 플러그인 방식이 켜지지 않습니다.** `dari`를 추가하거나 버전을 올려도 플러그인을 적용하고 `dari { }`를 작성하기 전에는 아무것도 바뀌지 않습니다. 그 전까지는 직접 호출한 인터셉터만 기록됩니다.
+- **직접 호출 방식으로 쓰던 앱의 업그레이드:** 버전만 올리면 됩니다. 코드 변경은 없습니다.
+- **브릿지마다 한 가지 방식만 쓰세요.** 매핑한 메서드가 이미 `DariInterceptor`를 호출하면 플러그인은 그 메서드를 건너뛰고 빌드 경고를 출력합니다. 매핑한 메서드 본문만 확인하므로, 같은 경로의 다른 곳(예: 핸들러 안)에 있는 직접 호출은 한 번 더 기록됩니다.
+
+아래 단계는 직접 호출 방식 설정입니다. 플러그인을 쓰려면 [선택: Gradle 플러그인](#선택-gradle-플러그인)도 따라 하세요.
+
 ### Gradle
 
 앱의 `build.gradle.kts`에 `dari`(debug)와 `dari-noop`(release) 의존성을 추가합니다:
