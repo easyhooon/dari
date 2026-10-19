@@ -1,0 +1,266 @@
+---
+title: Gradle 플러그인
+description: 브릿지 코드에 Dari 호출 없이, 한 번의 매핑으로 브릿지 메시지 캡처하기
+---
+
+Dari Gradle 플러그인을 쓰면 호출마다 코드를 넣지 않아도 브릿지 통신이 기록됩니다. 브릿지가 요청을 받는 곳과 응답을 보내는 곳을 한 번만 알려 주면 됩니다. 그러면 디버그 빌드에서 플러그인이 직접 작성했어야 할 `DariInterceptor` 호출을 똑같이 넣어 줍니다.
+
+캡처 이후 동작은 그대로입니다. 저장, 앱 내 인스펙터, 데스크톱 앱, 내보내기, 마스킹 모두 같습니다.
+
+## 배경 지식
+
+### 라이브러리와 플러그인
+
+**라이브러리**(`implementation`, `api`)는 APK에 들어가 기기에서 실행되는 코드입니다. `dari`가 라이브러리입니다. 메시지를 기록할 수는 있지만 내 코드를 바꿀 수는 없어서, 브릿지 코드가 직접 호출해야 합니다.
+
+**Gradle 플러그인**(`plugins { id(...) }`)은 앱을 빌드하는 동안 개발자 PC나 CI의 Gradle 안에서 실행되는 코드입니다. APK에는 들어가지 않습니다. AGP(`com.android.application`), KSP, Sentry Android Gradle Plugin이 모두 플러그인입니다.
+
+```text
+빌드 (개발자 PC 또는 CI, Gradle 안에서)
+  plugins { ... }        플러그인이 로드되어 빌드를 설정
+  compile                내 코드 -> .class 파일
+  transform              Dari 플러그인이 컴파일된 클래스를 수정   <- 여기
+  dex + package          클래스와 라이브러리 -> APK
+
+런타임 (기기)
+  내 앱                   삽입된 호출이 넘긴 내용을 dari가 기록
+```
+
+내 코드에 호출을 넣으려면 플러그인이 필요합니다. 메시지를 기록하고 보여주는 일은 라이브러리가 하므로, 플러그인을 쓸 때도 `dari`가 필요합니다.
+
+### DSL이란?
+
+DSL(domain-specific language)은 한 가지 일을 위한 작은 언어입니다. Gradle 빌드 스크립트는 Kotlin(또는 Groovy)으로 DSL을 만듭니다. `android { }`, `dependencies { }`, `plugins { }`도 모두 블록을 받는 평범한 Kotlin 함수 호출입니다.
+
+플러그인은 `dari { }` 블록을 하나 더 추가합니다. 그 안의 `webToAppRequest(...) { handlerName = arg(0) }`도 평범한 Kotlin입니다.
+
+- `webToAppRequest`는 `dari` 확장(extension)의 함수입니다.
+- `handlerName`은 프로퍼티입니다.
+- `arg(0)`은 "첫 번째 파라미터"를 뜻하는 값을 돌려줍니다.
+
+이 시점에는 기기에서 아무것도 실행되지 않습니다. 블록은 설명을 기록할 뿐이고, 플러그인이 그 설명을 클래스 안에 넣어 둡니다.
+
+### ASM이란?
+
+Kotlin과 Java는 JVM 바이트코드로 컴파일됩니다. 바이트코드는 메서드마다 명령어 목록을 담은 `.class` 파일이고, Android는 이후 이를 DEX로 바꿉니다.
+
+[ASM](https://asm.ow2.io/)은 이 바이트코드를 읽고 고치는 표준 라이브러리입니다. AGP는 instrumentation API로 ASM을 열어 둡니다. 플러그인이 `AsmClassVisitorFactory`를 등록하면, AGP가 dex 변환 전에 모든 클래스를 거기에 통과시킵니다. Firebase Performance, Sentry, Hilt도 같은 방식으로 컴파일된 코드를 바꿉니다.
+
+예를 들어 다음 메서드를 매핑했다고 합시다:
+
+```kotlin
+fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
+    when (handlerName) { /* ... */ }
+}
+```
+
+플러그인은 컴파일된 클래스에서 이 메서드 본문 맨 앞에 호출 하나를 넣습니다. 소스로 옮기면 아래와 같습니다. `.kt` 파일 자체는 바뀌지 않습니다.
+
+```kotlin
+fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
+    DariHooks.onMappedCall("""{"kind":"WEB_TO_APP_REQUEST","fields":{...}}""", this, arrayOf(handlerName, requestId, data))
+    when (handlerName) { /* ... */ }
+}
+```
+
+기기에서는 `dari` 안의 `DariHooks`가 매핑을 읽고, 인자에서 값을 꺼내 인터셉터의 `onWebToAppRequest(...)`를 호출합니다. 바이트코드 단계에서 동작하므로 Java와 Kotlin을 똑같이 처리합니다.
+
+플러그인은 다음 두 가지도 바꿉니다:
+
+- **`webView.addJavascriptInterface(bridge, name)` 호출**이 `DariHooks`를 거치게 됩니다. 덕분에 Dari가 브릿지 객체가 어느 WebView에 속하는지 알 수 있습니다.
+- **`WebViewClient.doUpdateVisitedHistory` override**가 페이지 URL을 알려 줍니다.
+
+## 설정
+
+```kotlin
+// settings.gradle.kts
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+```
+
+```kotlin
+// app/build.gradle.kts
+plugins {
+    id("com.android.application")
+    id("io.github.easyhooon.dari") version "{{DARI_VERSION}}"
+}
+
+dependencies {
+    debugImplementation("io.github.easyhooon:dari:{{DARI_VERSION}}")
+    releaseImplementation("io.github.easyhooon:dari-noop:{{DARI_VERSION}}")
+}
+
+dari {
+    webToAppRequest("com.example.MainActivity.BridgeInterface", "onBridgeRequest") {
+        handlerName = arg(0)
+        requestId = arg(1)
+        data = arg(2)
+    }
+    webToAppResponse("com.example.MainActivity", "sendResponseToWeb") {
+        handlerName = arg(0)
+        requestId = arg(1)
+        success = arg(2)
+        data = arg(3)
+    }
+}
+```
+
+플러그인, `dari`, `dari-noop`은 같은 버전을 쓰세요.
+
+브릿지에 요청이 들어오는 지점과 응답을 보내는 지점이 각각 하나일 때 매핑이 가장 간단합니다. 수동 로깅에서도 [인터셉터 가이드](./interceptor)가 같은 구조를 권장합니다.
+
+## 매핑 레퍼런스
+
+### 위치
+
+| 함수 | 매핑 대상 | 변환 결과 |
+| --- | --- | --- |
+| `webToAppRequest(class, method)` | JavaScript가 호출하는 메서드(`@JavascriptInterface`) | `onWebToAppRequest` |
+| `webToAppResponse(class, method)` | 결과를 페이지로 돌려보내는 메서드 | `onWebToAppResponse` |
+| `appToWebRequest(class, method)` | 페이지를 호출하는 메서드 | `onAppToWebRequest` |
+| `appToWebResponse(class, method)` | 페이지가 응답할 때 호출하는 메서드 | `onAppToWebResponse` |
+
+- `class`는 패키지를 포함한 클래스 이름입니다. 중첩 클래스는 `.`과 `$` 모두 쓸 수 있습니다.
+- `method`는 메서드 이름입니다. 같은 이름의 오버로드는 모두 매핑됩니다.
+- 훅은 메서드 본문보다 먼저, 메서드가 시작될 때 실행됩니다.
+
+### 필드
+
+| 필드 | 사용처 | 설명 |
+| --- | --- | --- |
+| `handlerName` | 요청(필수), `webToAppResponse` | 응답에서 생략하면 요청의 이름을 씁니다. |
+| `requestId` | 전체, 응답은 필수 | 응답을 요청과 짝지을 때 씁니다. |
+| `data` | 전체 | 텍스트는 그대로 저장합니다. 바이트(`base64(...)` 결과나 `ByteArray` 파라미터)는 protobuf API로 기록합니다. |
+| `displayName` | 요청 | 수동 API의 `displayName` 오버로드와 같습니다. |
+| `success` | 응답 | 생략하면 항상 SUCCESS입니다. `false`, `"false"`, `0`이면 ERROR로 기록합니다. |
+| `fireAndForget` | 요청 | `true`면 바로 완료 처리합니다. `false`면 수동 API에 `null`을 넘긴 것처럼 `DariConfig.fireAndForget`을 따릅니다. |
+| `tag` | 전체 | 이 매핑에서만 `dari { tag }` 값을 덮어씁니다. |
+
+### 표현식
+
+| 표현식 | 값 |
+| --- | --- |
+| `arg(n)` | 메서드의 `n`번째 파라미터입니다. 0부터 세고, `this`는 세지 않습니다. |
+| `constant("x")`, `constant(true)` | 고정값입니다. |
+| `json(expr, "a.b.0")` | JSON 문자열(또는 중첩된 `json(...)` 결과)의 필드입니다. JSON이 아닌 문자열이면 `null`입니다. |
+| `base64(expr)` | Base64 텍스트를 디코딩한 바이트입니다. |
+| `expr.equalsTo("x")` | 값의 문자열이 `"x"`와 같으면 `true`입니다. |
+| `isNull(expr)` | 값이 `null`이면 `true`입니다. 예를 들어 `error` 필드가 없는 경우입니다. |
+
+### 옵션
+
+```kotlin
+dari {
+    tag = "Checkout"                         // 기본값: addJavascriptInterface에 넘긴 이름
+    scope = InstrumentationScope.ALL         // 기본값: InstrumentationScope.PROJECT
+}
+```
+
+`InstrumentationScope`는 `com.android.build.api.instrumentation` 패키지에 있습니다.
+
+## 사용 예
+
+### 호출마다 JSON 문자열 하나
+
+브릿지가 `Android.postMessage('{"action":"login","id":"7","params":{...}}')`처럼 JSON 문자열 하나를 넘기는 경우가 많습니다:
+
+```kotlin
+dari {
+    webToAppRequest("com.example.WebBridge", "postMessage") {
+        handlerName = json(arg(0), "action")
+        requestId = json(arg(0), "id")
+        data = json(arg(0), "params")
+    }
+    webToAppResponse("com.example.WebBridge", "reply") {
+        requestId = json(arg(0), "id")
+        success = isNull(json(arg(0), "error"))
+        data = arg(0)
+    }
+}
+```
+
+### Fire-and-forget
+
+```kotlin
+webToAppRequest("com.example.MainActivity.BridgeInterface", "onBridgeRequestFireAndForget") {
+    handlerName = arg(0)
+    data = arg(1)
+    fireAndForget = constant(true)
+}
+
+// 공용 진입점에서 일부 핸들러만:
+webToAppRequest("com.example.MainActivity.BridgeInterface", "onBridgeRequest") {
+    handlerName = arg(0)
+    requestId = arg(1)
+    data = arg(2)
+    fireAndForget = arg(0).equalsTo("logEvent")
+}
+```
+
+### Protocol Buffers
+
+페이로드를 바이트로 매핑하고, 앱 시작 시 디코더를 한 번 등록하세요. 플러그인이 만드는 인터셉터가 이 디코더를 씁니다.
+
+```kotlin
+webToAppRequest("com.example.MainActivity.BridgeInterface", "onProtobufBridgeRequest") {
+    handlerName = constant("protobufGreeting")
+    requestId = arg(0)
+    data = base64(arg(1))
+}
+```
+
+```kotlin
+class App : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        Dari.setProtobufDecoder(protobufDecoder { /* Protocol Buffers 문서 참고 */ })
+    }
+}
+```
+
+`dari-noop`에서 `Dari.setProtobufDecoder`는 아무 일도 하지 않습니다. 디코더 작성법은 [Protocol Buffers](./protobuf)를 참고하세요.
+
+### App → Web
+
+```kotlin
+appToWebRequest("com.example.MainActivity", "sendToWeb") {
+    handlerName = arg(0)
+    requestId = arg(1)
+    data = arg(2)
+    fireAndForget = isNull(arg(1))           // requestId가 없으면 페이지가 응답하지 않음
+}
+appToWebResponse("com.example.MainActivity.BridgeInterface", "onAppToWebResponse") {
+    requestId = arg(0)
+    success = arg(1)
+    data = arg(2)
+}
+```
+
+## 함께 기록되는 정보
+
+- **WebView별 태그.** WebView마다 인터셉터가 따로 생깁니다. `tag`를 지정하지 않으면 `addJavascriptInterface`에 넘긴 이름(`Android`)이 태그가 됩니다.
+  - 요청은 브릿지 객체가 등록된 WebView를 씁니다.
+  - 응답은 짝이 되는 요청을 기록한 인터셉터를 씁니다.
+  - 브릿지 객체가 아닌 곳에 매핑된 메서드는 `WebView` 파라미터가 있으면 그것을 쓰고, 없으면 가장 최근에 본 WebView를 씁니다.
+- **페이지 URL.** `doUpdateVisitedHistory`에서 가져오므로 리다이렉트, 링크 이동, SPA history 변경도 반영됩니다. `doUpdateVisitedHistory`를 override한 `WebViewClient` 서브클래스가 있어야 하며, 빈 override여도 됩니다.
+
+## 규칙
+
+- **디버그 전용.** debuggable variant만 변환합니다. 릴리스 빌드에는 훅이 없습니다.
+- **`dari-noop` 사용 시에도 안전.** `dari-noop`에 그대로 통과시키는 훅이 들어 있어서, `dari-noop`으로 빌드한 debuggable variant도 정상 동작하고 아무것도 기록하지 않습니다.
+- **범위.** 기본적으로 해당 모듈의 클래스만 변환합니다.
+  - 서드파티 AAR 안의 브릿지는 `scope = InstrumentationScope.ALL`이 필요합니다. 이 경우 앱의 모든 AAR을 다시 dex 변환하므로, 테스트에서는 콜드 빌드가 약 5분 더 걸렸습니다.
+  - 프로젝트의 다른 모듈에 있는 브릿지는 그 모듈에도 플러그인을 적용해야 합니다.
+- **수동 로깅도 계속 동작.** 플러그인은 매핑된 메서드만 건드립니다. 매핑된 메서드가 이미 `DariInterceptor`를 호출하고 있으면 그 메서드는 건너뛰고 빌드 경고를 출력하므로, 같은 항목이 두 번 기록되지 않습니다.
+- **빌드 경고.** 매핑한 클래스에 해당 이름의 메서드가 없으면 경고가 나옵니다. 클래스 이름에 오타가 있으면 아무것도 매칭되지 않고 경고도 나오지 않으니, 첫 실행 후 인스펙터를 확인하세요.
+  - 경고는 해당 클래스가 다시 빌드될 때만 나옵니다.
+  - 변환된 메서드 목록을 보려면 `--info`로 빌드하고 `Dari: instrumented`를 찾으세요.
+- **지원하지 않는 것.**
+  - 리플렉션으로 한 호출
+  - `androidx.webkit` 메시지 채널(`addWebMessageListener`, `WebMessagePort`)
+  - 메서드 본문 안에서 계산한 값. 매핑할 수 있는 것은 메서드의 파라미터뿐입니다.
