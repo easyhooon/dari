@@ -1,20 +1,31 @@
 import { button, copyText, download, h, highlighted } from './dom'
-import { browserContext, exportJson, exportText, formatSize, messageText, suggestedFileName, VERSION } from './export'
+import { browserContext, exportJson, exportText, formatSize, messageText, suggestedFileName, VERSION, type ExportContext } from './export'
 import { distinctOrigins, distinctTags, EMPTY_FILTER, filterEntries, type Filter } from './filter'
 import { allContainerPaths, defaultCollapsedPaths, parseStructured, pathsContainingMatch, renderTree } from './json'
 import type { Settings, Theme } from './settings'
 import { handlerStats, SLOW_HANDLER_THRESHOLD_MS } from './stats'
-import type { MessageStore } from './store'
 import type { MessageDirection, MessageEntry, MessageStatus } from './types'
 import { pageOriginOf } from './url'
 import { utf8Size } from './wire'
 
 export { h } from './dom'
 
+/** What the view reads entries from: the page's own store, or a page streamed to the viewer. */
+export interface EntrySource {
+  getEntries(): readonly MessageEntry[]
+  subscribe(listener: () => void): () => void
+  clear(): void
+}
+
 export interface ViewHost {
   settings(): Settings
   updateSettings(patch: Partial<Settings>): void
-  close(): void
+  /** Omitted where there's nothing to close, which hides ✕. */
+  close?(): void
+  /** Offered in Settings only where there is a launcher. */
+  resetLauncher?(): void
+  /** Defaults to this browser and page. */
+  exportContext?(): ExportContext
 }
 
 type Mode = { kind: 'list' } | { kind: 'detail'; id: number } | { kind: 'stats' } | { kind: 'settings' }
@@ -49,7 +60,7 @@ export class DariView {
   private noticeTimer: ReturnType<typeof setTimeout> | undefined
 
   constructor(
-    private readonly store: MessageStore,
+    private readonly store: EntrySource,
     private readonly host: ViewHost,
   ) {
     this.search = h('input', {
@@ -109,7 +120,7 @@ export class DariView {
         'aria-label': 'More',
         'aria-haspopup': 'menu',
       }),
-      button('✕', 'dari-icon-btn dari-close', () => host.close(), { 'aria-label': 'Close' }),
+      host.close ? button('✕', 'dari-icon-btn dari-close', () => host.close?.(), { 'aria-label': 'Close' }) : null,
     )
     this.body = h('div', { class: 'dari-body' })
     this.notice = h('div', { class: 'dari-notice', role: 'status' })
@@ -398,10 +409,12 @@ export class DariView {
     ])
     theme.value = settings.theme
     theme.addEventListener('change', () => this.host.updateSettings({ theme: theme.value as Theme }))
-    const reset = button('Reset button position', 'dari-link', () => {
-      this.host.updateSettings({ launcher: null })
-      this.toast('Button moved back to the corner')
-    })
+    const reset = this.host.resetLauncher
+      ? button('Reset button position', 'dari-link', () => {
+          this.host.resetLauncher?.()
+          this.toast('Button moved back to the corner')
+        })
+      : null
     this.body.replaceChildren(
       h(
         'div',
@@ -413,7 +426,7 @@ export class DariView {
           h('label', { class: 'dari-setting' }, h('span', {}, 'Appearance'), theme),
           this.checkbox('Fold nested JSON', settings.foldJson, (foldJson) => this.host.updateSettings({ foldJson })),
           this.checkbox('Show tags in the list', settings.showTags, (showTags) => this.host.updateSettings({ showTags })),
-          h('div', { class: 'dari-setting' }, reset),
+          reset ? h('div', { class: 'dari-setting' }, reset) : null,
           h('div', { class: 'dari-version' }, `dari-web ${VERSION}`),
         ),
       ),
@@ -446,11 +459,16 @@ export class DariView {
     return filterEntries(this.store.getEntries(), this.filter)
   }
 
+  private exportContext(): ExportContext {
+    return this.host.exportContext?.() ?? browserContext()
+  }
+
   private copyAll(kind: 'txt' | 'json'): void {
     this.menu.hidden = true
     const entries = this.exportable()
     if (entries.length === 0) return this.toast('Nothing to copy')
-    const text = kind === 'txt' ? exportText(entries, browserContext()) : exportJson(entries, browserContext())
+    const context = this.exportContext()
+    const text = kind === 'txt' ? exportText(entries, context) : exportJson(entries, context)
     this.copy(text, `Copied ${plural(entries.length)}`)
   }
 
@@ -459,7 +477,7 @@ export class DariView {
     const entries = this.exportable()
     if (entries.length === 0) return this.toast('Nothing to save')
     try {
-      download(suggestedFileName('json'), exportJson(entries, browserContext()), 'application/json')
+      download(suggestedFileName('json'), exportJson(entries, this.exportContext()), 'application/json')
       this.toast(`Saved ${plural(entries.length)}`)
     } catch {
       this.toast('Download failed; try Copy all as JSON')

@@ -60,4 +60,6 @@ export interface DariWebOptions {
   fireAndForget?: boolean
   /** `auto` follows the system setting. Default `auto`. */
   theme?: 'auto' | 'light' | 'dark'
+  /** Relay to stream entries to, e.g. `ws://localhost:9333` from `npx @easyhooon/dari-web serve`. Off by default. */
+  remote?: string
 }
