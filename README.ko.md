@@ -257,6 +257,41 @@ REQUEST와 RESPONSE 탭은 `Decoded`와 `Raw` 보기를 제공합니다. Raw 보
   </tr>
 </table>
 
+### 선택: Gradle 플러그인
+
+위의 인터셉터 호출 방식이 기본이며 그대로 동작합니다. 브릿지 코드에 Dari 호출을 넣고 싶지 않다면, 선택 사항인 `io.github.easyhooon.dari` Gradle 플러그인이 한 번의 매핑으로 디버그 빌드에 같은 호출을 넣어 줍니다.
+
+`plugins { }`와 `dari { }`는 `dari` / `dari-noop`을 추가한 앱 모듈의 `build.gradle.kts`에 넣습니다. 루트 `build.gradle.kts`나 `settings.gradle.kts`에 넣지 않습니다.
+
+```kotlin
+// settings.gradle.kts: 플러그인은 Maven Central에서 받습니다
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+```
+
+```kotlin
+// app/build.gradle.kts
+plugins {
+    id("io.github.easyhooon.dari") version "<version>"
+}
+
+dari {
+    webToAppRequest("com.example.MainActivity.Bridge", "onBridgeRequest") {
+        handlerName = arg(0); requestId = arg(1); data = arg(2)
+    }
+    webToAppResponse("com.example.MainActivity", "sendResponseToWeb") {
+        handlerName = arg(0); requestId = arg(1); success = arg(2); data = arg(3)
+    }
+}
+```
+
+protobuf 페이로드를 쓸 때만 `Application.onCreate()`에서 `Dari.setProtobufDecoder(...)`로 디코더를 한 번 등록하세요. 매핑 레퍼런스는 [Gradle 플러그인 가이드](https://easyhooon.github.io/dari/ko/docs/gradle-plugin)를 참고하세요.
+
 ### 사용자 정의 구성
 
 자동 초기화가 일어나기 전이나 `Application.onCreate()`에서 config와 함께 `init`을 호출해 Dari를 사용자 정의할 수 있습니다:
@@ -317,6 +352,8 @@ commonMain.dependencies {
 2. 알림을 탭하면 메시지 목록이 열립니다
 3. 메시지를 탭하면 상세 내용(개요, 요청 페이로드, 응답 페이로드)을 볼 수 있습니다
 
+샘플은 Gradle 플러그인으로 브릿지를 캡처합니다(`sample/build.gradle.kts`의 `dari { }`). 같은 캡처를 직접 하는 코드는 위의 [인터셉터 연동](#인터셉터-연동)에 있습니다.
+
 ## 보안 및 개인정보
 
 Dari는 디버그 빌드와 내부 빌드용입니다. 브릿지 페이로드에는 토큰, 개인정보 등 민감한 값이
@@ -336,6 +373,7 @@ Dari는 디버그 빌드와 내부 빌드용입니다. 브릿지 페이로드에
 | `init(context, config)` | 사용자 정의 구성으로 초기화 |
 | `createInterceptor(tag?)` | 태그(선택)를 지정해 `DariInterceptor` 생성(noop에서는 `null` 반환) |
 | `createInterceptor(tag?, protobufDecoder)` | 문자열/JSON 메서드를 모두 유지하면서 protobuf를 지원하는 인터셉터 생성 |
+| `setProtobufDecoder(decoder)` | Gradle 플러그인이 만드는 인터셉터가 쓸 protobuf 디코더. 앱 시작 시 한 번 호출 |
 | `setShakeToOpenEnabled(enabled)` | 런타임에 흔들어서 열기 켜기/끄기(저장됨) |
 | `setDarkMode(value)` | 다크 모드 재정의: `true` / `false` / `null`(시스템 기본값). 저장됨 |
 | `setShowTagChip(show)` | 메시지 목록의 브릿지 태그 칩 표시/숨김. 저장됨 |

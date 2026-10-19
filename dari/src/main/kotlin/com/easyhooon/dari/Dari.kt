@@ -60,6 +60,10 @@ object Dari {
     @Volatile
     private var payloadRedactor: DariPayloadRedactor? = null
 
+    @Volatile
+    internal var protobufDecoder: ProtobufPayloadDecoder? = null
+        private set
+
     private var inspectorServer: DariInspectorServer? = null
     private var inspectorJob: Job? = null
     private var desktopInspectorEnabled = true
@@ -253,6 +257,14 @@ object Dari {
         tag: String? = null,
         protobufDecoder: ProtobufPayloadDecoder,
     ): ProtobufDariInterceptor? = DefaultDariInterceptor(tag, protobufDecoder)
+
+    /**
+     * Registers the protobuf decoder used by interceptors the Dari Gradle plugin creates.
+     * Call it once at app start; interceptors you create yourself still take their own decoder.
+     */
+    fun setProtobufDecoder(decoder: ProtobufPayloadDecoder?) {
+        protobufDecoder = decoder
+    }
 
     // UNDISPATCHED subscribes before init returns, so the first captured message is not missed.
     private fun observeNewMessages() {

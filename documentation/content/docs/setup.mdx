@@ -69,3 +69,7 @@ private fun sendResponseToWeb(handlerName: String, requestId: String, isSuccess:
 ```
 
 Replies sent later, e.g. from a permission callback, are still paired by `requestId` as long as they go through the same function.
+
+## Without Bridge Code (optional)
+
+The interceptor calls above are the default way and keep working. If you'd rather not touch your bridge code, the [Gradle plugin](./gradle-plugin) inserts the same calls into debug builds from a one-time `dari { }` mapping.

@@ -256,6 +256,41 @@ The REQUEST and RESPONSE tabs provide `Decoded` and `Raw` views. The raw view re
   </tr>
 </table>
 
+### Optional: Gradle Plugin
+
+The interceptor calls above stay the default and keep working. If you'd rather keep Dari out of your bridge code, the optional `io.github.easyhooon.dari` Gradle plugin inserts the same calls into debug builds from a one-time mapping.
+
+`plugins { }` and `dari { }` go in the app module's `build.gradle.kts`, the module that adds `dari` / `dari-noop`. They don't go in the root `build.gradle.kts` or in `settings.gradle.kts`.
+
+```kotlin
+// settings.gradle.kts: the plugin resolves from Maven Central
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+```
+
+```kotlin
+// app/build.gradle.kts
+plugins {
+    id("io.github.easyhooon.dari") version "<version>"
+}
+
+dari {
+    webToAppRequest("com.example.MainActivity.Bridge", "onBridgeRequest") {
+        handlerName = arg(0); requestId = arg(1); data = arg(2)
+    }
+    webToAppResponse("com.example.MainActivity", "sendResponseToWeb") {
+        handlerName = arg(0); requestId = arg(1); success = arg(2); data = arg(3)
+    }
+}
+```
+
+Only for protobuf payloads: register the decoder once in `Application.onCreate()` with `Dari.setProtobufDecoder(...)`. See the [Gradle plugin guide](https://easyhooon.github.io/dari/docs/gradle-plugin) for the mapping reference.
+
 ### Custom Configuration
 
 You can customize Dari by calling `init` with a config before auto-initialization occurs, or in your `Application.onCreate()`:
@@ -316,6 +351,8 @@ The `sample/` module contains a working WebView demo with realistic bridge scena
 2. Tap the notification to open the message list
 3. Tap any message to see its details (overview, request payload, response payload)
 
+The sample captures its bridge with the Gradle plugin (`dari { }` in `sample/build.gradle.kts`). The [Interceptor Integration](#interceptor-integration) code above shows the same capture done by hand.
+
 ## Security & Privacy
 
 Dari is intended for debug and internal builds. Bridge payloads may contain
@@ -336,6 +373,7 @@ are never sent. Turn it off in Settings → Privacy → **Send crash reports**.
 | `init(context, config)` | Initialize with custom configuration |
 | `createInterceptor(tag?)` | Create a `DariInterceptor` with an optional tag (returns `null` in noop) |
 | `createInterceptor(tag?, protobufDecoder)` | Create a protobuf-capable interceptor while retaining all string/JSON methods |
+| `setProtobufDecoder(decoder)` | Protobuf decoder for interceptors the Gradle plugin creates. Call once at app start |
 | `setShakeToOpenEnabled(enabled)` | Enable/disable shake-to-open at runtime (persisted) |
 | `setDarkMode(value)` | Override dark mode: `true` / `false` / `null` (system default). Persisted |
 | `setShowTagChip(show)` | Show/hide bridge tag chips in the message list. Persisted |

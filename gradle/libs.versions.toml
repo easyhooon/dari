@@ -27,6 +27,8 @@ sentry = "8.58.0"
 jna = "5.17.0"
 robolectric = "4.17"
 androidxTestCore = "1.7.0"
+# The ASM version AGP 9.0.0 depends on; the plugin compiles against it but uses AGP's copy at runtime.
+asm = "9.8"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -62,6 +64,8 @@ sentry = { group = "io.sentry", name = "sentry", version.ref = "sentry" }
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
+android-gradle-api = { group = "com.android.tools.build", name = "gradle-api", version.ref = "agp" }
+asm-commons = { group = "org.ow2.asm", name = "asm-commons", version.ref = "asm" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -34,6 +34,17 @@ tasks.matching { it.name == "preBuild" }.configureEach {
     dependsOn("installGitHooks")
 }
 
+// The plugin is an included build, so root lint, tests and clean don't reach it on their own.
+val pluginBuild = gradle.includedBuild("dari-gradle-plugin")
+listOf("detekt", "ktlintCheck", "ktlintFormat").forEach { name ->
+    tasks.matching { it.name == name }.configureEach { dependsOn(pluginBuild.task(":$name")) }
+}
+tasks.register("clean") { dependsOn(pluginBuild.task(":clean")) }
+tasks.register("testGradlePlugin") {
+    description = "Runs the Dari Gradle plugin's unit tests."
+    dependsOn(pluginBuild.task(":test"))
+}
+
 allprojects {
     apply {
         plugin(rootProject.libs.plugins.detekt.get().pluginId)

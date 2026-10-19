@@ -12,6 +12,7 @@ import android.os.VibrationEffect
 import android.os.VibratorManager
 import android.provider.Settings
 import android.util.Base64
+import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -22,26 +23,21 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.lifecycleScope
 import com.easyhooon.dari.Dari
-import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
 import com.easyhooon.dari.interceptor.protobufDecoder
 import com.google.protobuf.StringValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.util.concurrent.atomic.AtomicInteger
 
 class MainActivity : ComponentActivity() {
 
-    private val interceptor: ProtobufDariInterceptor? = Dari.createInterceptor(
-        tag = "Sample",
-        protobufDecoder = protobufDecoder {
-            webToApp(PROTOBUF_HANDLER) {
-                request { describeStringValue(it, "REQUEST") }
-                response { describeStringValue(it, "RESPONSE") }
-            }
-        },
-    )
     private var webView: WebView? = null
+    private val appRequestCounter = AtomicInteger()
+
+    @Volatile
+    private var pageLoaded = false
 
     // Pending camera permission request info
     private var pendingPermissionRequestId: String? = null
@@ -65,6 +61,16 @@ class MainActivity : ComponentActivity() {
         Dari.setPayloadRedactor { entry ->
             entry.copy(requestData = entry.requestData?.replace(Regex("\"userId\":\"[^\"]*\""), "\"userId\":\"***\""))
         }
+        // Bridge traffic is captured by the Dari Gradle plugin (see `dari { }` in build.gradle.kts).
+        // Its interceptors decode protobuf payloads with this decoder.
+        Dari.setProtobufDecoder(
+            protobufDecoder {
+                webToApp(PROTOBUF_HANDLER) {
+                    request { describeStringValue(it, "REQUEST") }
+                    response { describeStringValue(it, "RESPONSE") }
+                }
+            },
+        )
         enableEdgeToEdge()
 
         webView = WebView(this).apply {
@@ -80,9 +86,15 @@ class MainActivity : ComponentActivity() {
             settings.allowFileAccessFromFileURLs = false
             settings.allowUniversalAccessFromFileURLs = false
             webViewClient = object : WebViewClient() {
-                // Also fires on SPA history changes, so each request records the page it came from.
+                // The Dari plugin reads the page URL here; it also fires on SPA history changes.
                 override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
-                    interceptor?.onPageUrlChanged(url)
+                    super.doUpdateVisitedHistory(view, url, isReload)
+                }
+
+                override fun onPageFinished(view: WebView, url: String?) {
+                    pageLoaded = true
+                    // App-initiated round trip: the page answers through BridgeInterface.onAppToWebResponse.
+                    sendToWeb("getPageState", nextAppRequestId(), null)
                 }
             }
             addJavascriptInterface(BridgeInterface(), "Android")
@@ -92,10 +104,27 @@ class MainActivity : ComponentActivity() {
         setContentView(webView)
     }
 
-    // Every Web-to-App reply goes through here, so this one call logs all responses.
+    override fun onResume() {
+        super.onResume()
+        // Fire-and-forget App-to-Web notification; the page sends nothing back.
+        if (pageLoaded) sendToWeb("appResumed", null, """{"at":${System.currentTimeMillis()}}""")
+    }
+
+    // Every App-to-Web message goes through here; a null requestId means the page won't answer.
+    private fun sendToWeb(handlerName: String, requestId: String?, data: String?) {
+        val id = requestId?.let { "'$it'" } ?: "null"
+        val payload = data?.let { "'${it.escapeForJs()}'" } ?: "null"
+        webView?.post {
+            webView?.evaluateJavascript("onAppRequest('$handlerName', $id, $payload)", null)
+        }
+    }
+
+    private fun nextAppRequestId(): String = "app_${appRequestCounter.incrementAndGet()}"
+
+    // Every Web-to-App reply goes through here, so the Dari plugin maps this one method for all responses.
+    @Suppress("UnusedParameter") // handlerName is read by the dari { } mapping.
     private fun sendResponseToWeb(handlerName: String, requestId: String, success: Boolean, data: String) {
-        interceptor?.onWebToAppResponse(handlerName, requestId, data, success)
-        val escaped = data.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+        val escaped = data.escapeForJs()
         webView?.post {
             webView?.evaluateJavascript(
                 "javascript:onBridgeResponse('$requestId', $success, '$escaped')",
@@ -105,7 +134,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun sendProtobufResponseToWeb(requestId: String, success: Boolean, data: ByteArray) {
-        interceptor?.onWebToAppProtobufResponse(PROTOBUF_HANDLER, requestId, data, success)
         val base64Data = Base64.encodeToString(data, Base64.NO_WRAP)
         webView?.post {
             webView?.evaluateJavascript(
@@ -119,10 +147,7 @@ class MainActivity : ComponentActivity() {
         @RequiresApi(Build.VERSION_CODES.P)
         @JavascriptInterface
         fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
-            val perCallFireAndForget = if (handlerName == "fireAndForgetPerCall") true else null
-            // Every request enters here, so one call logs them all before dispatching.
-            interceptor?.onWebToAppRequest(handlerName, requestId, data, fireAndForget = perCallFireAndForget)
-
+            // Every request enters here, so the Dari plugin maps this one method for all requests.
             when (handlerName) {
                 "getAppInfo" -> handleGetAppInfo(requestId)
                 "hapticFeedback" -> handleHapticFeedback(handlerName, requestId, data)
@@ -149,8 +174,6 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface
         fun onProtobufBridgeRequest(requestId: String, base64Data: String) {
             val requestData = Base64.decode(base64Data, Base64.NO_WRAP)
-            interceptor?.onWebToAppProtobufRequest(PROTOBUF_HANDLER, requestId, requestData)
-
             val result = runCatching {
                 val request = StringValue.parseFrom(requestData)
                 StringValue.newBuilder()
@@ -166,15 +189,24 @@ class MainActivity : ComponentActivity() {
             sendProtobufResponseToWeb(requestId, success, response.toByteArray())
         }
 
+        // Lets the page trigger an App-to-Web call on demand; the trigger itself is not a bridge message.
+        @JavascriptInterface
+        fun requestAppToWeb(handlerName: String) {
+            sendToWeb(handlerName, nextAppRequestId(), """{"requestedAt":${System.currentTimeMillis()}}""")
+        }
+
+        // Every web reply to an App-to-Web request enters here.
+        @JavascriptInterface
+        fun onAppToWebResponse(requestId: String, success: Boolean, data: String?) {
+            Log.d("Dari-Sample", "Web answered $requestId: success=$success, ${data?.length ?: 0} chars")
+        }
+
         /**
          * Fire-and-forget bridge request without requestId.
          * No response will be sent back to the web side.
          */
         @JavascriptInterface
         fun onBridgeRequestFireAndForget(handlerName: String, data: String?) {
-            // Pass null as requestId for fire-and-forget messages
-            interceptor?.onWebToAppRequest(handlerName, null, data)
-
             when (handlerName) {
                 "logEvent" -> handleLogEvent(data)
                 "trackScreenView" -> handleTrackScreenView(data)
@@ -219,8 +251,7 @@ class MainActivity : ComponentActivity() {
     private fun handleShowToast(handlerName: String, requestId: String, data: String?) {
         val json = data?.let { JSONObject(it) }
         val rawMessage = json?.optString("message", "Hello!") ?: "Hello!"
-        val prefix = interceptor?.tag?.let { "[$it] " } ?: ""
-        val message = "$prefix$rawMessage"
+        val message = "[Sample] $rawMessage"
         val duration = if (json?.optString("duration") == "long") {
             Toast.LENGTH_LONG
         } else {
@@ -477,7 +508,7 @@ class MainActivity : ComponentActivity() {
         val event = json?.optString("event", "unknown") ?: "unknown"
         val screen = json?.optString("screen", "unknown") ?: "unknown"
         // In a real app, this would send to analytics service
-        android.util.Log.d("Dari-Sample", "Analytics event: $event on $screen")
+        Log.d("Dari-Sample", "Analytics event: $event on $screen")
     }
 
     private fun handleTrackScreenView(data: String?) {
@@ -485,11 +516,13 @@ class MainActivity : ComponentActivity() {
         val screen = json?.optString("screen", "unknown") ?: "unknown"
         val timestamp = json?.optLong("timestamp", 0) ?: 0
         // In a real app, this would send to analytics service
-        android.util.Log.d("Dari-Sample", "Screen view: $screen at $timestamp")
+        Log.d("Dari-Sample", "Screen view: $screen at $timestamp")
     }
 
     private companion object {
         const val PROTOBUF_HANDLER = "protobufGreeting"
+
+        fun String.escapeForJs(): String = replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
 
         fun describeStringValue(payload: ByteArray, part: String): String =
             JSONObject().apply {
