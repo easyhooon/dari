@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.desktop.app.ui.json.markMatches
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
+import kotlinx.coroutines.delay
 
 enum class StatusKind { PENDING, SUCCESS, ERROR }
 
@@ -327,24 +329,55 @@ fun CodeBlock(text: String, onCopy: () -> Unit, modifier: Modifier = Modifier, q
     }
 }
 
-/** Code-block copy control: the two-sheets icon plus a label, as on GitHub and in docs sites. */
+/** How long a copy control reads "Copied" after a click. */
+const val COPIED_FEEDBACK_MILLIS = 1_500L
+
+/**
+ * Code-block copy control: the two-sheets icon plus a label, as on GitHub and in docs sites.
+ * It turns into a check and "Copied" for a moment, so the click is confirmed where it happened.
+ */
 @Composable
 fun CopyButton(onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    val color = if (hovered) Dari.colors.text else Dari.colors.textSecondary
+    var copied by remember { mutableStateOf(false) }
+    LaunchedEffect(copied) {
+        if (copied) {
+            delay(COPIED_FEEDBACK_MILLIS)
+            copied = false
+        }
+    }
+    val color = when {
+        copied -> Dari.colors.success
+        hovered -> Dari.colors.text
+        else -> Dari.colors.textSecondary
+    }
     Row(
         Modifier.height(DariMetrics.controlHeight)
             .background(if (hovered) Dari.colors.hover else Color.Transparent, RoundedCornerShape(DariMetrics.radius))
             .hoverable(interaction)
-            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button) {
+                onClick()
+                copied = true
+            }
             .pointerHoverIcon(PointerIcon.Hand)
             .padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CopyIcon(color)
-        Text("Copy", style = Dari.type.label, color = color)
+        if (copied) CheckIcon(color) else CopyIcon(color)
+        Text(if (copied) "Copied" else "Copy", style = Dari.type.label, color = color)
+    }
+}
+
+@Composable
+private fun CheckIcon(color: Color) {
+    Canvas(Modifier.size(12.dp)) {
+        val stroke = 1.6.dp.toPx()
+        val w = size.width
+        val h = size.height
+        drawLine(color, Offset(w * 0.12f, h * 0.55f), Offset(w * 0.4f, h * 0.82f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.4f, h * 0.82f), Offset(w * 0.9f, h * 0.2f), stroke, StrokeCap.Round)
     }
 }
 
