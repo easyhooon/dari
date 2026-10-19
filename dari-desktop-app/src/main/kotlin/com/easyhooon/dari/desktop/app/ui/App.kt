@@ -32,8 +32,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowScope
 import com.easyhooon.dari.desktop.app.Appearance
@@ -52,6 +54,7 @@ import java.awt.Cursor
 
 // Leaves room for the macOS traffic lights inside the transparent title bar.
 private val TrafficLightInset = if (isMacOs) 78.dp else 12.dp
+private val TitleBarGap = 4.dp
 
 @Composable
 fun WindowScope.App(
@@ -100,7 +103,7 @@ private fun WindowScope.TitleBar(controller: InspectorController, updater: Updat
     val state = controller.state
     Row(
         Modifier.fillMaxWidth().height(DariMetrics.toolbarHeight).padding(start = TrafficLightInset, end = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(TitleBarGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("Dari", style = Dari.type.label, color = Dari.colors.text, modifier = Modifier.padding(end = 8.dp))
@@ -114,59 +117,101 @@ private fun WindowScope.TitleBar(controller: InspectorController, updater: Updat
             onPick = { controller.selectDevice(it.serial) },
         )
         Text("/", style = Dari.type.caption, color = Dari.colors.textTertiary)
-        // Pick from the apps found on the device; when none are listed, type the applicationId instead.
-        if (controller.discoveredApps.isEmpty()) {
-            ConnectionDot(state is ConnectionState.Connected)
-            SearchField(
-                value = controller.applicationId,
-                onValueChange = { controller.applicationId = it },
-                placeholder = "applicationId",
-                modifier = Modifier.width(220.dp).padding(start = 4.dp),
-            )
-        } else {
-            Picker(
-                label = controller.applicationId.ifBlank { "Choose app" },
-                options = controller.discoveredApps,
-                isSelected = { it == controller.applicationId },
-                optionLabel = { it },
-                onPick = {
-                    controller.applicationId = it
-                    controller.connect()
-                },
-                leading = { ConnectionDot(state is ConnectionState.Connected) },
-            )
-        }
-        // The title bar is transparent on macOS; its empty middle moves the window. Wrapping the whole
-        // row would swallow clicks on the pickers and buttons.
-        WindowDraggableArea(Modifier.weight(1f).fillMaxHeight()) {}
-        UpdateStatus(updater, installUpdate)
-        val status = statusLine(state)
-        // Short on screen; hovering shows every field with its label.
-        TooltipArea(
-            tooltip = {
-                Text(
-                    statusDetails(state),
-                    style = Dari.type.caption,
-                    color = Dari.colors.text,
-                    modifier = Modifier.background(Dari.colors.surface, RoundedCornerShape(DariMetrics.radius))
-                        .border(1.dp, Dari.colors.border, RoundedCornerShape(DariMetrics.radius))
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                )
+        TitleBarMiddle(
+            modifier = Modifier.weight(1f),
+            start = {
+                // Pick from the apps found on the device; when none are listed, type the applicationId instead.
+                if (controller.discoveredApps.isEmpty()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ConnectionDot(state is ConnectionState.Connected)
+                        SearchField(
+                            value = controller.applicationId,
+                            onValueChange = { controller.applicationId = it },
+                            placeholder = "applicationId",
+                            modifier = Modifier.width(220.dp).padding(start = 4.dp),
+                        )
+                    }
+                } else {
+                    Picker(
+                        label = controller.applicationId.ifBlank { "Choose app" },
+                        options = controller.discoveredApps,
+                        isSelected = { it == controller.applicationId },
+                        optionLabel = { it },
+                        onPick = {
+                            controller.applicationId = it
+                            controller.connect()
+                        },
+                        leading = { ConnectionDot(state is ConnectionState.Connected) },
+                    )
+                }
             },
-            modifier = Modifier.widthIn(max = 420.dp),
-        ) {
-            Text(
-                status,
-                style = Dari.type.caption,
-                color = Dari.colors.textTertiary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+            end = {
+                // Short on screen; hovering shows every field with its label.
+                TooltipArea(
+                    tooltip = {
+                        Text(
+                            statusDetails(state),
+                            style = Dari.type.caption,
+                            color = Dari.colors.text,
+                            modifier = Modifier.background(Dari.colors.surface, RoundedCornerShape(DariMetrics.radius))
+                                .border(1.dp, Dari.colors.border, RoundedCornerShape(DariMetrics.radius))
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                        )
+                    },
+                    modifier = Modifier.widthIn(max = 420.dp),
+                ) {
+                    Text(
+                        statusLine(state),
+                        style = Dari.type.caption,
+                        color = Dari.colors.textTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            },
+        )
         // Connecting is automatic; the button only appears when nothing is connecting yet.
         // Disconnect and Reconnect live in the Session menu.
         if (state == ConnectionState.Idle) {
             QuietButton("Connect", onClick = controller::connect, enabled = controller.applicationId.isNotBlank())
+        }
+        // Last, after the session controls, as in most apps' title bars.
+        UpdateStatus(updater, installUpdate)
+    }
+}
+
+/**
+ * The app picker, the window drag area and the status, in that order. On a narrow window the picker
+ * keeps its width before the status, and both ellipsize instead of pushing the buttons after them out.
+ * The title bar is transparent on macOS, so only the drag area moves the window; wrapping the whole
+ * row would swallow clicks on the pickers and buttons.
+ */
+@Composable
+private fun WindowScope.TitleBarMiddle(
+    modifier: Modifier,
+    start: @Composable () -> Unit,
+    end: @Composable () -> Unit,
+) {
+    Layout(
+        content = {
+            Box { start() }
+            WindowDraggableArea(Modifier.fillMaxHeight()) {}
+            Box { end() }
+        },
+        modifier = modifier.fillMaxHeight(),
+    ) { measurables, constraints ->
+        val gap = TitleBarGap.roundToPx()
+        val width = constraints.maxWidth
+        val height = constraints.maxHeight
+        val startPlaceable = measurables[0].measure(Constraints(maxWidth = width, maxHeight = height))
+        val endMax = (width - startPlaceable.width - gap).coerceAtLeast(0)
+        val endPlaceable = measurables[2].measure(Constraints(maxWidth = endMax, maxHeight = height))
+        val dragWidth = (width - startPlaceable.width - endPlaceable.width - 2 * gap).coerceAtLeast(0)
+        val dragPlaceable = measurables[1].measure(Constraints.fixed(dragWidth, height))
+        layout(width, height) {
+            startPlaceable.place(0, (height - startPlaceable.height) / 2)
+            dragPlaceable.place(startPlaceable.width + gap, 0)
+            endPlaceable.place(width - endPlaceable.width, (height - endPlaceable.height) / 2)
         }
     }
 }

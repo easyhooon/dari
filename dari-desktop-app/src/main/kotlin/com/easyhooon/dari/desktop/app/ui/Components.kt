@@ -141,7 +141,7 @@ fun QuietButton(
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, style = Dari.type.label, color = fg)
+        Text(text, style = Dari.type.label, color = fg, maxLines = 1, softWrap = false)
     }
 }
 
@@ -163,7 +163,7 @@ fun AccentButton(text: String, onClick: () -> Unit, showDownloadIcon: Boolean = 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (showDownloadIcon) DownloadIcon(content)
-        Text(text, style = Dari.type.label.copy(fontWeight = FontWeight.SemiBold), color = content)
+        Text(text, style = Dari.type.label.copy(fontWeight = FontWeight.SemiBold), color = content, maxLines = 1, softWrap = false)
     }
 }
 
@@ -241,7 +241,8 @@ fun <T> Picker(
                 color = Dari.colors.text,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 260.dp),
+                // Measured after the chevron, so a narrow picker shortens the label instead of dropping it.
+                modifier = Modifier.weight(1f, fill = false).widthIn(max = 260.dp),
             )
             secondary?.let { Text(it, style = Dari.type.caption, color = Dari.colors.textTertiary, maxLines = 1) }
             Text("▾", style = Dari.type.caption, color = Dari.colors.textTertiary)
