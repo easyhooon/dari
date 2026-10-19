@@ -69,3 +69,7 @@ private fun sendResponseToWeb(handlerName: String, requestId: String, isSuccess:
 ```
 
 권한 콜백처럼 나중에 보내는 응답도 같은 함수를 거치면 `requestId`로 요청과 짝지어집니다.
+
+## 브릿지 코드 없이 (선택)
+
+위의 인터셉터 호출이 기본 방식이며 그대로 동작합니다. 브릿지 코드를 건드리고 싶지 않다면 [Gradle 플러그인](./gradle-plugin)이 한 번의 `dari { }` 매핑으로 디버그 빌드에 같은 호출을 넣어 줍니다.

@@ -256,6 +256,27 @@ The REQUEST and RESPONSE tabs provide `Decoded` and `Raw` views. The raw view re
   </tr>
 </table>
 
+### Optional: Gradle Plugin
+
+The interceptor calls above stay the default and keep working. If you'd rather keep Dari out of your bridge code, the optional `io.github.easyhooon.dari` Gradle plugin inserts the same calls into debug builds from a one-time mapping:
+
+```kotlin
+plugins {
+    id("io.github.easyhooon.dari") version "<version>"
+}
+
+dari {
+    webToAppRequest("com.example.MainActivity.Bridge", "onBridgeRequest") {
+        handlerName = arg(0); requestId = arg(1); data = arg(2)
+    }
+    webToAppResponse("com.example.MainActivity", "sendResponseToWeb") {
+        handlerName = arg(0); requestId = arg(1); success = arg(2); data = arg(3)
+    }
+}
+```
+
+See the [Gradle plugin guide](https://easyhooon.github.io/dari/docs/gradle-plugin) for the mapping reference.
+
 ### Custom Configuration
 
 You can customize Dari by calling `init` with a config before auto-initialization occurs, or in your `Application.onCreate()`:
@@ -315,6 +336,8 @@ The `sample/` module contains a working WebView demo with realistic bridge scena
 1. A notification appears showing recent bridge messages
 2. Tap the notification to open the message list
 3. Tap any message to see its details (overview, request payload, response payload)
+
+The sample captures its bridge with the Gradle plugin (`dari { }` in `sample/build.gradle.kts`). The [Interceptor Integration](#interceptor-integration) code above shows the same capture done by hand.
 
 ## Security & Privacy
 
