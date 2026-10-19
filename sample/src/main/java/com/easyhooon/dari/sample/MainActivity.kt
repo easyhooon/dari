@@ -29,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.util.concurrent.atomic.AtomicInteger
 
 class MainActivity : ComponentActivity() {
 
@@ -42,6 +43,10 @@ class MainActivity : ComponentActivity() {
         },
     )
     private var webView: WebView? = null
+    private val appRequestCounter = AtomicInteger()
+
+    @Volatile
+    private var pageLoaded = false
 
     // Pending camera permission request info
     private var pendingPermissionRequestId: String? = null
@@ -84,6 +89,12 @@ class MainActivity : ComponentActivity() {
                 override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
                     interceptor?.onPageUrlChanged(url)
                 }
+
+                override fun onPageFinished(view: WebView, url: String?) {
+                    pageLoaded = true
+                    // App-initiated round trip: the page answers through BridgeInterface.onAppToWebResponse.
+                    sendToWeb("getPageState", nextAppRequestId(), null)
+                }
             }
             addJavascriptInterface(BridgeInterface(), "Android")
             loadUrl("file:///android_asset/sample.html")
@@ -92,10 +103,28 @@ class MainActivity : ComponentActivity() {
         setContentView(webView)
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Fire-and-forget App-to-Web notification; the page sends nothing back.
+        if (pageLoaded) sendToWeb("appResumed", null, """{"at":${System.currentTimeMillis()}}""")
+    }
+
+    // Every App-to-Web message goes through here; a null requestId means the page won't answer.
+    private fun sendToWeb(handlerName: String, requestId: String?, data: String?) {
+        interceptor?.onAppToWebRequest(handlerName, requestId, data, fireAndForget = if (requestId == null) true else null)
+        val id = requestId?.let { "'$it'" } ?: "null"
+        val payload = data?.let { "'${it.escapeForJs()}'" } ?: "null"
+        webView?.post {
+            webView?.evaluateJavascript("onAppRequest('$handlerName', $id, $payload)", null)
+        }
+    }
+
+    private fun nextAppRequestId(): String = "app_${appRequestCounter.incrementAndGet()}"
+
     // Every Web-to-App reply goes through here, so this one call logs all responses.
     private fun sendResponseToWeb(handlerName: String, requestId: String, success: Boolean, data: String) {
         interceptor?.onWebToAppResponse(handlerName, requestId, data, success)
-        val escaped = data.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+        val escaped = data.escapeForJs()
         webView?.post {
             webView?.evaluateJavascript(
                 "javascript:onBridgeResponse('$requestId', $success, '$escaped')",
@@ -164,6 +193,18 @@ class MainActivity : ComponentActivity() {
             }
             val success = result.isSuccess
             sendProtobufResponseToWeb(requestId, success, response.toByteArray())
+        }
+
+        // Lets the page trigger an App-to-Web call on demand; the trigger itself is not a bridge message.
+        @JavascriptInterface
+        fun requestAppToWeb(handlerName: String) {
+            sendToWeb(handlerName, nextAppRequestId(), """{"requestedAt":${System.currentTimeMillis()}}""")
+        }
+
+        // Every web reply to an App-to-Web request enters here.
+        @JavascriptInterface
+        fun onAppToWebResponse(requestId: String, success: Boolean, data: String?) {
+            interceptor?.onAppToWebResponse(requestId, success, data)
         }
 
         /**
@@ -490,6 +531,8 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val PROTOBUF_HANDLER = "protobufGreeting"
+
+        fun String.escapeForJs(): String = replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
 
         fun describeStringValue(payload: ByteArray, part: String): String =
             JSONObject().apply {
