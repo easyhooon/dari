@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -341,11 +342,13 @@ fun CopyButton(onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     var copied by remember { mutableStateOf(false) }
-    LaunchedEffect(copied) {
-        if (copied) {
-            delay(COPIED_FEEDBACK_MILLIS)
-            copied = false
-        }
+    // Keyed on a count, not on `copied`, so each copy restarts the timer.
+    var copies by remember { mutableIntStateOf(0) }
+    LaunchedEffect(copies) {
+        if (copies == 0) return@LaunchedEffect
+        copied = true
+        delay(COPIED_FEEDBACK_MILLIS)
+        copied = false
     }
     val color = when {
         copied -> Dari.colors.success
@@ -358,7 +361,7 @@ fun CopyButton(onClick: () -> Unit) {
             .hoverable(interaction)
             .clickable(interactionSource = interaction, indication = null, role = Role.Button) {
                 onClick()
-                copied = true
+                copies++
             }
             .pointerHoverIcon(PointerIcon.Hand)
             .padding(horizontal = 8.dp),

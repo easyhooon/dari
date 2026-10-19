@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -177,18 +178,20 @@ private fun ExportMenu(onCopy: (onCopied: () -> Unit) -> Unit, onSave: (ExportFo
     var open by remember { mutableStateOf(false) }
     // The menu closes on click, so the button confirms the copy instead, once it has succeeded.
     var copied by remember { mutableStateOf(false) }
-    LaunchedEffect(copied) {
-        if (copied) {
-            delay(COPIED_FEEDBACK_MILLIS)
-            copied = false
-        }
+    // Keyed on a count, not on `copied`, so each copy restarts the timer.
+    var copies by remember { mutableIntStateOf(0) }
+    LaunchedEffect(copies) {
+        if (copies == 0) return@LaunchedEffect
+        copied = true
+        delay(COPIED_FEEDBACK_MILLIS)
+        copied = false
     }
     Box {
         QuietButton(if (copied) "✓ Copied" else "Export ▾", onClick = { open = true })
         DariMenu(expanded = open, onDismiss = { open = false }) {
             DariMenuItem("Copy as Text", onClick = {
                 open = false
-                onCopy { copied = true }
+                onCopy { copies++ }
             })
             DariMenuItem("Save as Text…", onClick = {
                 open = false
