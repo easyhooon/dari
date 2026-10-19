@@ -139,7 +139,6 @@ private fun WindowScope.TitleBar(controller: InspectorController, updater: Updat
         // The title bar is transparent on macOS; its empty middle moves the window. Wrapping the whole
         // row would swallow clicks on the pickers and buttons.
         WindowDraggableArea(Modifier.weight(1f).fillMaxHeight()) {}
-        UpdateStatus(updater, installUpdate)
         val status = statusLine(state)
         // Short on screen; hovering shows every field with its label.
         TooltipArea(
@@ -168,6 +167,8 @@ private fun WindowScope.TitleBar(controller: InspectorController, updater: Updat
         if (state == ConnectionState.Idle) {
             QuietButton("Connect", onClick = controller::connect, enabled = controller.applicationId.isNotBlank())
         }
+        // Last, so showing or hiding it doesn't shift the connection status.
+        UpdateStatus(updater, installUpdate)
     }
 }
 
