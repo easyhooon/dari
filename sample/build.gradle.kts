@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    id("io.github.easyhooon.dari")
 }
 
 android {
@@ -34,6 +35,54 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+}
+
+// Where MainActivity's bridge receives and sends messages; the plugin logs them in debug builds.
+dari {
+    tag = "Sample"
+
+    val activity = "com.easyhooon.dari.sample.MainActivity"
+    val bridge = "$activity.BridgeInterface"
+
+    webToAppRequest(bridge, "onBridgeRequest") {
+        handlerName = arg(0)
+        requestId = arg(1)
+        data = arg(2)
+        fireAndForget = arg(0).equalsTo("fireAndForgetPerCall")
+    }
+    webToAppRequest(bridge, "onBridgeRequestFireAndForget") {
+        handlerName = arg(0)
+        data = arg(1)
+        fireAndForget = constant(true)
+    }
+    webToAppRequest(bridge, "onProtobufBridgeRequest") {
+        handlerName = constant("protobufGreeting")
+        requestId = arg(0)
+        data = base64(arg(1))
+    }
+    webToAppResponse(activity, "sendResponseToWeb") {
+        handlerName = arg(0)
+        requestId = arg(1)
+        success = arg(2)
+        data = arg(3)
+    }
+    webToAppResponse(activity, "sendProtobufResponseToWeb") {
+        handlerName = constant("protobufGreeting")
+        requestId = arg(0)
+        success = arg(1)
+        data = arg(2)
+    }
+    appToWebRequest(activity, "sendToWeb") {
+        handlerName = arg(0)
+        requestId = arg(1)
+        data = arg(2)
+        fireAndForget = isNull(arg(1))
+    }
+    appToWebResponse(bridge, "onAppToWebResponse") {
+        requestId = arg(0)
+        success = arg(1)
+        data = arg(2)
     }
 }
 
