@@ -54,10 +54,7 @@ class MainActivity : ComponentActivity() {
             put("permission", "camera")
             put("granted", isGranted)
         }
-        interceptor?.onWebToAppResponse(
-            "requestCameraPermission", requestId, response.toString(2), isGranted,
-        )
-        callJs(requestId, isGranted, response.toString())
+        sendResponseToWeb("requestCameraPermission", requestId, isGranted, response.toString())
         pendingPermissionRequestId = null
     }
 
@@ -95,7 +92,9 @@ class MainActivity : ComponentActivity() {
         setContentView(webView)
     }
 
-    private fun callJs(requestId: String, success: Boolean, data: String) {
+    // Every Web-to-App reply goes through here, so this one call logs all responses.
+    private fun sendResponseToWeb(handlerName: String, requestId: String, success: Boolean, data: String) {
+        interceptor?.onWebToAppResponse(handlerName, requestId, data, success)
         val escaped = data.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
         webView?.post {
             webView?.evaluateJavascript(
@@ -105,7 +104,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun callProtobufJs(requestId: String, success: Boolean, data: ByteArray) {
+    private fun sendProtobufResponseToWeb(requestId: String, success: Boolean, data: ByteArray) {
+        interceptor?.onWebToAppProtobufResponse(PROTOBUF_HANDLER, requestId, data, success)
         val base64Data = Base64.encodeToString(data, Base64.NO_WRAP)
         webView?.post {
             webView?.evaluateJavascript(
@@ -120,6 +120,7 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface
         fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
             val perCallFireAndForget = if (handlerName == "fireAndForgetPerCall") true else null
+            // Every request enters here, so one call logs them all before dispatching.
             interceptor?.onWebToAppRequest(handlerName, requestId, data, fireAndForget = perCallFireAndForget)
 
             when (handlerName) {
@@ -140,8 +141,7 @@ class MainActivity : ComponentActivity() {
                 "noResponsePending" -> { /* intentionally no response — stays IN_PROGRESS */ }
                 else -> {
                     val error = """{"error":"Unknown handler","handler":"$handlerName"}"""
-                    interceptor?.onWebToAppResponse(handlerName, requestId, error, false)
-                    callJs(requestId, false, error)
+                    sendResponseToWeb(handlerName, requestId, false, error)
                 }
             }
         }
@@ -163,15 +163,7 @@ class MainActivity : ComponentActivity() {
                     .build()
             }
             val success = result.isSuccess
-            val responseData = response.toByteArray()
-
-            interceptor?.onWebToAppProtobufResponse(
-                PROTOBUF_HANDLER,
-                requestId,
-                responseData,
-                success,
-            )
-            callProtobufJs(requestId, success, responseData)
+            sendProtobufResponseToWeb(requestId, success, response.toByteArray())
         }
 
         /**
@@ -200,8 +192,7 @@ class MainActivity : ComponentActivity() {
             put("deviceModel", "${Build.MANUFACTURER} ${Build.MODEL}")
             put("deviceBrand", Build.BRAND)
         }
-        interceptor?.onWebToAppResponse("getAppInfo", requestId, response.toString(2), true)
-        callJs(requestId, true, response.toString())
+        sendResponseToWeb("getAppInfo", requestId, true, response.toString())
     }
 
     private fun handleHapticFeedback(handlerName: String, requestId: String, data: String?) {
@@ -222,8 +213,7 @@ class MainActivity : ComponentActivity() {
             put("vibrated", true)
             put("durationMs", durationMs)
         }
-        interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(2), true)
-        callJs(requestId, true, response.toString())
+        sendResponseToWeb(handlerName, requestId, true, response.toString())
     }
 
     private fun handleShowToast(handlerName: String, requestId: String, data: String?) {
@@ -242,8 +232,7 @@ class MainActivity : ComponentActivity() {
         }
 
         val response = JSONObject().apply { put("shown", true) }
-        interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(2), true)
-        callJs(requestId, true, response.toString())
+        sendResponseToWeb(handlerName, requestId, true, response.toString())
     }
 
     private fun handleShareText(handlerName: String, requestId: String, data: String?) {
@@ -258,8 +247,7 @@ class MainActivity : ComponentActivity() {
         startActivity(Intent.createChooser(intent, title))
 
         val response = JSONObject().apply { put("shared", true) }
-        interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(2), true)
-        callJs(requestId, true, response.toString())
+        sendResponseToWeb(handlerName, requestId, true, response.toString())
     }
 
     private fun handleCopyToClipboard(handlerName: String, requestId: String, data: String?) {
@@ -277,8 +265,7 @@ class MainActivity : ComponentActivity() {
             put("copied", true)
             put("length", text.length)
         }
-        interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(2), true)
-        callJs(requestId, true, response.toString())
+        sendResponseToWeb(handlerName, requestId, true, response.toString())
     }
 
     private fun handleOpenAppSettings(handlerName: String, requestId: String) {
@@ -288,8 +275,7 @@ class MainActivity : ComponentActivity() {
         startActivity(intent)
 
         val response = JSONObject().apply { put("opened", true) }
-        interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(2), true)
-        callJs(requestId, true, response.toString())
+        sendResponseToWeb(handlerName, requestId, true, response.toString())
     }
 
     private fun handleRequestCameraPermission(requestId: String) {
@@ -308,8 +294,7 @@ class MainActivity : ComponentActivity() {
             put("nickname", JSONObject.NULL)
             put("metadata", JSONObject.NULL)
         }
-        interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(2), true)
-        callJs(requestId, true, response.toString())
+        sendResponseToWeb(handlerName, requestId, true, response.toString())
     }
 
     private fun handleFetchLargeData(handlerName: String, requestId: String) {
@@ -323,8 +308,7 @@ class MainActivity : ComponentActivity() {
             }
             append("]}")
         }
-        interceptor?.onWebToAppResponse(handlerName, requestId, largePayload, true)
-        callJs(requestId, true, """{"size":${largePayload.length},"itemCount":10000}""")
+        sendResponseToWeb(handlerName, requestId, true, largePayload)
     }
 
     // Fake credentials so "Mask sensitive values" has something to hide.
@@ -342,8 +326,7 @@ class MainActivity : ComponentActivity() {
                 },
             )
         }
-        interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(2), true)
-        callJs(requestId, true, response.toString())
+        sendResponseToWeb(handlerName, requestId, true, response.toString())
     }
 
     // Keep the complete payload together so its expandable shape stays easy to inspect.
@@ -465,8 +448,7 @@ class MainActivity : ComponentActivity() {
         ).apply {
             put("requestId", requestId)
         }
-        interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(), true)
-        callJs(requestId, true, """{"tripId":"TRIP-2026-JEJU-03","dayCount":2}""")
+        sendResponseToWeb(handlerName, requestId, true, response.toString())
     }
 
     private fun handleSimulateSlowResponse(handlerName: String, requestId: String) {
@@ -475,8 +457,7 @@ class MainActivity : ComponentActivity() {
             val response = JSONObject().apply {
                 put("result", "completed after 10s delay")
             }
-            interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(2), true)
-            callJs(requestId, true, response.toString())
+            sendResponseToWeb(handlerName, requestId, true, response.toString())
         }
     }
 
@@ -488,8 +469,7 @@ class MainActivity : ComponentActivity() {
             put("error", errorType)
             put("message", "Simulated $errorType error for testing")
         }
-        interceptor?.onWebToAppResponse(handlerName, requestId, response.toString(2), false)
-        callJs(requestId, false, response.toString())
+        sendResponseToWeb(handlerName, requestId, false, response.toString())
     }
 
     private fun handleLogEvent(data: String?) {

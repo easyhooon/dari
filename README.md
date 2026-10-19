@@ -46,7 +46,9 @@ releaseImplementation("io.github.easyhooon:dari-noop:<latest-version>")
 // In your bridge layer
 val interceptor = Dari.createInterceptor()
 
+// Where every request enters the bridge
 interceptor?.onWebToAppRequest(handlerName, requestId, data)
+// In the one function that sends responses to the web
 interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
 ```
 
@@ -144,7 +146,7 @@ That's it for initialization. Dari auto-initializes via `androidx.startup` when 
 
 ### Interceptor Integration
 
-Dari requires **manual injection** of the interceptor into your WebView bridge layer. Create an interceptor instance and call its methods at the appropriate points in your bridge communication code.
+Dari requires **manual injection** of the interceptor into your WebView bridge layer. Call it where messages enter and leave the bridge, not in each handler: most bridges have one entry point for incoming requests and one function that sends replies, so a few calls cover every handler.
 
 #### 1. Create the interceptor
 
@@ -164,25 +166,40 @@ When a `tag` is provided, all messages captured by that interceptor are automati
 
 #### 2. Intercept Web-to-App messages
 
-Call the interceptor in your `@JavascriptInterface` method when a request arrives and after the response is ready:
+Log the request in the `@JavascriptInterface` method every request enters, and the response in the one function that sends replies back. Handlers then need no Dari code:
 
 ```kotlin
-// When a request is received from JavaScript
-interceptor?.onWebToAppRequest(handlerName, requestId, data)
+inner class Bridge {
+    @JavascriptInterface
+    fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
+        // Every request enters here
+        interceptor?.onWebToAppRequest(handlerName, requestId, data)
+        when (handlerName) {
+            "getAppInfo" -> sendResponseToWeb(handlerName, requestId, true, appInfoJson())
+            // ...other handlers reply through sendResponseToWeb too
+        }
+    }
+}
 
-// After processing, log the response
-interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
+// Every reply leaves through here
+private fun sendResponseToWeb(handlerName: String, requestId: String, isSuccess: Boolean, data: String) {
+    interceptor?.onWebToAppResponse(handlerName, requestId, data, isSuccess)
+    val script = "onBridgeResponse(${JSONObject.quote(requestId)}, $isSuccess, ${JSONObject.quote(data)})"
+    webView.post { webView.evaluateJavascript(script, null) }
+}
 ```
+
+Replies sent later, e.g. from a permission callback, are still paired by `requestId` as long as they go through the same function.
 
 #### 3. Intercept App-to-Web messages
 
-Call the interceptor when your native code sends a message to JavaScript and when the response comes back:
+Same idea in the other direction: log in the function that sends messages to JavaScript and in the method that receives the web's reply:
 
 ```kotlin
-// When sending a message to JavaScript
+// In the function that sends messages to JavaScript
 interceptor?.onAppToWebRequest(handlerName, requestId, data)
 
-// When the web response is received
+// In the @JavascriptInterface method that receives the web's reply
 interceptor?.onAppToWebResponse(requestId, isSuccess, responseData)
 ```
 

@@ -72,7 +72,7 @@ Protobuf inspection has no feature flag and does not replace the string/JSON API
 
 ### `onWebToAppRequest`
 
-Called when JavaScript sends a message to the native side.
+Called when JavaScript sends a message to the native side. Call it once where every request enters the bridge, before dispatching to a handler.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -83,7 +83,7 @@ Called when JavaScript sends a message to the native side.
 
 ### `onWebToAppResponse`
 
-Called when the native side sends a response back to JavaScript.
+Called when the native side sends a response back to JavaScript. Call it in the one function that sends every response, so handlers need no call of their own.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -94,11 +94,11 @@ Called when the native side sends a response back to JavaScript.
 
 ### `onAppToWebRequest`
 
-Called when the native side pushes a message to JavaScript.
+Called when the native side pushes a message to JavaScript. Call it in the function that sends messages to the web.
 
 ### `onAppToWebResponse`
 
-Called when JavaScript responds to a native-initiated message.
+Called when JavaScript responds to a native-initiated message. Call it where the web's reply arrives.
 
 ## Optional display names
 
