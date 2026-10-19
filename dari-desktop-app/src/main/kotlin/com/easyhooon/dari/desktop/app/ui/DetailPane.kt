@@ -26,7 +26,9 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,6 +53,7 @@ import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
 import com.easyhooon.dari.inspector.protocol.WirePayloadMetadata
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -61,7 +64,7 @@ import kotlinx.coroutines.launch
 fun DetailPane(
     detail: WireMessageDetail?,
     jsonFoldingEnabled: Boolean,
-    onCopy: () -> Unit,
+    onCopy: (onCopied: () -> Unit) -> Unit,
     onCopyPayload: (text: String, what: String) -> Unit,
     onSave: (ExportFormat) -> Unit,
     onClose: () -> Unit,
@@ -171,14 +174,24 @@ private fun NewerHint(count: Int, onClick: () -> Unit) {
 
 /** The in-app detail screen's share and save actions, desktop style. */
 @Composable
-private fun ExportMenu(onCopy: () -> Unit, onSave: (ExportFormat) -> Unit) {
+private fun ExportMenu(onCopy: (onCopied: () -> Unit) -> Unit, onSave: (ExportFormat) -> Unit) {
     var open by remember { mutableStateOf(false) }
+    // The menu closes on click, so the button confirms the copy instead, once it has succeeded.
+    var copied by remember { mutableStateOf(false) }
+    // Keyed on a count, not on `copied`, so each copy restarts the timer.
+    var copies by remember { mutableIntStateOf(0) }
+    LaunchedEffect(copies) {
+        if (copies == 0) return@LaunchedEffect
+        copied = true
+        delay(COPIED_FEEDBACK_MILLIS)
+        copied = false
+    }
     Box {
-        QuietButton("Export ▾", onClick = { open = true })
+        QuietButton(if (copied) "✓ Copied" else "Export ▾", onClick = { open = true })
         DariMenu(expanded = open, onDismiss = { open = false }) {
             DariMenuItem("Copy as Text", onClick = {
                 open = false
-                onCopy()
+                onCopy { copies++ }
             })
             DariMenuItem("Save as Text…", onClick = {
                 open = false

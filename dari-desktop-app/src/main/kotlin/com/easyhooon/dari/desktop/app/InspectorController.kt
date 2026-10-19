@@ -265,12 +265,13 @@ class InspectorController(
     val canExport: Boolean get() = state is ConnectionState.Connected && messages.isNotEmpty()
 
     /** Copies the selected message as readable text, like the app's "Share as text". */
-    fun copySelected() {
+    fun copySelected(onCopied: () -> Unit = {}) {
         val id = selectedId ?: return
         scope.launch {
             val message = fetchDetail(id) ?: return@launch showNotice("Couldn't copy: message unavailable")
             copyText(MessageExport.text(message))
             showNotice("Copied message")
+            onCopied()
         }
     }
 
