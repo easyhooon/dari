@@ -13,12 +13,13 @@ Dari Gradle 플러그인을 쓰면 호출마다 코드를 넣지 않아도 브�
 
 | 파일 | 넣을 내용 |
 | --- | --- |
+| `app/build.gradle.kts`의 `dependencies { }` | 직접 호출 방식과 같은 `dari` / `dari-noop`. 플러그인이 추가해 주지 않습니다 |
 | `settings.gradle.kts` | Gradle이 플러그인을 찾을 수 있도록 `pluginManagement { repositories { } }`에 `mavenCentral()` 추가 |
 | `app/build.gradle.kts` (`dari` / `dari-noop`을 추가한 모듈) | `plugins { }`에 `id("io.github.easyhooon.dari")`, 그리고 `dari { }` 매핑 블록 |
 | `Application.onCreate()` | `Dari.setProtobufDecoder(...)`. protobuf 페이로드를 캡처할 때만 필요 |
 | 브릿지 코드 | 없음 |
 
-`dari { }`를 루트 `build.gradle.kts`에 넣지 마세요. 다른 모듈에 있는 브릿지는 그 모듈의 `build.gradle.kts`에 플러그인과 `dari { }`를 따로 넣어야 합니다.
+의존성만으로는 켜지지 않습니다. 플러그인과 `dari { }`가 없으면 아무것도 바뀌지 않습니다. `dari { }`를 루트 `build.gradle.kts`에 넣지 마세요. 다른 모듈에 있는 브릿지는 그 모듈의 `build.gradle.kts`에 플러그인과 `dari { }`를 따로 넣어야 합니다.
 
 ## 배경 지식
 
@@ -269,7 +270,7 @@ appToWebResponse("com.example.MainActivity.BridgeInterface", "onAppToWebResponse
 - **범위.** 기본적으로 해당 모듈의 클래스만 변환합니다.
   - 서드파티 AAR 안의 브릿지는 `scope = InstrumentationScope.ALL`이 필요합니다. 이 경우 앱의 모든 AAR을 다시 dex 변환하므로, 테스트에서는 콜드 빌드가 약 5분 더 걸렸습니다.
   - 프로젝트의 다른 모듈에 있는 브릿지는 그 모듈에도 플러그인을 적용해야 합니다.
-- **수동 로깅도 계속 동작.** 플러그인은 매핑된 메서드만 건드립니다. 매핑된 메서드가 이미 `DariInterceptor`를 호출하고 있으면 그 메서드는 건너뛰고 빌드 경고를 출력하므로, 같은 항목이 두 번 기록되지 않습니다.
+- **수동 로깅도 계속 동작.** 플러그인은 매핑된 메서드만 건드립니다. 매핑된 메서드가 이미 `DariInterceptor`를 호출하고 있으면 그 메서드는 건너뛰고 빌드 경고를 출력합니다. 확인하는 것은 그 메서드 본문뿐이라, 같은 경로의 다른 곳(예: 핸들러 안)에 있는 직접 호출은 한 번 더 기록됩니다. 브릿지마다 한 가지 방식만 쓰세요.
 - **빌드 경고.** 매핑한 클래스에 해당 이름의 메서드가 없으면 경고가 나옵니다. 클래스 이름에 오타가 있으면 아무것도 매칭되지 않고 경고도 나오지 않으니, 첫 실행 후 인스펙터를 확인하세요.
   - 경고는 해당 클래스가 다시 빌드될 때만 나옵니다.
   - 변환된 메서드 목록을 보려면 `--info`로 빌드하고 `Dari: instrumented`를 찾으세요.

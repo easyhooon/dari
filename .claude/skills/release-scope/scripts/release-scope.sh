@@ -17,6 +17,8 @@ classify() {
   case "$1" in
     */src/test/* | */src/*Test/* | */src/androidTest/*) echo test ;;
     dari/* | dari-core/* | dari-noop/* | dari-runtime/*) echo library ;;
+    # The plugin ships to Maven Central with the library, under the same `dari` version.
+    dari-gradle-plugin/src/main/* | dari-gradle-plugin/build.gradle.kts | dari-gradle-plugin/settings.gradle.kts) echo library ;;
     dari-inspector-protocol/*) echo protocol ;;
     dari-desktop-app/*) echo desktop ;;
     scripts/package-desktop-app.sh | scripts/smoke-test-desktop-app.sh | scripts/verify-macos-signature.sh \

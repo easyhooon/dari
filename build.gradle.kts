@@ -34,12 +34,16 @@ tasks.matching { it.name == "preBuild" }.configureEach {
     dependsOn("installGitHooks")
 }
 
-// The plugin is an included build, so root lint, tests and clean don't reach it on their own.
+// The plugin is an included build, so root lint, tests, clean and publishing don't reach it on their own.
 val pluginBuild = gradle.includedBuild("dari-gradle-plugin")
 listOf("detekt", "ktlintCheck", "ktlintFormat").forEach { name ->
     tasks.matching { it.name == name }.configureEach { dependsOn(pluginBuild.task(":$name")) }
 }
 tasks.register("clean") { dependsOn(pluginBuild.task(":clean")) }
+// Same names as the subprojects' tasks, so `./gradlew <task>` also publishes the plugin and its marker.
+listOf("publishAllPublicationsToMavenCentralRepository", "publishToMavenLocal").forEach { name ->
+    tasks.register(name) { dependsOn(pluginBuild.task(":$name")) }
+}
 tasks.register("testGradlePlugin") {
     description = "Runs the Dari Gradle plugin's unit tests."
     dependsOn(pluginBuild.task(":test"))

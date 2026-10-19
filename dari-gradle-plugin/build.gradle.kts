@@ -53,6 +53,9 @@ ktlint {
     verbose.set(true)
 }
 
+// `./gradlew clean publish…` from the root must not upload jars built before the clean.
+tasks.matching { it.name.startsWith("publish") }.configureEach { mustRunAfter("clean") }
+
 mavenPublishing {
     coordinates(
         groupId = "io.github.easyhooon",
