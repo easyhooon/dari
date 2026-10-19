@@ -359,6 +359,7 @@ Dari는 디버그 빌드와 내부 빌드용입니다. 브릿지 페이로드에
 | `init(context, config)` | 사용자 정의 구성으로 초기화 |
 | `createInterceptor(tag?)` | 태그(선택)를 지정해 `DariInterceptor` 생성(noop에서는 `null` 반환) |
 | `createInterceptor(tag?, protobufDecoder)` | 문자열/JSON 메서드를 모두 유지하면서 protobuf를 지원하는 인터셉터 생성 |
+| `setProtobufDecoder(decoder)` | Gradle 플러그인이 만드는 인터셉터가 쓸 protobuf 디코더. 앱 시작 시 한 번 호출 |
 | `setShakeToOpenEnabled(enabled)` | 런타임에 흔들어서 열기 켜기/끄기(저장됨) |
 | `setDarkMode(value)` | 다크 모드 재정의: `true` / `false` / `null`(시스템 기본값). 저장됨 |
 | `setShowTagChip(show)` | 메시지 목록의 브릿지 태그 칩 표시/숨김. 저장됨 |

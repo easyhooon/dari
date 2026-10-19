@@ -359,6 +359,7 @@ are never sent. Turn it off in Settings → Privacy → **Send crash reports**.
 | `init(context, config)` | Initialize with custom configuration |
 | `createInterceptor(tag?)` | Create a `DariInterceptor` with an optional tag (returns `null` in noop) |
 | `createInterceptor(tag?, protobufDecoder)` | Create a protobuf-capable interceptor while retaining all string/JSON methods |
+| `setProtobufDecoder(decoder)` | Protobuf decoder for interceptors the Gradle plugin creates. Call once at app start |
 | `setShakeToOpenEnabled(enabled)` | Enable/disable shake-to-open at runtime (persisted) |
 | `setDarkMode(value)` | Override dark mode: `true` / `false` / `null` (system default). Persisted |
 | `setShowTagChip(show)` | Show/hide bridge tag chips in the message list. Persisted |
