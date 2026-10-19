@@ -23,6 +23,9 @@ object Dari {
     ): ProtobufDariInterceptor? = null
 
     @Suppress("UNUSED_PARAMETER")
+    fun setProtobufDecoder(decoder: ProtobufPayloadDecoder?) = Unit
+
+    @Suppress("UNUSED_PARAMETER")
     fun setShakeToOpenEnabled(enabled: Boolean) = Unit
 
     @Suppress("UNUSED_PARAMETER")
