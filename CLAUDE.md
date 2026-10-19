@@ -20,7 +20,7 @@
 ## Release
 
 - Always run `./gradlew clean` before `publishAllPublicationsToMavenCentralRepository` to ensure freshly compiled artifacts are uploaded (not stale build cache).
-- `dari` (library) and `dariDesktop` (desktop app) in `gradle/libs.versions.toml` share one number line. A desktop-only fix bumps only `dariDesktop` and skips Maven; apps don't need a library bump because compatibility is `InspectorProtocol.VERSION`. Use `/release desktop <version>`.
+- `dari` (library and Gradle plugin) and `dariDesktop` (desktop app) in `gradle/libs.versions.toml` share one number line. A desktop-only fix bumps only `dariDesktop` and skips Maven; apps don't need a library bump because compatibility is `InspectorProtocol.VERSION`. Use `/release desktop <version>`.
 
 ## Skills
 
