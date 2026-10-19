@@ -9,6 +9,17 @@ Dari Gradle 플러그인을 쓰면 호출마다 코드를 넣지 않아도 브�
 
 플러그인은 선택 사항입니다. [설정](./setup)처럼 인터셉터를 직접 호출하는 방식이 기본이며 그대로 동작하고, 한 앱에서 두 방식을 함께 써도 됩니다.
 
+## 파일별로 넣을 내용
+
+| 파일 | 넣을 내용 |
+| --- | --- |
+| `settings.gradle.kts` | Gradle이 플러그인을 찾을 수 있도록 `pluginManagement { repositories { } }`에 `mavenCentral()` 추가 |
+| `app/build.gradle.kts` (`dari` / `dari-noop`을 추가한 모듈) | `plugins { }`에 `id("io.github.easyhooon.dari")`, 그리고 `dari { }` 매핑 블록 |
+| `Application.onCreate()` | `Dari.setProtobufDecoder(...)`. protobuf 페이로드를 캡처할 때만 필요 |
+| 브릿지 코드 | 없음 |
+
+`dari { }`를 루트 `build.gradle.kts`에 넣지 마세요. 다른 모듈에 있는 브릿지는 그 모듈의 `build.gradle.kts`에 플러그인과 `dari { }`를 따로 넣어야 합니다.
+
 ## 배경 지식
 
 ### 라이브러리와 플러그인

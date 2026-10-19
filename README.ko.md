@@ -259,9 +259,23 @@ REQUEST와 RESPONSE 탭은 `Decoded`와 `Raw` 보기를 제공합니다. Raw 보
 
 ### 선택: Gradle 플러그인
 
-위의 인터셉터 호출 방식이 기본이며 그대로 동작합니다. 브릿지 코드에 Dari 호출을 넣고 싶지 않다면, 선택 사항인 `io.github.easyhooon.dari` Gradle 플러그인이 한 번의 매핑으로 디버그 빌드에 같은 호출을 넣어 줍니다:
+위의 인터셉터 호출 방식이 기본이며 그대로 동작합니다. 브릿지 코드에 Dari 호출을 넣고 싶지 않다면, 선택 사항인 `io.github.easyhooon.dari` Gradle 플러그인이 한 번의 매핑으로 디버그 빌드에 같은 호출을 넣어 줍니다.
+
+`plugins { }`와 `dari { }`는 `dari` / `dari-noop`을 추가한 앱 모듈의 `build.gradle.kts`에 넣습니다. 루트 `build.gradle.kts`나 `settings.gradle.kts`에 넣지 않습니다.
 
 ```kotlin
+// settings.gradle.kts: 플러그인은 Maven Central에서 받습니다
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+```
+
+```kotlin
+// app/build.gradle.kts
 plugins {
     id("io.github.easyhooon.dari") version "<version>"
 }
@@ -276,7 +290,7 @@ dari {
 }
 ```
 
-매핑 레퍼런스는 [Gradle 플러그인 가이드](https://easyhooon.github.io/dari/ko/docs/gradle-plugin)를 참고하세요.
+protobuf 페이로드를 쓸 때만 `Application.onCreate()`에서 `Dari.setProtobufDecoder(...)`로 디코더를 한 번 등록하세요. 매핑 레퍼런스는 [Gradle 플러그인 가이드](https://easyhooon.github.io/dari/ko/docs/gradle-plugin)를 참고하세요.
 
 ### 사용자 정의 구성
 

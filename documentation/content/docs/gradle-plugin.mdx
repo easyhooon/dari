@@ -9,6 +9,17 @@ Everything after capture stays the same: storage, the in-app inspector, the desk
 
 The plugin is optional. Calling the interceptor yourself, as in [Setup](./setup), remains the default and keeps working, and both can live in one app.
 
+## Where each piece goes
+
+| File | What to put there |
+| --- | --- |
+| `settings.gradle.kts` | `mavenCentral()` in `pluginManagement { repositories { } }`, so Gradle can find the plugin. |
+| `app/build.gradle.kts` (the module that adds `dari` / `dari-noop`) | `id("io.github.easyhooon.dari")` in `plugins { }`, and the `dari { }` mapping block. |
+| Your `Application.onCreate()` | `Dari.setProtobufDecoder(...)`, only if you capture protobuf payloads. |
+| Your bridge code | Nothing. |
+
+Don't put `dari { }` in the root `build.gradle.kts`. A bridge in another module needs the plugin and its own `dari { }` in that module's `build.gradle.kts`.
+
 ## Background
 
 ### Library vs plugin

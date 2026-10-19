@@ -258,9 +258,23 @@ The REQUEST and RESPONSE tabs provide `Decoded` and `Raw` views. The raw view re
 
 ### Optional: Gradle Plugin
 
-The interceptor calls above stay the default and keep working. If you'd rather keep Dari out of your bridge code, the optional `io.github.easyhooon.dari` Gradle plugin inserts the same calls into debug builds from a one-time mapping:
+The interceptor calls above stay the default and keep working. If you'd rather keep Dari out of your bridge code, the optional `io.github.easyhooon.dari` Gradle plugin inserts the same calls into debug builds from a one-time mapping.
+
+`plugins { }` and `dari { }` go in the app module's `build.gradle.kts`, the module that adds `dari` / `dari-noop`. They don't go in the root `build.gradle.kts` or in `settings.gradle.kts`.
 
 ```kotlin
+// settings.gradle.kts: the plugin resolves from Maven Central
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+```
+
+```kotlin
+// app/build.gradle.kts
 plugins {
     id("io.github.easyhooon.dari") version "<version>"
 }
@@ -275,7 +289,7 @@ dari {
 }
 ```
 
-See the [Gradle plugin guide](https://easyhooon.github.io/dari/docs/gradle-plugin) for the mapping reference.
+Only for protobuf payloads: register the decoder once in `Application.onCreate()` with `Dari.setProtobufDecoder(...)`. See the [Gradle plugin guide](https://easyhooon.github.io/dari/docs/gradle-plugin) for the mapping reference.
 
 ### Custom Configuration
 
