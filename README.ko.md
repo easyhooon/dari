@@ -46,7 +46,9 @@ releaseImplementation("io.github.easyhooon:dari-noop:<latest-version>")
 // 브릿지 레이어에서
 val interceptor = Dari.createInterceptor()
 
+// 모든 요청이 들어오는 진입점에서
 interceptor?.onWebToAppRequest(handlerName, requestId, data)
+// 웹으로 응답을 보내는 함수 한 곳에서
 interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
 ```
 
@@ -145,7 +147,7 @@ dependencies {
 
 ### 인터셉터 연동
 
-Dari는 WebView 브릿지 레이어에 인터셉터를 **직접 주입**해야 합니다. 인터셉터 인스턴스를 만들고 브릿지 통신 코드의 적절한 지점에서 메서드를 호출하세요.
+Dari는 WebView 브릿지 레이어에 인터셉터를 **직접 주입**해야 합니다. 핸들러마다 호출하지 말고 메시지가 브릿지로 들어오고 나가는 지점에서 호출하세요. 대부분의 브릿지에는 요청이 들어오는 진입점과 응답을 보내는 함수가 하나씩 있으므로, 몇 번의 호출로 모든 핸들러를 기록할 수 있습니다.
 
 #### 1. 인터셉터 생성
 
@@ -165,25 +167,40 @@ val mainInterceptor: DariInterceptor? = Dari.createInterceptor(tag = "MainWebVie
 
 #### 2. Web-to-App 메시지 가로채기
 
-`@JavascriptInterface` 메서드에서 요청이 도착했을 때와 응답이 준비된 뒤에 인터셉터를 호출합니다:
+요청은 모든 요청이 들어오는 `@JavascriptInterface` 메서드에서, 응답은 웹으로 응답을 보내는 함수 한 곳에서 기록합니다. 그러면 핸들러에는 Dari 코드가 필요 없습니다:
 
 ```kotlin
-// When a request is received from JavaScript
-interceptor?.onWebToAppRequest(handlerName, requestId, data)
+inner class Bridge {
+    @JavascriptInterface
+    fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
+        // Every request enters here
+        interceptor?.onWebToAppRequest(handlerName, requestId, data)
+        when (handlerName) {
+            "getAppInfo" -> sendResponseToWeb(handlerName, requestId, true, appInfoJson())
+            // ...other handlers reply through sendResponseToWeb too
+        }
+    }
+}
 
-// After processing, log the response
-interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
+// Every reply leaves through here
+private fun sendResponseToWeb(handlerName: String, requestId: String, isSuccess: Boolean, data: String) {
+    interceptor?.onWebToAppResponse(handlerName, requestId, data, isSuccess)
+    val script = "onBridgeResponse(${JSONObject.quote(requestId)}, $isSuccess, ${JSONObject.quote(data)})"
+    webView.post { webView.evaluateJavascript(script, null) }
+}
 ```
+
+권한 콜백처럼 나중에 보내는 응답도 같은 함수를 거치면 `requestId`로 요청과 짝지어집니다.
 
 #### 3. App-to-Web 메시지 가로채기
 
-네이티브 코드가 JavaScript로 메시지를 보낼 때와 응답이 돌아왔을 때 인터셉터를 호출합니다:
+반대 방향도 같습니다. JavaScript로 메시지를 보내는 함수와 웹의 응답을 받는 메서드에서 기록합니다:
 
 ```kotlin
-// When sending a message to JavaScript
+// In the function that sends messages to JavaScript
 interceptor?.onAppToWebRequest(handlerName, requestId, data)
 
-// When the web response is received
+// In the @JavascriptInterface method that receives the web's reply
 interceptor?.onAppToWebResponse(requestId, isSuccess, responseData)
 ```
 

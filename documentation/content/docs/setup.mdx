@@ -45,21 +45,27 @@ Create an interceptor through `Dari.createInterceptor()` so the same app code co
 val interceptor = Dari.createInterceptor(tag = "MyBridge")
 ```
 
-Call the interceptor at each bridge point. In release builds, `dari-noop` returns `null`, so use safe calls:
+Call it where requests enter your bridge and in the one function that sends responses back, not in each handler. In release builds, `dari-noop` returns `null`, so use safe calls:
 
 ```kotlin
-// Web → App: request received
-interceptor?.onWebToAppRequest(
-    handlerName = "getUserInfo",
-    requestId = "req_001",
-    requestData = """{"userId": 123}""",
-)
+inner class Bridge {
+    @JavascriptInterface
+    fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
+        // Every request enters here
+        interceptor?.onWebToAppRequest(handlerName, requestId, data)
+        when (handlerName) {
+            "getAppInfo" -> sendResponseToWeb(handlerName, requestId, true, appInfoJson())
+            // ...other handlers reply through sendResponseToWeb too
+        }
+    }
+}
 
-// Web → App: response sent back
-interceptor?.onWebToAppResponse(
-    handlerName = "getUserInfo",
-    requestId = "req_001",
-    responseData = """{"name": "John"}""",
-    isSuccess = true,
-)
+// Every reply leaves through here
+private fun sendResponseToWeb(handlerName: String, requestId: String, isSuccess: Boolean, data: String) {
+    interceptor?.onWebToAppResponse(handlerName, requestId, data, isSuccess)
+    val script = "onBridgeResponse(${JSONObject.quote(requestId)}, $isSuccess, ${JSONObject.quote(data)})"
+    webView.post { webView.evaluateJavascript(script, null) }
+}
 ```
+
+Replies sent later, e.g. from a permission callback, are still paired by `requestId` as long as they go through the same function.

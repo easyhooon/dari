@@ -384,10 +384,12 @@
 
         // Called from native side with the response
         function onBridgeResponse(requestId, success, data) {
+            // Large payloads such as fetchLargeData would flood the log, so show a preview.
+            var shown = data.length > 200 ? data.slice(0, 200) + '… (' + data.length + ' chars)' : data;
             if (success) {
-                log('← ' + data, 'res');
+                log('← ' + shown, 'res');
             } else {
-                log('✗ ' + data, 'err');
+                log('✗ ' + shown, 'err');
             }
         }
     </script>
