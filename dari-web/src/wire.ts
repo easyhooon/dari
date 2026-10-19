@@ -1,4 +1,4 @@
-import type { MessageEntry } from './types'
+import type { MessageDirection, MessageEntry, MessageStatus } from './types'
 
 // Shapes of `WireMessageSummary` / `WireMessageDetail` in dari-inspector-protocol, encoded like
 // `InspectorProtocol.json` (nulls omitted, defaults kept). Shared fixtures pin this shape.
@@ -53,6 +53,27 @@ export function toWireDetail(entry: MessageEntry): WireMessageDetail {
     ...optional('responseData', entry.responseData),
     requestDataTruncated: entry.requestDataTruncated,
     responseDataTruncated: entry.responseDataTruncated,
+  }
+}
+
+/** Back to an entry, for the viewer. Unknown enum values are coerced, since pages are untrusted. */
+export function fromWireDetail(detail: WireMessageDetail): MessageEntry {
+  const s = detail.summary
+  return {
+    id: s.id,
+    requestId: s.requestId ?? null,
+    handlerName: String(s.handlerName),
+    displayName: s.displayName ?? null,
+    direction: (s.direction === 'APP_TO_WEB' ? 'APP_TO_WEB' : 'WEB_TO_APP') as MessageDirection,
+    tag: s.tag ?? null,
+    requestData: detail.requestData ?? null,
+    responseData: detail.responseData ?? null,
+    requestDataTruncated: detail.requestDataTruncated === true,
+    responseDataTruncated: detail.responseDataTruncated === true,
+    status: (s.status === 'SUCCESS' || s.status === 'ERROR' ? s.status : 'IN_PROGRESS') as MessageStatus,
+    requestTimestamp: s.requestTimestamp,
+    responseTimestamp: s.responseTimestamp ?? null,
+    pageUrl: s.pageUrl ?? null,
   }
 }
 

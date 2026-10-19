@@ -1,4 +1,5 @@
 import { DariPanel } from './panel'
+import { connectRemote, remotePageUrl } from './remote'
 import { MessageStore } from './store'
 import type { DariWebOptions, MessageEntry, Recorder } from './types'
 
@@ -18,6 +19,8 @@ let installed: DariWeb | null = null
 /** Adds the floating Dari panel to the page and starts recording bridge traffic through `options.hook`. */
 export function install(options: DariWebOptions = {}): DariWeb {
   if (installed) throw new Error('Dari is already installed; call uninstall() first')
+  // Validate before touching the page.
+  if (options.remote !== undefined) remotePageUrl(options.remote)
   const store = new MessageStore(options)
   const panel = new DariPanel(store, options.theme)
   const mount = () => document.body.append(panel.host)
@@ -35,6 +38,7 @@ export function install(options: DariWebOptions = {}): DariWeb {
     panel.destroy()
     throw error
   }
+  const remote = options.remote !== undefined ? connectRemote(options.remote, store) : null
 
   const dari: DariWeb = {
     recorder: store.recorder,
@@ -46,6 +50,7 @@ export function install(options: DariWebOptions = {}): DariWeb {
       if (installed !== dari) return
       installed = null
       unhook?.()
+      remote?.close()
       document.removeEventListener('DOMContentLoaded', mount)
       panel.destroy()
     },

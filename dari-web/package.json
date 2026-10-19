@@ -1,7 +1,7 @@
 {
   "name": "@easyhooon/dari-web",
   "version": "0.1.0",
-  "description": "Floating in-page panel for inspecting WebView bridge messages from the web side",
+  "description": "Floating in-page panel and desktop browser viewer for inspecting WebView bridge messages from the web side",
   "license": "Apache-2.0",
   "author": "Lee jihun",
   "homepage": "https://github.com/easyhooon/dari",
@@ -32,6 +32,9 @@
         "default": "./dist/index.cjs"
       }
     }
+  },
+  "bin": {
+    "dari-web": "./dist/cli.js"
   },
   "unpkg": "./dist/index.global.js",
   "jsdelivr": "./dist/index.global.js",

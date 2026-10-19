@@ -45,6 +45,7 @@ export class DariPanel {
       settings: () => this.settings,
       updateSettings: (patch) => this.updateSettings(patch),
       close: () => this.hide(),
+      resetLauncher: () => this.updateSettings({ launcher: null }),
     })
     this.backdrop = h('div', { class: 'dari-backdrop' })
     this.backdrop.addEventListener('click', () => this.hide())

@@ -36,6 +36,8 @@
     window.onAppMessage = (msg) => window.webkit.messageHandlers.bridge.postMessage({ name: 'ack', ackId: msg.id })
 
     window.dari = DariWeb.install({
+      // ?remote=ws://localhost:9333 streams to `npx @easyhooon/dari-web serve`.
+      remote: new URLSearchParams(location.search).get('remote') ?? undefined,
       hook(recorder) {
         const handler = window.webkit.messageHandlers.bridge
         const post = handler.postMessage.bind(handler)
