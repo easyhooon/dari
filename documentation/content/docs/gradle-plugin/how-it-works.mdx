@@ -35,7 +35,7 @@ Nothing runs on the device at this point. The block only records a description t
 
 Kotlin and Java compile to JVM bytecode: `.class` files that hold a list of instructions per method. Android turns them into DEX afterwards.
 
-[ASM](https://asm.ow2.io/) is the standard library for reading and rewriting that bytecode. AGP exposes it through its instrumentation API: a plugin registers an `AsmClassVisitorFactory`, and AGP passes every class through it before dexing. This is also how Firebase Performance, Sentry and Hilt modify compiled code.
+[ASM](https://asm.ow2.io/) is the standard library for reading and rewriting that bytecode. AGP exposes it through its official [instrumentation API](https://developer.android.com/build/extend-agp): a plugin registers an [`AsmClassVisitorFactory`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/instrumentation/AsmClassVisitorFactory), and AGP passes every class through it before dexing. This is also how Firebase Performance, Sentry and Hilt modify compiled code.
 
 For a mapped method such as:
 
@@ -60,8 +60,22 @@ Why not a Kotlin compiler plugin? It runs inside `kotlinc`, so it only sees Kotl
 
 The plugin also rewrites two more things:
 
-- **`webView.addJavascriptInterface(bridge, name)` calls** now go through `DariHooks`. Dari can then tell which WebView a bridge object belongs to.
-- **`WebViewClient.doUpdateVisitedHistory` overrides** now report the page URL.
+- **[`webView.addJavascriptInterface(bridge, name)`](https://developer.android.com/reference/android/webkit/WebView#addJavascriptInterface(java.lang.Object,java.lang.String)) calls** now go through `DariHooks`. Dari can then tell which WebView a bridge object belongs to.
+- **[`WebViewClient.doUpdateVisitedHistory`](https://developer.android.com/reference/android/webkit/WebViewClient#doUpdateVisitedHistory(android.webkit.WebView,java.lang.String,boolean)) overrides** now report the page URL.
+
+## Built on official APIs
+
+Every step uses a public, documented API.
+
+| What | Official API |
+| --- | --- |
+| Rewrite compiled classes | AGP [`Instrumentation.transformClassesWith`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/variant/Instrumentation) with an [`AsmClassVisitorFactory`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/instrumentation/AsmClassVisitorFactory) ([Extend the Android Gradle plugin](https://developer.android.com/build/extend-agp)) |
+| Choose which classes | AGP [`InstrumentationScope`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/instrumentation/InstrumentationScope) |
+| Debug builds only | AGP [`Component.debuggable`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/variant/Component) |
+| Read and write bytecode | [ASM](https://asm.ow2.io/), the copy AGP already ships |
+| Bridge methods | [`@JavascriptInterface`](https://developer.android.com/reference/android/webkit/JavascriptInterface) |
+| Bridge → WebView | [`WebView.addJavascriptInterface`](https://developer.android.com/reference/android/webkit/WebView#addJavascriptInterface(java.lang.Object,java.lang.String)) |
+| Page URL | [`WebViewClient.doUpdateVisitedHistory`](https://developer.android.com/reference/android/webkit/WebViewClient#doUpdateVisitedHistory(android.webkit.WebView,java.lang.String,boolean)) |
 
 ## What else is captured
 
