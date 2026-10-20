@@ -88,4 +88,6 @@ private object GradleDariLog : DariLog {
     override fun info(message: String) = logger.info(message)
 
     override fun warn(message: String) = logger.warn(message)
+
+    override fun error(message: String) = logger.error(message)
 }

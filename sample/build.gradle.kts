@@ -46,43 +46,43 @@ dari {
     val bridge = "$activity.BridgeInterface"
 
     webToAppRequest(bridge, "onBridgeRequest") {
-        handlerName = arg(0)
-        requestId = arg(1)
-        data = arg(2)
-        fireAndForget = arg(0).equalsTo("fireAndForgetPerCall")
+        handlerName = arg("handlerName")
+        requestId = arg("requestId")
+        data = arg("data")
+        fireAndForget = arg("handlerName").equalsTo("fireAndForgetPerCall")
     }
     webToAppRequest(bridge, "onBridgeRequestFireAndForget") {
-        handlerName = arg(0)
-        data = arg(1)
+        handlerName = arg("handlerName")
+        data = arg("data")
         fireAndForget = constant(true)
     }
     webToAppRequest(bridge, "onProtobufBridgeRequest") {
         handlerName = constant("protobufGreeting")
-        requestId = arg(0)
-        data = base64(arg(1))
+        requestId = arg("requestId")
+        data = base64(arg("base64Data"))
     }
     webToAppResponse(activity, "sendResponseToWeb") {
-        handlerName = arg(0)
-        requestId = arg(1)
-        success = arg(2)
-        data = arg(3)
+        handlerName = arg("handlerName")
+        requestId = arg("requestId")
+        success = arg("success")
+        data = arg("data")
     }
     webToAppResponse(activity, "sendProtobufResponseToWeb") {
         handlerName = constant("protobufGreeting")
-        requestId = arg(0)
-        success = arg(1)
-        data = arg(2)
+        requestId = arg("requestId")
+        success = arg("success")
+        data = arg("data")
     }
     appToWebRequest(activity, "sendToWeb") {
-        handlerName = arg(0)
-        requestId = arg(1)
-        data = arg(2)
-        fireAndForget = isNull(arg(1))
+        handlerName = arg("handlerName")
+        requestId = arg("requestId")
+        data = arg("data")
+        fireAndForget = isNull(arg("requestId"))
     }
     appToWebResponse(bridge, "onAppToWebResponse") {
-        requestId = arg(0)
-        success = arg(1)
-        data = arg(2)
+        requestId = arg("requestId")
+        success = arg("success")
+        data = arg("data")
     }
 }
 

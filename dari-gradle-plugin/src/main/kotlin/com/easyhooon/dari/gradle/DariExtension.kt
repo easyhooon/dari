@@ -71,6 +71,15 @@ class BridgeMappingSpec internal constructor(internal val kind: MappingKind) {
     /** The [index]th parameter of the mapped method, starting at 0. */
     fun arg(index: Int): DariExpr = DariExpr("""{"arg":$index}""")
 
+    /**
+     * The mapped method's parameter called [name], resolved to its index at build time.
+     * The build fails when no parameter has that name, so renaming or reordering parameters is caught.
+     */
+    fun arg(name: String): DariExpr {
+        require(name.isNotEmpty() && name.none { it == '"' || it == '\\' || it < ' ' }) { "Dari: invalid parameter name '$name'" }
+        return DariExpr("""{"argName":"$name"}""")
+    }
+
     fun constant(value: String): DariExpr = DariExpr("""{"const":${quote(value)}}""")
 
     fun constant(value: Boolean): DariExpr = DariExpr("""{"const":$value}""")

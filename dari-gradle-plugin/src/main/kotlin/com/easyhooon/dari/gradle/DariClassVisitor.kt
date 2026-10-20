@@ -1,5 +1,6 @@
 package com.easyhooon.dari.gradle
 
+import org.gradle.api.GradleException
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
@@ -23,6 +24,7 @@ private const val VISITED_HISTORY = "doUpdateVisitedHistory"
 private const val VISITED_HISTORY_DESC = "(Landroid/webkit/WebView;Ljava/lang/String;Z)V"
 private const val CONTINUATION = "kotlin/coroutines/Continuation"
 private const val LABEL = "label"
+private val ARG_NAME = Regex("""\{"argName":"([^"]*)"\}""")
 
 private val HOOKS_TYPE: Type = Type.getObjectType(HOOKS)
 private val ON_MAPPED_CALL = Method("onMappedCall", "(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)V")
@@ -110,8 +112,45 @@ internal class DariClassVisitor(
                     isSuspend() -> " (suspend without a state machine)"
                     else -> ""
                 }
+                val resolved = resolveArgNames()
                 log.info("Dari: instrumented $className.$name$note")
-                accept(MappedCallAdvice(api, next, access, name, desc, specs, stateMachine))
+                accept(MappedCallAdvice(api, next, access, name, desc, resolved, stateMachine))
+            }
+        }
+
+        /** Rewrites each `{"argName":"x"}` in [specs] to `{"arg":n}`, or fails the build when a name has no parameter. */
+        private fun resolveArgNames(): List<String> {
+            val wanted = specs.flatMap { spec -> ARG_NAME.findAll(spec).map { it.groupValues[1] } }.distinct()
+            if (wanted.isEmpty()) return specs
+            val where = "$className.$name$desc"
+            val names = parameterNames() ?: fail(
+                "Dari: $where has no parameter names (no LocalVariableTable or MethodParameters), " +
+                    "so arg(${wanted.joinToString { "\"$it\"" }}) cannot be resolved; use arg(index) instead",
+            )
+            val missing = wanted.filter { it !in names }
+            if (missing.isNotEmpty()) {
+                fail("Dari: $where has no parameter named ${missing.joinToString { "'$it'" }}; its parameters are [${names.joinToString()}]")
+            }
+            return specs.map { spec -> spec.replace(ARG_NAME) { """{"arg":${names.indexOf(it.groupValues[1])}}""" } }
+        }
+
+        /** AGP wraps the exception as "Error occurred while instrumenting class", so the reason is logged too. */
+        private fun fail(message: String): Nothing {
+            log.error(message)
+            throw GradleException(message)
+        }
+
+        /** Names by argument index. Slots differ: `this` takes slot 0 and long/double take two. */
+        private fun parameterNames(): List<String>? {
+            val argTypes = Type.getArgumentTypes(desc)
+            parameters?.map { it.name }?.takeIf { it.size == argTypes.size && null !in it }?.let { return it }
+            val vars = localVariables ?: return null
+            var slot = if (access and Opcodes.ACC_STATIC != 0) 0 else 1
+            return argTypes.map { type ->
+                // A parameter's entry starts with the method; a later local may reuse its slot.
+                val name = vars.filter { it.index == slot }.minByOrNull { instructions.indexOf(it.start) }?.name ?: return null
+                slot += type.size
+                name
             }
         }
 
@@ -212,4 +251,5 @@ private class CallSiteRewriter(
 internal interface DariLog {
     fun info(message: String)
     fun warn(message: String)
+    fun error(message: String)
 }
