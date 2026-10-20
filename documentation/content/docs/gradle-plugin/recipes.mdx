@@ -1,0 +1,97 @@
+---
+title: Recipes
+description: Mappings for common bridge layouts
+---
+
+## One JSON string per call
+
+Many bridges pass one JSON string, e.g. `Android.postMessage('{"action":"login","id":"7","params":{...}}')`:
+
+```kotlin
+dari {
+    webToAppRequest("com.example.WebBridge", "postMessage") {
+        handlerName = json(arg(0), "action")
+        requestId = json(arg(0), "id")
+        data = json(arg(0), "params")
+    }
+    webToAppResponse("com.example.WebBridge", "reply") {
+        requestId = json(arg(0), "id")
+        success = isNull(json(arg(0), "error"))
+        data = arg(0)
+    }
+}
+```
+
+## Fire-and-forget
+
+```kotlin
+webToAppRequest("com.example.MainActivity.BridgeInterface", "onBridgeRequestFireAndForget") {
+    handlerName = arg(0)
+    data = arg(1)
+    fireAndForget = constant(true)
+}
+
+// Only some handlers on a shared entry point:
+webToAppRequest("com.example.MainActivity.BridgeInterface", "onBridgeRequest") {
+    handlerName = arg(0)
+    requestId = arg(1)
+    data = arg(2)
+    fireAndForget = arg(0).equalsTo("logEvent")
+}
+```
+
+## Protocol Buffers
+
+Map the payload to bytes, and register the decoder once at app start. Interceptors that the plugin creates use it.
+
+```kotlin
+webToAppRequest("com.example.MainActivity.BridgeInterface", "onProtobufBridgeRequest") {
+    handlerName = constant("protobufGreeting")
+    requestId = arg(0)
+    data = base64(arg(1))
+}
+```
+
+```kotlin
+class App : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        Dari.setProtobufDecoder(protobufDecoder { /* see Protocol Buffers */ })
+    }
+}
+```
+
+`Dari.setProtobufDecoder` is a no-op in `dari-noop`. See [Protocol Buffers](../protobuf) for writing the decoder.
+
+## App to Web
+
+```kotlin
+appToWebRequest("com.example.MainActivity", "sendToWeb") {
+    handlerName = arg(0)
+    requestId = arg(1)
+    data = arg(2)
+    fireAndForget = isNull(arg(1))           // no requestId: the page won't answer
+}
+appToWebResponse("com.example.MainActivity.BridgeInterface", "onAppToWebResponse") {
+    requestId = arg(0)
+    success = arg(1)
+    data = arg(2)
+}
+```
+
+## Requests and responses through one method
+
+When one method sends both, e.g. a `type` field of `"request"` or `"response"`, map it twice and filter each mapping with `onlyIf`:
+
+```kotlin
+appToWebRequest("com.example.WebBridge", "postMessage") {
+    handlerName = json(arg(0), "action")
+    requestId = json(arg(0), "id")
+    onlyIf = json(arg(0), "type").equalsTo("request")
+}
+appToWebResponse("com.example.WebBridge", "postMessage") {
+    requestId = json(arg(0), "id")
+    data = arg(0)
+    onlyIf = json(arg(0), "type").equalsTo("response")
+}
+```

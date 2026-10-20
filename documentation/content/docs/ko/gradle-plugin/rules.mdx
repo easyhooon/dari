@@ -1,0 +1,22 @@
+---
+title: 규칙과 제한
+description: 변환 범위, 빌드 경고, 지원하지 않는 것
+---
+
+- **디버그 전용.** debuggable variant만 변환합니다. 릴리스 빌드에는 훅이 없습니다.
+- **`dari-noop` 사용 시에도 안전.** `dari-noop`에 그대로 통과시키는 훅이 들어 있어서, `dari-noop`으로 빌드한 debuggable variant도 정상 동작하고 아무것도 기록하지 않습니다.
+- **범위.** 기본적으로 해당 모듈의 클래스만 변환합니다.
+  - 서드파티 AAR 안의 브릿지는 `scope = InstrumentationScope.ALL`이 필요합니다. 이 경우 앱의 모든 AAR을 다시 dex 변환하므로, 테스트에서는 콜드 빌드가 약 5분 더 걸렸습니다.
+  - 프로젝트의 다른 모듈에 있는 브릿지는 그 모듈에도 플러그인을 적용해야 합니다.
+- **수동 로깅도 계속 동작.** 플러그인은 매핑된 메서드만 건드립니다. 매핑된 메서드가 이미 `DariInterceptor`를 호출하고 있으면 그 메서드는 건너뛰고 빌드 경고를 출력합니다. 확인하는 것은 그 메서드 본문뿐이라, 같은 경로의 다른 곳(예: 핸들러 안)에 있는 직접 호출은 한 번 더 기록됩니다. 브릿지마다 한 가지 방식만 쓰세요.
+- **매핑 검사.** debuggable variant마다 `dariCheck<Variant>Mappings` task가 생기고, 그 variant의 `assemble`, `bundle`, `install` task와 `check`에서 함께 실행됩니다. 매핑한 클래스가 컴파일된 클래스에 없거나, 그 클래스에 해당 이름의 본문 있는 메서드가 없으면(abstract, native 메서드는 해당하지 않음) 빌드가 실패합니다. 오류 메시지에는 해당하는 매핑 전부와 비슷한 클래스·메서드 이름이 나오므로, 오타나 이름 변경 때문에 아무것도 기록되지 않는 상황을 빌드에서 잡을 수 있습니다.
+  - 해당 모듈의 클래스를 검사하고, 앱 모듈에서 `scope = InstrumentationScope.ALL`이면 의존성의 클래스도 함께 검사합니다.
+  - variant마다 그 variant의 클래스로 검사합니다. 특정 flavor나 build type의 source set에만 있는 브릿지는 다른 debuggable variant의 검사에서 실패합니다.
+  - `failOnUnmatchedMapping = false`이면 같은 메시지를 경고로 출력하고 빌드를 계속합니다. 해당 매핑은 아무것도 기록하지 않습니다.
+  - 이 task는 캐시되어 클래스나 매핑이 바뀔 때만 다시 실행되므로, 바뀐 것 없는 빌드에서는 경고가 다시 나오지 않습니다.
+  - 변환된 메서드 목록을 보려면 `--info`로 빌드하고 `Dari: instrumented`를 찾으세요.
+- **지원하지 않는 것.**
+  - 리플렉션으로 한 호출
+  - `androidx.webkit` 메시지 채널(`addWebMessageListener`, `WebMessagePort`)
+  - 메서드 본문 안에서 계산한 값. 매핑할 수 있는 것은 메서드의 파라미터뿐입니다.
+  - `suspend` 함수가 재개될 때 들어오는 재진입 호출(인자가 `null`). 첫 호출만 기록합니다.
