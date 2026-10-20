@@ -154,7 +154,7 @@ The mapping works best when your bridge has one request entry point and one resp
 | `displayName` | requests | Same as the manual `displayName` overload. |
 | `success` | responses | Leave it out for "always SUCCESS". `false`, `"false"` or `0` record ERROR. |
 | `fireAndForget` | requests | `true` resolves the entry at once. `false` defers to `DariConfig.fireAndForget`, like passing `null` by hand. |
-| `onlyIf` | all | Records the call only when `true`. A missing value (`null`) counts as `false`. For one method that carries several kinds of message. |
+| `onlyIf` | all | Optional. Leave it out to record every call. When set, the call is recorded only when it evaluates to `true`; `null` counts as `false`. For one method that carries several kinds of message. |
 | `tag` | all | Overrides `dari { tag }` for this mapping. |
 
 ### Expressions

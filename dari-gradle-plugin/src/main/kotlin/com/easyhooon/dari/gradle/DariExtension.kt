@@ -62,7 +62,7 @@ class BridgeMappingSpec internal constructor(internal val kind: MappingKind) {
     /** Requests only. True resolves the entry at once; false defers to `DariConfig.fireAndForget`. */
     var fireAndForget: DariExpr? = null
 
-    /** Records the call only when true, e.g. `json(arg(0), "type").equalsTo("request")` on a shared entry point. */
+    /** Optional; unmapped records every call. When set, records only when true, e.g. `json(arg(0), "type").equalsTo("request")`. */
     var onlyIf: DariExpr? = null
 
     /** Overrides `dari { tag }` for this mapping. */
