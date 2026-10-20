@@ -65,6 +65,7 @@ jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 android-gradle-api = { group = "com.android.tools.build", name = "gradle-api", version.ref = "agp" }
+android-gradle-plugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
 asm-commons = { group = "org.ow2.asm", name = "asm-commons", version.ref = "asm" }
 
 [plugins]

@@ -1,5 +1,6 @@
 package com.easyhooon.dari.gradle
 
+import com.android.build.api.artifact.ScopedArtifact
 import com.android.build.api.instrumentation.AsmClassVisitorFactory
 import com.android.build.api.instrumentation.ClassContext
 import com.android.build.api.instrumentation.ClassData
@@ -7,6 +8,9 @@ import com.android.build.api.instrumentation.FramesComputationMode
 import com.android.build.api.instrumentation.InstrumentationParameters
 import com.android.build.api.instrumentation.InstrumentationScope
 import com.android.build.api.variant.AndroidComponentsExtension
+import com.android.build.api.variant.LibraryVariant
+import com.android.build.api.variant.ScopedArtifacts
+import com.android.build.api.variant.Variant
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.logging.Logging
@@ -30,6 +34,7 @@ class DariPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         val extension = project.extensions.create("dari", DariExtension::class.java)
         extension.scope.convention(InstrumentationScope.PROJECT)
+        extension.failOnUnmatchedMapping.convention(true)
         listOf("com.android.application", "com.android.library").forEach { id ->
             project.pluginManager.withPlugin(id) { register(project, extension) }
         }
@@ -47,7 +52,31 @@ class DariPlugin : Plugin<Project> {
             }
             // AdviceAdapter only pushes onto the stack at method entry; frames for those methods are recomputed.
             variant.instrumentation.setAsmFramesComputationMode(FramesComputationMode.COMPUTE_FRAMES_FOR_INSTRUMENTED_METHODS)
+            if (extension.mappings.isNotEmpty()) registerCheck(project, extension, variant)
         }
+    }
+
+    /** `dariCheck<Variant>Mappings`, run by that variant's assemble, bundle and install tasks and by `check`. */
+    private fun registerCheck(project: Project, extension: DariExtension, variant: Variant) {
+        val variantName = variant.name.replaceFirstChar { it.uppercase() }
+        // A library's output holds only its own classes, so only those are instrumented whatever the scope.
+        val inLibrary = variant is LibraryVariant
+        val includesDependencies = extension.scope.get() == InstrumentationScope.ALL && !inLibrary
+        val mappings = extension.mappings.map { CheckedMapping(it.spec.kind.dslName, it.className, it.methodName) }
+        val check = project.tasks.register("dariCheck${variantName}Mappings", DariCheckMappingsTask::class.java) { task ->
+            task.group = "verification"
+            task.description = "Checks that every dari { } mapping names a class and method in the ${variant.name} classes."
+            task.mappings.set(mappings)
+            task.failOnUnmatchedMapping.set(extension.failOnUnmatchedMapping)
+            task.includesDependencies.set(includesDependencies)
+            task.inLibrary.set(inLibrary)
+            task.report.set(project.layout.buildDirectory.file("intermediates/dari/${variant.name}/unmatchedMappings.txt"))
+        }
+        val scope = if (includesDependencies) ScopedArtifacts.Scope.ALL else ScopedArtifacts.Scope.PROJECT
+        variant.artifacts.forScope(scope).use(check)
+            .toGet(ScopedArtifact.CLASSES, DariCheckMappingsTask::jars, DariCheckMappingsTask::dirs)
+        val dependents = setOf("assemble$variantName", "bundle$variantName", "bundle${variantName}Aar", "install$variantName", "check")
+        project.tasks.configureEach { task -> if (task.name in dependents) task.dependsOn(check) }
     }
 }
 

@@ -17,6 +17,12 @@ abstract class DariExtension {
     /** Tag for every captured entry. Defaults to the name passed to `addJavascriptInterface`. */
     abstract val tag: Property<String>
 
+    /**
+     * Defaults to true: the build fails when a mapping's class or method is not in the compiled classes.
+     * False only prints a warning, and the mapping records nothing.
+     */
+    abstract val failOnUnmatchedMapping: Property<Boolean>
+
     internal val mappings = mutableListOf<Pending>()
 
     internal class Pending(val className: String, val methodName: String, val spec: BridgeMappingSpec)

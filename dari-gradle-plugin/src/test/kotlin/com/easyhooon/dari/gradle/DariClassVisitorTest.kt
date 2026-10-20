@@ -99,10 +99,11 @@ class DariClassVisitorTest {
     }
 
     @Test
-    fun `a mapping whose method does not exist warns`() {
+    fun `a mapping whose method does not exist is noted at info level, since the check task reports it`() {
         loader.loadClass("fixtures.Bridge")
 
-        assertTrue(warnings.any { "fixtures.Bridge has no method 'missing'" in it })
+        assertTrue(infos.any { "fixtures.Bridge has no method 'missing'" in it })
+        assertTrue(warnings.none { "missing" in it })
     }
 
     @Test

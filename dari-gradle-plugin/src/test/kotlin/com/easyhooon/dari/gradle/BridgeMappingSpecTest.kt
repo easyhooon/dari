@@ -10,6 +10,7 @@ class BridgeMappingSpecTest {
     private val extension = object : DariExtension() {
         override val scope get() = throw UnsupportedOperationException()
         override val tag get() = throw UnsupportedOperationException()
+        override val failOnUnmatchedMapping get() = throw UnsupportedOperationException()
     }
 
     @Test

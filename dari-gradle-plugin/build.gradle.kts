@@ -22,6 +22,10 @@ kotlin {
     }
 }
 
+// Builds small Android projects with Gradle TestKit; needs an Android SDK (ANDROID_HOME or ../local.properties).
+val functionalTest: SourceSet by sourceSets.creating
+val functionalTestAgp: Configuration by configurations.creating
+
 dependencies {
     // The app build already has AGP and its ASM; bundling another copy would clash with that classloader.
     compileOnly(libs.android.gradle.api)
@@ -30,9 +34,31 @@ dependencies {
     testImplementation(libs.android.gradle.api)
     testImplementation(libs.asm.commons)
     testImplementation(libs.junit)
+
+    "functionalTestImplementation"(gradleTestKit())
+    "functionalTestImplementation"(libs.junit)
+    // The test projects apply AGP without a version, so it must load beside the plugin under test.
+    functionalTestAgp(libs.android.gradle.plugin)
+}
+
+tasks.pluginUnderTestMetadata {
+    pluginClasspath.from(functionalTestAgp)
+}
+
+val functionalTestTask = tasks.register<Test>("functionalTest") {
+    description = "Builds Android projects that apply the plugin and checks the results."
+    group = "verification"
+    testClassesDirs = functionalTest.output.classesDirs
+    classpath = functionalTest.runtimeClasspath
+    systemProperty("dari.localProperties", rootDir.resolve("../local.properties").absolutePath)
+}
+
+tasks.check {
+    dependsOn(functionalTestTask)
 }
 
 gradlePlugin {
+    testSourceSets(functionalTest)
     plugins {
         register("dari") {
             id = "io.github.easyhooon.dari"
