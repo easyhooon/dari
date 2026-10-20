@@ -29,16 +29,13 @@ A **library** (`implementation`, `api`) is code that ships in your APK and runs 
 
 A **Gradle plugin** (`plugins { id(...) }`) is code that runs inside Gradle on your machine or CI while the app builds. It is not packaged into the APK. AGP (`com.android.application`), KSP and the Sentry Android Gradle Plugin are all plugins.
 
-```text
-Build (your machine or CI, inside Gradle)
-  plugins { ... }        plugins load and configure the build
-  compile                your code -> .class files
-  transform              the Dari plugin rewrites the compiled classes   <- here
-  dex + package          classes and libraries -> APK
-
-Runtime (device)
-  your app               dari records what the inserted calls report
-```
+| Step | Runs on | What happens |
+| --- | --- | --- |
+| 1. `plugins { ... }` | Your machine or CI (Gradle) | Plugins load and configure the build. |
+| 2. Compile | Your machine or CI (Gradle) | Your code becomes `.class` files. |
+| **3. Transform** | **Your machine or CI (Gradle)** | **The Dari plugin rewrites the compiled classes.** |
+| 4. Dex + package | Your machine or CI (Gradle) | Classes and libraries become the APK. |
+| 5. Run the app | Device | `dari` records what the inserted calls report. |
 
 Inserting calls into your code needs a plugin. Recording and showing messages is the library's job, so the plugin needs `dari` too.
 
@@ -304,7 +301,9 @@ Measured with `BridgeOverheadBenchmark` (`sample/src/androidTest`) on a Samsung 
 
 **Positional bridge** (`arg(n)`), recording with `dari`
 
-| Payload | No capture | Manual | Plugin |
+Median / p95 in **µs** (1,000 µs = 1 ms).
+
+| Payload | No capture (µs) | Manual (µs) | Plugin (µs) |
 | --- | --- | --- | --- |
 | 100 B | 1.0 / 1.1 | 238.6 / 432.7 | 178.8 / 226.9 |
 | 10 KB | 1.1 / 1.3 | 126.8 / 180.8 | 138.0 / 182.2 |
@@ -314,7 +313,9 @@ Plugin and manual capture cost the same. The time goes to recording the entry (c
 
 **JSON string bridge** (`json(arg(0), "...")`), recording with `dari`
 
-| Payload | No capture | Manual | Plugin |
+Median / p95 in **µs** (1,000 µs = 1 ms).
+
+| Payload | No capture (µs) | Manual (µs) | Plugin (µs) |
 | --- | --- | --- | --- |
 | 100 B | 16.7 / 18.5 | 178.1 / 244.6 | 209.6 / 282.8 |
 | 10 KB | 1,603 / 1,754 | 3,039 / 3,313 | 4,771 / 5,462 |
@@ -324,7 +325,9 @@ With small messages `json()` costs about the same as manual capture. From 10 KB 
 
 **With `dari-noop`** (the plugin's hooks run, nothing is recorded)
 
-| Payload | Positional: no capture | Positional: plugin | JSON: no capture | JSON: plugin |
+Median / p95 in **µs** (1,000 µs = 1 ms).
+
+| Payload | Positional: no capture (µs) | Positional: plugin (µs) | JSON: no capture (µs) | JSON: plugin (µs) |
 | --- | --- | --- | --- | --- |
 | 100 B | 0.8 / 0.9 | 8.3 / 8.5 | 30.5 / 80.4 | 18.1 / 82.3 |
 | 10 KB | 5.4 / 5.5 | 4.8 / 6.3 | 1,607 / 1,832 | 1,614 / 1,849 |
