@@ -96,6 +96,8 @@ object DariHooks {
     }
 
     private fun dispatch(mapping: BridgeMapping, values: Map<String, Any?>, receiver: Any?, args: Array<Any?>) {
+        // Before any lookup, so a filtered call neither creates an interceptor nor consumes an open request.
+        if (mapping.has("onlyIf") && !values["onlyIf"].asBoolean()) return
         val requestId = values["requestId"]?.toString()
         val data = values["data"]
         val success = if (mapping.has("success")) values["success"].asBoolean() else true

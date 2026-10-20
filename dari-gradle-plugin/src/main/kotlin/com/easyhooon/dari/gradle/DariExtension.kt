@@ -62,6 +62,9 @@ class BridgeMappingSpec internal constructor(internal val kind: MappingKind) {
     /** Requests only. True resolves the entry at once; false defers to `DariConfig.fireAndForget`. */
     var fireAndForget: DariExpr? = null
 
+    /** Optional; unmapped records every call. When set, records only when true, e.g. `json(arg(0), "type").equalsTo("request")`. */
+    var onlyIf: DariExpr? = null
+
     /** Overrides `dari { tag }` for this mapping. */
     var tag: String? = null
 
@@ -72,7 +75,7 @@ class BridgeMappingSpec internal constructor(internal val kind: MappingKind) {
 
     fun constant(value: Boolean): DariExpr = DariExpr("""{"const":$value}""")
 
-    /** A field of a JSON string, e.g. `json(arg(0), "meta.requestId")`. Array items take numeric keys. */
+    /** A field of a JSON string or object, e.g. `json(arg(0), "meta.requestId")`. Array items take numeric keys. */
     fun json(source: DariExpr, path: String): DariExpr = DariExpr("""{"json":[${source.json},${quote(path)}]}""")
 
     /** Base64 text decoded to bytes; byte data is captured through the protobuf API. */
@@ -88,6 +91,7 @@ class BridgeMappingSpec internal constructor(internal val kind: MappingKind) {
             "data" to data,
             "success" to success,
             "fireAndForget" to fireAndForget,
+            "onlyIf" to onlyIf,
         ).mapNotNull { (name, expr) -> expr?.let { "${quote(name)}:${it.json}" } }
         val resolvedTag = (tag ?: defaultTag)?.let { "\"tag\":${quote(it)}," }.orEmpty()
         return """{"kind":"${kind.name}",$resolvedTag"fields":{${fields.joinToString(",")}}}"""

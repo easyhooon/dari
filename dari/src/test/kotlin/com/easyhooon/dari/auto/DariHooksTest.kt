@@ -5,6 +5,9 @@ import android.webkit.WebView
 import androidx.test.core.app.ApplicationProvider
 import com.easyhooon.dari.interceptor.DariInterceptor
 import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -63,11 +66,79 @@ class DariHooksTest {
             "WEB_TO_APP_REQUEST",
             """"handlerName":{"json":[{"arg":0},"action"]},"requestId":{"json":[{"arg":0},"meta.id"]},""" +
                 """"data":{"json":[{"arg":0},"params"]},"displayName":{"const":"Hello"}""",
-            tag = "Hime",
+            tag = "Sample",
         )
         DariHooks.onMappedCall(spec, null, arrayOf("""{"action":"login","meta":{"id":7},"params":{"u":"x"}}"""))
 
-        assertEquals(listOf("Hime w2a-req login Hello 7 {\"u\":\"x\"} null"), calls)
+        assertEquals(listOf("Sample w2a-req login Hello 7 {\"u\":\"x\"} null"), calls)
+    }
+
+    @Test
+    fun `json paths read objects that print themselves as JSON`() {
+        val spec = spec(
+            "APP_TO_WEB_REQUEST",
+            """"handlerName":{"json":[{"arg":0},"action"]},"requestId":{"json":[{"arg":0},"meta.id"]},""" +
+                """"data":{"json":[{"arg":0},"params"]}""",
+        )
+        val kotlinx = buildJsonObject {
+            put("action", "login")
+            putJsonObject("meta") { put("id", 7) }
+            putJsonObject("params") { put("u", "x") }
+        }
+        // Stands in for Gson's JsonObject and any other type whose toString() is JSON.
+        val other = object {
+            override fun toString() = """{"action":"logout","meta":{"id":"8"}}"""
+        }
+
+        DariHooks.onMappedCall(spec, null, arrayOf(kotlinx))
+        DariHooks.onMappedCall(spec, null, arrayOf(other))
+
+        assertEquals(listOf("null a2w-req login 7 {\"u\":\"x\"} null", "null a2w-req logout 8 null null"), calls)
+    }
+
+    @Test
+    fun `onlyIf splits one entry point into requests and responses`() {
+        val webView = WebView(ApplicationProvider.getApplicationContext())
+        DariHooks.addJavascriptInterface(webView, Any(), "Android")
+        val request = spec(
+            "APP_TO_WEB_REQUEST",
+            """"handlerName":{"json":[{"arg":0},"action"]},"requestId":{"json":[{"arg":0},"id"]},""" +
+                """"onlyIf":{"equalsTo":[{"json":[{"arg":0},"type"]},"request"]}""",
+        )
+        val response = spec(
+            "APP_TO_WEB_RESPONSE",
+            """"requestId":{"json":[{"arg":0},"id"]},"data":{"arg":0},""" +
+                """"onlyIf":{"equalsTo":[{"json":[{"arg":0},"type"]},"response"]}""",
+        )
+        val outgoing = buildJsonObject {
+            put("type", "request")
+            put("action", "getPageState")
+            put("id", "a1")
+        }
+        val answer = buildJsonObject {
+            put("type", "response")
+            put("id", "a1")
+        }
+
+        // One method carries both kinds, so every message reaches both mappings.
+        listOf(outgoing, answer).forEach { message ->
+            DariHooks.onMappedCall(request, Any(), arrayOf(message))
+            DariHooks.onMappedCall(response, Any(), arrayOf(message))
+        }
+
+        assertEquals(1, created.size)
+        assertEquals(
+            listOf("Android a2w-req getPageState a1 null null", "Android a2w-res a1 true {\"type\":\"response\",\"id\":\"a1\"}"),
+            calls,
+        )
+    }
+
+    @Test
+    fun `a filtered call creates no interceptor`() {
+        val spec = spec("WEB_TO_APP_REQUEST", """"handlerName":{"arg":0},"onlyIf":{"isNull":{"arg":1}}""")
+        DariHooks.onMappedCall(spec, null, arrayOf("ping", "not null"))
+
+        assertEquals(0, created.size)
     }
 
     @Test

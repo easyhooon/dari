@@ -10,12 +10,18 @@ import org.junit.Test
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.coroutines.resume
 
 class DariClassVisitorTest {
 
     private val warnings = mutableListOf<String>()
+    private val infos = mutableListOf<String>()
     private val log = object : DariLog {
-        override fun info(message: String) = Unit
+        override fun info(message: String) {
+            infos += message
+        }
 
         override fun warn(message: String) {
             warnings += message
@@ -29,6 +35,7 @@ class DariClassVisitorTest {
         MappingTarget("fixtures.Outer.Inner", "onRequest", "INNER"),
         MappingTarget("fixtures.ManualBridge", "onRequest", "MANUAL"),
         MappingTarget("fixtures.Bridge", "missing", "MISSING"),
+        MappingTarget("fixtures.SuspendBridge", "send", "SUSPEND"),
     )
 
     private val loader = TransformingLoader()
@@ -82,6 +89,25 @@ class DariClassVisitorTest {
         loader.loadClass("fixtures.Bridge")
 
         assertTrue(warnings.any { "fixtures.Bridge has no method 'missing'" in it })
+    }
+
+    @Test
+    fun `a suspend method reports its first entry, not each resumption`() {
+        val bridge = loader.new("fixtures.SuspendBridge")
+        var result: Result<Any?>? = null
+        val completion = Continuation<Any?>(EmptyCoroutineContext) { result = it }
+
+        bridge.call("send", "hello", "log", completion)
+        repeat(2) {
+            @Suppress("UNCHECKED_CAST")
+            (bridge.javaClass.getField("pending").get(bridge) as Continuation<Unit>).resume(Unit)
+        }
+
+        assertEquals(Result.success("hello log"), result)
+        assertEquals(listOf("start hello", "resumed once", "resumed twice"), bridge.javaClass.getField("steps").get(bridge))
+        assertEquals(1, DariHooks.calls.size)
+        assertTrue(DariHooks.calls.single().startsWith("mapped SUSPEND SuspendBridge [hello, log, "))
+        assertTrue(infos.any { "fixtures.SuspendBridge.send" in it && "suspend" in it })
     }
 
     @Test

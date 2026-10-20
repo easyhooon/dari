@@ -6,8 +6,12 @@ import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.AdviceAdapter
 import org.objectweb.asm.commons.Method
+import org.objectweb.asm.tree.AbstractInsnNode
+import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.TypeInsnNode
+import org.objectweb.asm.tree.VarInsnNode
 import java.io.Serializable
 
 internal const val HOOKS = "com/easyhooon/dari/auto/DariHooks"
@@ -17,6 +21,8 @@ private const val ADD_JS_INTERFACE = "addJavascriptInterface"
 private const val ADD_JS_INTERFACE_DESC = "(Ljava/lang/Object;Ljava/lang/String;)V"
 private const val VISITED_HISTORY = "doUpdateVisitedHistory"
 private const val VISITED_HISTORY_DESC = "(Landroid/webkit/WebView;Ljava/lang/String;Z)V"
+private const val CONTINUATION = "kotlin/coroutines/Continuation"
+private const val LABEL = "label"
 
 private val HOOKS_TYPE: Type = Type.getObjectType(HOOKS)
 private val ON_MAPPED_CALL = Method("onMappedCall", "(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)V")
@@ -98,9 +104,40 @@ internal class DariClassVisitor(
                 log.warn("Dari: $className.$name already calls DariInterceptor; skipped to avoid duplicate entries")
                 accept(next)
             } else {
-                log.info("Dari: instrumented $className.$name")
-                accept(MappedCallAdvice(api, next, access, name, desc, specs))
+                val stateMachine = stateMachineClass()
+                val note = when {
+                    stateMachine != null -> " (suspend; resumptions skipped)"
+                    isSuspend() -> " (suspend without a state machine)"
+                    else -> ""
+                }
+                log.info("Dari: instrumented $className.$name$note")
+                accept(MappedCallAdvice(api, next, access, name, desc, specs, stateMachine))
             }
+        }
+
+        private fun isSuspend(): Boolean = Type.getArgumentTypes(desc).lastOrNull()?.internalName == CONTINUATION
+
+        /**
+         * The continuation class of a suspend method, read from the prologue Kotlin compiles into it:
+         * `cont instanceof Owner$method$N && (cont.label & MIN_VALUE) != 0` means it is resuming.
+         * The `$N` suffix depends on the other classes the method declares, so it is not guessed.
+         */
+        private fun stateMachineClass(): String? {
+            if (!isSuspend()) return null
+            val argTypes = Type.getArgumentTypes(desc)
+            val slot = argTypes.dropLast(1).sumOf { it.size } + if (access and Opcodes.ACC_STATIC != 0) 0 else 1
+            val owner = instructions.firstOrNull { insn ->
+                insn is TypeInsnNode && insn.opcode == Opcodes.INSTANCEOF &&
+                    insn.previousCode().let { it is VarInsnNode && it.opcode == Opcodes.ALOAD && it.`var` == slot }
+            }?.let { (it as TypeInsnNode).desc } ?: return null
+            val hasLabel = instructions.any { it is FieldInsnNode && it.owner == owner && it.name == LABEL && it.desc == "I" }
+            return owner.takeIf { hasLabel }
+        }
+
+        private fun AbstractInsnNode.previousCode(): AbstractInsnNode? {
+            var insn = previous
+            while (insn != null && insn.opcode < 0) insn = insn.previous
+            return insn
         }
     }
 }
@@ -112,14 +149,33 @@ private class MappedCallAdvice(
     name: String,
     descriptor: String,
     private val specs: List<String>,
+    private val stateMachine: String?,
 ) : AdviceAdapter(api, next, access, name, descriptor) {
     override fun onMethodEnter() {
+        // A resuming suspend method is called again with null arguments and its own continuation; skip those calls.
+        val skip = stateMachine?.let { owner ->
+            val type = Type.getObjectType(owner)
+            val run = newLabel()
+            val skip = newLabel()
+            loadArg(argumentTypes.lastIndex)
+            instanceOf(type)
+            ifZCmp(EQ, run)
+            loadArg(argumentTypes.lastIndex)
+            checkCast(type)
+            getField(type, LABEL, Type.INT_TYPE)
+            push(Int.MIN_VALUE)
+            math(AND, Type.INT_TYPE)
+            ifZCmp(NE, skip)
+            mark(run)
+            skip
+        }
         specs.forEach { spec ->
             push(spec)
             if (methodAccess and Opcodes.ACC_STATIC != 0) visitInsn(Opcodes.ACONST_NULL) else loadThis()
             loadArgArray()
             invokeStatic(HOOKS_TYPE, ON_MAPPED_CALL)
         }
+        skip?.let(::mark)
     }
 }
 
