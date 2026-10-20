@@ -303,7 +303,7 @@ dari {
 }
 ```
 
-Only for protobuf payloads: register the decoder once in `Application.onCreate()` with `Dari.setProtobufDecoder(...)`. See the [Gradle plugin guide](https://easyhooon.github.io/dari/docs/gradle-plugin) for the mapping reference.
+Only for protobuf payloads: register the decoder once in `Application.onCreate()` with `Dari.setProtobufDecoder(...)`. See the [mapping reference](https://easyhooon.github.io/dari/docs/gradle-plugin/mappings).
 
 ### Custom Configuration
 

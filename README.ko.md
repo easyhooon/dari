@@ -304,7 +304,7 @@ dari {
 }
 ```
 
-protobuf 페이로드를 쓸 때만 `Application.onCreate()`에서 `Dari.setProtobufDecoder(...)`로 디코더를 한 번 등록하세요. 매핑 레퍼런스는 [Gradle 플러그인 가이드](https://easyhooon.github.io/dari/ko/docs/gradle-plugin)를 참고하세요.
+protobuf 페이로드를 쓸 때만 `Application.onCreate()`에서 `Dari.setProtobufDecoder(...)`로 디코더를 한 번 등록하세요. 매핑 레퍼런스는 [매핑 레퍼런스 문서](https://easyhooon.github.io/dari/ko/docs/gradle-plugin/mappings)를 참고하세요.
 
 ### 사용자 정의 구성
 

@@ -1,0 +1,56 @@
+---
+title: 매핑 레퍼런스
+description: dari { } 블록의 위치, 필드, 표현식, 옵션
+---
+
+## 위치
+
+| 함수 | 매핑 대상 | 변환 결과 |
+| --- | --- | --- |
+| `webToAppRequest(class, method)` | JavaScript가 호출하는 메서드(`@JavascriptInterface`) | `onWebToAppRequest` |
+| `webToAppResponse(class, method)` | 결과를 페이지로 돌려보내는 메서드 | `onWebToAppResponse` |
+| `appToWebRequest(class, method)` | 페이지를 호출하는 메서드 | `onAppToWebRequest` |
+| `appToWebResponse(class, method)` | 페이지가 응답할 때 호출하는 메서드 | `onAppToWebResponse` |
+
+- `class`는 패키지를 포함한 클래스 이름입니다. 중첩 클래스는 `.`과 `$` 모두 쓸 수 있습니다.
+- `method`는 메서드 이름입니다. 같은 이름의 오버로드는 모두 매핑됩니다.
+- 훅은 메서드 본문보다 먼저, 메서드가 시작될 때 실행됩니다.
+- `suspend` 함수도 매핑할 수 있습니다. suspend 함수는 재개될 때마다 다시 호출되는데, 처음 호출만 기록합니다. `--info` 로그에는 메서드 옆에 `(suspend; resumptions skipped)`가 붙습니다.
+
+## 필드
+
+| 필드 | 사용처 | 설명 |
+| --- | --- | --- |
+| `handlerName` | 요청(필수), `webToAppResponse` | 응답에서 생략하면 요청의 이름을 씁니다. |
+| `requestId` | 전체, 응답은 필수 | 응답을 요청과 짝지을 때 씁니다. |
+| `data` | 전체 | 텍스트는 그대로 저장합니다. 바이트(`base64(...)` 결과나 `ByteArray` 파라미터)는 protobuf API로 기록합니다. |
+| `displayName` | 요청 | 수동 API의 `displayName` 오버로드와 같습니다. |
+| `success` | 응답 | 생략하면 항상 SUCCESS입니다. `false`, `"false"`, `0`이면 ERROR로 기록합니다. |
+| `fireAndForget` | 요청 | `true`면 바로 완료 처리합니다. `false`면 수동 API에 `null`을 넘긴 것처럼 `DariConfig.fireAndForget`을 따릅니다. |
+| `onlyIf` | 전체 | 선택 사항입니다. 생략하면 모든 호출을 기록합니다. 지정하면 값이 `true`일 때만 기록하고, `null`은 `false`로 봅니다. 메서드 하나로 여러 종류의 메시지가 오갈 때 씁니다. |
+| `tag` | 전체 | 이 매핑에서만 `dari { tag }` 값을 덮어씁니다. |
+
+## 표현식
+
+| 표현식 | 값 |
+| --- | --- |
+| `arg("name")` | 이름이 `name`인 파라미터입니다. 플러그인이 빌드 시점에 인덱스로 바꿉니다. |
+| `arg(n)` | 메서드의 `n`번째 파라미터입니다. 0부터 세고, `this`는 세지 않습니다. |
+| `constant("x")`, `constant(true)` | 고정값입니다. |
+| `json(expr, "a.b.0")` | JSON 문자열, JSON 객체(kotlinx.serialization이나 Gson의 `JsonObject`처럼 `toString()`이 JSON인 값), 또는 중첩된 `json(...)` 결과의 필드입니다. JSON이 아닌 값이면 `null`입니다. |
+| `base64(expr)` | Base64 텍스트를 디코딩한 바이트입니다. |
+| `expr.equalsTo("x")` | 값의 문자열이 `"x"`와 같으면 `true`입니다. |
+| `isNull(expr)` | 값이 `null`이면 `true`입니다. 예를 들어 `error` 필드가 없는 경우입니다. |
+
+`arg(1)`보다 `arg("requestId")`를 권장합니다. 인덱스를 쓰면 파라미터 두 개의 순서를 바꾸거나 하나를 끼워 넣어도 빌드가 통과하고, 엉뚱한 값이 조용히 기록됩니다. 이름을 쓰면 파라미터 이름이 바뀌거나 사라졌을 때 빌드가 실패하고, 오류 메시지에 메서드의 실제 파라미터 이름이 나옵니다. 이름은 디버그 정보에서 읽습니다. Kotlin은 항상 기록하고, Java는 기본 옵션인 `-g`에서 기록합니다. 매핑한 메서드에 오버로드가 여러 개면 각각 따로 해석하므로, 모든 오버로드에 그 이름이 있어야 합니다.
+
+## 옵션
+
+```kotlin
+dari {
+    tag = "Checkout"                         // 기본값: addJavascriptInterface에 넘긴 이름
+    scope = InstrumentationScope.ALL         // 기본값: InstrumentationScope.PROJECT
+}
+```
+
+`InstrumentationScope`는 `com.android.build.api.instrumentation` 패키지에 있습니다.

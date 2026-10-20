@@ -1,0 +1,72 @@
+---
+title: 동작 원리
+description: 플러그인이 빌드 중에 바이트코드(ASM)를 고쳐 브릿지 호출을 기록하는 방식
+---
+
+## 라이브러리와 플러그인
+
+**라이브러리**(`implementation`, `api`)는 APK에 들어가 기기에서 실행되는 코드입니다. `dari`가 라이브러리입니다. 메시지를 기록할 수는 있지만 내 코드를 바꿀 수는 없어서, 브릿지 코드가 직접 호출해야 합니다.
+
+**Gradle 플러그인**(`plugins { id(...) }`)은 앱을 빌드하는 동안 개발자 PC나 CI의 Gradle 안에서 실행되는 코드입니다. APK에는 들어가지 않습니다. AGP(`com.android.application`), KSP, Sentry Android Gradle Plugin이 모두 플러그인입니다.
+
+| 단계 | 실행 위치 | 하는 일 |
+| --- | --- | --- |
+| 1. `plugins { ... }` | 개발자 PC 또는 CI (Gradle) | 플러그인이 로드되어 빌드를 설정합니다. |
+| 2. 컴파일 | 개발자 PC 또는 CI (Gradle) | 내 코드가 `.class` 파일이 됩니다. |
+| **3. 변환** | **개발자 PC 또는 CI (Gradle)** | **Dari 플러그인이 컴파일된 클래스를 수정합니다.** |
+| 4. dex + 패키징 | 개발자 PC 또는 CI (Gradle) | 클래스와 라이브러리가 APK가 됩니다. |
+| 5. 앱 실행 | 기기 | 삽입된 호출이 넘긴 내용을 `dari`가 기록합니다. |
+
+내 코드에 호출을 넣으려면 플러그인이 필요합니다. 메시지를 기록하고 보여주는 일은 라이브러리가 하므로, 플러그인을 쓸 때도 `dari`가 필요합니다.
+
+## DSL이란?
+
+DSL(domain-specific language)은 한 가지 일을 위한 작은 언어입니다. Gradle 빌드 스크립트는 Kotlin(또는 Groovy)으로 DSL을 만듭니다. `android { }`, `dependencies { }`, `plugins { }`도 모두 블록을 받는 평범한 Kotlin 함수 호출입니다.
+
+플러그인은 `dari { }` 블록을 하나 더 추가합니다. 그 안의 `webToAppRequest(...) { handlerName = arg(0) }`도 평범한 Kotlin입니다.
+
+- `webToAppRequest`는 `dari` 확장(extension)의 함수입니다.
+- `handlerName`은 프로퍼티입니다.
+- `arg(0)`은 "첫 번째 파라미터"를 뜻하는 값을 돌려줍니다.
+
+이 시점에는 기기에서 아무것도 실행되지 않습니다. 블록은 설명을 기록할 뿐이고, 플러그인이 그 설명을 클래스 안에 넣어 둡니다.
+
+## ASM이란?
+
+Kotlin과 Java는 JVM 바이트코드로 컴파일됩니다. 바이트코드는 메서드마다 명령어 목록을 담은 `.class` 파일이고, Android는 이후 이를 DEX로 바꿉니다.
+
+[ASM](https://asm.ow2.io/)은 이 바이트코드를 읽고 고치는 표준 라이브러리입니다. AGP는 instrumentation API로 ASM을 열어 둡니다. 플러그인이 `AsmClassVisitorFactory`를 등록하면, AGP가 dex 변환 전에 모든 클래스를 거기에 통과시킵니다. Firebase Performance, Sentry, Hilt도 같은 방식으로 컴파일된 코드를 바꿉니다.
+
+예를 들어 다음 메서드를 매핑했다고 합시다:
+
+```kotlin
+fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
+    when (handlerName) { /* ... */ }
+}
+```
+
+플러그인은 컴파일된 클래스에서 이 메서드 본문 맨 앞에 호출 하나를 넣습니다. 소스로 옮기면 아래와 같습니다. `.kt` 파일 자체는 바뀌지 않습니다.
+
+```kotlin
+fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
+    DariHooks.onMappedCall("""{"kind":"WEB_TO_APP_REQUEST","fields":{...}}""", this, arrayOf(handlerName, requestId, data))
+    when (handlerName) { /* ... */ }
+}
+```
+
+기기에서는 `dari` 안의 `DariHooks`가 매핑을 읽고, 인자에서 값을 꺼내 인터셉터의 `onWebToAppRequest(...)`를 호출합니다. 바이트코드 단계에서 동작하므로 Java와 Kotlin을 똑같이 처리합니다.
+
+Kotlin 컴파일러 플러그인을 쓰지 않은 이유: 컴파일러 플러그인은 `kotlinc` 안에서 돌아서 Kotlin 소스만 봅니다. WebView 코드에 흔한 Java 브릿지나 서드파티 AAR 안의 브릿지는 건드릴 수 없습니다. IR API도 안정 API가 아니라서 보통 Kotlin 버전마다 따로 빌드해야 합니다. AGP instrumentation API는 언어와 AAR에 상관없이 컴파일된 클래스를 다룹니다. 대신 파라미터 이름이나 `suspend` 같은 소스 수준 정보는 바이트코드에서 다시 알아내야 합니다.
+
+플러그인은 다음 두 가지도 바꿉니다:
+
+- **`webView.addJavascriptInterface(bridge, name)` 호출**이 `DariHooks`를 거치게 됩니다. 덕분에 Dari가 브릿지 객체가 어느 WebView에 속하는지 알 수 있습니다.
+- **`WebViewClient.doUpdateVisitedHistory` override**가 페이지 URL을 알려 줍니다.
+
+## 함께 기록되는 정보
+
+- **WebView별 태그.** WebView마다 인터셉터가 따로 생깁니다. `tag`를 지정하지 않으면 `addJavascriptInterface`에 넘긴 이름(`Android`)이 태그가 됩니다.
+  - 요청은 브릿지 객체가 등록된 WebView를 씁니다.
+  - 응답은 짝이 되는 요청을 기록한 인터셉터를 씁니다.
+  - 브릿지 객체가 아닌 곳에 매핑된 메서드는 `WebView` 파라미터가 있으면 그것을 쓰고, 없으면 가장 최근에 본 WebView를 씁니다.
+- **페이지 URL.** `doUpdateVisitedHistory`에서 가져오므로 리다이렉트, 링크 이동, SPA history 변경도 반영됩니다. `doUpdateVisitedHistory`를 override한 `WebViewClient` 서브클래스가 있어야 하며, 빈 override여도 됩니다.
