@@ -37,7 +37,9 @@ internal class BridgeMapping(
         override fun evaluate(args: Array<Any?>, parsed: MutableMap<String, Any?>): Any? {
             var current: Any? = when (val value = source.evaluate(args, parsed)) {
                 is String -> parsed.getOrPut(value) { parseJson(value) }
-                else -> value
+                is JSONObject, is JSONArray, null -> value
+                // Other JSON types (kotlinx.serialization, Gson) print themselves as JSON.
+                else -> value.toString().let { text -> parsed.getOrPut(text) { parseJson(text) } }
             }
             for (key in path) {
                 current = when (current) {

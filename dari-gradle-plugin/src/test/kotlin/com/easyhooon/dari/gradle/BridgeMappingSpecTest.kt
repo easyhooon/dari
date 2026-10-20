@@ -72,6 +72,24 @@ class BridgeMappingSpecTest {
         )
     }
 
+    @Test
+    fun `onlyIf serializes as a field`() {
+        extension.appToWebRequest(
+            "a.B",
+            "postMessage",
+            mapping {
+                handlerName = json(arg(0), "action")
+                onlyIf = json(arg(0), "type").equalsTo("request")
+            },
+        )
+
+        assertEquals(
+            """{"kind":"APP_TO_WEB_REQUEST","fields":{"handlerName":{"json":[{"arg":0},"action"]},""" +
+                """"onlyIf":{"equalsTo":[{"json":[{"arg":0},"type"]},"request"]}}}""",
+            extension.mappings.single().spec.toSpec(defaultTag = null),
+        )
+    }
+
     @Test(expected = GradleException::class)
     fun `a request without handlerName fails the build`() {
         extension.webToAppRequest("a.B", "m", mapping { requestId = arg(0) })

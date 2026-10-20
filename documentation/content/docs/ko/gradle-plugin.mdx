@@ -142,6 +142,7 @@ dari {
 - `class`는 패키지를 포함한 클래스 이름입니다. 중첩 클래스는 `.`과 `$` 모두 쓸 수 있습니다.
 - `method`는 메서드 이름입니다. 같은 이름의 오버로드는 모두 매핑됩니다.
 - 훅은 메서드 본문보다 먼저, 메서드가 시작될 때 실행됩니다.
+- `suspend` 함수도 매핑할 수 있습니다. suspend 함수는 재개될 때마다 다시 호출되는데, 처음 호출만 기록합니다. `--info` 로그에는 메서드 옆에 `(suspend; resumptions skipped)`가 붙습니다.
 
 ### 필드
 
@@ -153,6 +154,7 @@ dari {
 | `displayName` | 요청 | 수동 API의 `displayName` 오버로드와 같습니다. |
 | `success` | 응답 | 생략하면 항상 SUCCESS입니다. `false`, `"false"`, `0`이면 ERROR로 기록합니다. |
 | `fireAndForget` | 요청 | `true`면 바로 완료 처리합니다. `false`면 수동 API에 `null`을 넘긴 것처럼 `DariConfig.fireAndForget`을 따릅니다. |
+| `onlyIf` | 전체 | 값이 `true`일 때만 기록합니다. 값이 없으면(`null`) `false`로 봅니다. 메서드 하나로 여러 종류의 메시지가 오갈 때 씁니다. |
 | `tag` | 전체 | 이 매핑에서만 `dari { tag }` 값을 덮어씁니다. |
 
 ### 표현식
@@ -161,7 +163,7 @@ dari {
 | --- | --- |
 | `arg(n)` | 메서드의 `n`번째 파라미터입니다. 0부터 세고, `this`는 세지 않습니다. |
 | `constant("x")`, `constant(true)` | 고정값입니다. |
-| `json(expr, "a.b.0")` | JSON 문자열(또는 중첩된 `json(...)` 결과)의 필드입니다. JSON이 아닌 문자열이면 `null`입니다. |
+| `json(expr, "a.b.0")` | JSON 문자열, JSON 객체(kotlinx.serialization이나 Gson의 `JsonObject`처럼 `toString()`이 JSON인 값), 또는 중첩된 `json(...)` 결과의 필드입니다. JSON이 아닌 값이면 `null`입니다. |
 | `base64(expr)` | Base64 텍스트를 디코딩한 바이트입니다. |
 | `expr.equalsTo("x")` | 값의 문자열이 `"x"`와 같으면 `true`입니다. |
 | `isNull(expr)` | 값이 `null`이면 `true`입니다. 예를 들어 `error` 필드가 없는 경우입니다. |
@@ -255,6 +257,23 @@ appToWebResponse("com.example.MainActivity.BridgeInterface", "onAppToWebResponse
 }
 ```
 
+### 메서드 하나로 요청과 응답을 보낼 때
+
+메서드 하나가 요청과 응답을 모두 보낸다면(예: `type` 필드가 `"request"` 또는 `"response"`), 같은 메서드를 두 번 매핑하고 각 매핑에 `onlyIf`를 겁니다.
+
+```kotlin
+appToWebRequest("com.example.WebBridge", "postMessage") {
+    handlerName = json(arg(0), "action")
+    requestId = json(arg(0), "id")
+    onlyIf = json(arg(0), "type").equalsTo("request")
+}
+appToWebResponse("com.example.WebBridge", "postMessage") {
+    requestId = json(arg(0), "id")
+    data = arg(0)
+    onlyIf = json(arg(0), "type").equalsTo("response")
+}
+```
+
 ## 함께 기록되는 정보
 
 - **WebView별 태그.** WebView마다 인터셉터가 따로 생깁니다. `tag`를 지정하지 않으면 `addJavascriptInterface`에 넘긴 이름(`Android`)이 태그가 됩니다.
@@ -278,3 +297,4 @@ appToWebResponse("com.example.MainActivity.BridgeInterface", "onAppToWebResponse
   - 리플렉션으로 한 호출
   - `androidx.webkit` 메시지 채널(`addWebMessageListener`, `WebMessagePort`)
   - 메서드 본문 안에서 계산한 값. 매핑할 수 있는 것은 메서드의 파라미터뿐입니다.
+  - `suspend` 함수가 재개될 때 들어오는 재진입 호출(인자가 `null`). 첫 호출만 기록합니다.

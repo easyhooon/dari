@@ -142,6 +142,7 @@ The mapping works best when your bridge has one request entry point and one resp
 - `class` is the fully qualified class name. Nested classes may use `.` or `$`.
 - `method` is the method name. Every overload with that name is mapped.
 - The hook runs when the method starts, before its body.
+- `suspend` functions work too. A suspend function is called again each time it resumes; only the first call is recorded. `--info` shows `(suspend; resumptions skipped)` next to the method.
 
 ### Fields
 
@@ -153,6 +154,7 @@ The mapping works best when your bridge has one request entry point and one resp
 | `displayName` | requests | Same as the manual `displayName` overload. |
 | `success` | responses | Leave it out for "always SUCCESS". `false`, `"false"` or `0` record ERROR. |
 | `fireAndForget` | requests | `true` resolves the entry at once. `false` defers to `DariConfig.fireAndForget`, like passing `null` by hand. |
+| `onlyIf` | all | Records the call only when `true`. A missing value (`null`) counts as `false`. For one method that carries several kinds of message. |
 | `tag` | all | Overrides `dari { tag }` for this mapping. |
 
 ### Expressions
@@ -161,7 +163,7 @@ The mapping works best when your bridge has one request entry point and one resp
 | --- | --- |
 | `arg(n)` | The method's `n`th parameter, starting at 0 (`this` doesn't count). |
 | `constant("x")`, `constant(true)` | A fixed value. |
-| `json(expr, "a.b.0")` | A field from a JSON string (or from a nested `json(...)`). A string that isn't JSON yields `null`. |
+| `json(expr, "a.b.0")` | A field from a JSON string, a JSON object such as kotlinx.serialization's `JsonObject` or Gson's `JsonObject` (anything whose `toString()` is JSON), or a nested `json(...)`. A value that isn't JSON yields `null`. |
 | `base64(expr)` | Base64 text decoded to bytes. |
 | `expr.equalsTo("x")` | `true` when the value's text equals `"x"`. |
 | `isNull(expr)` | `true` when the value is `null`, e.g. a missing `error` field. |
@@ -255,6 +257,23 @@ appToWebResponse("com.example.MainActivity.BridgeInterface", "onAppToWebResponse
 }
 ```
 
+### Requests and responses through one method
+
+When one method sends both, e.g. a `type` field of `"request"` or `"response"`, map it twice and filter each mapping with `onlyIf`:
+
+```kotlin
+appToWebRequest("com.example.WebBridge", "postMessage") {
+    handlerName = json(arg(0), "action")
+    requestId = json(arg(0), "id")
+    onlyIf = json(arg(0), "type").equalsTo("request")
+}
+appToWebResponse("com.example.WebBridge", "postMessage") {
+    requestId = json(arg(0), "id")
+    data = arg(0)
+    onlyIf = json(arg(0), "type").equalsTo("response")
+}
+```
+
 ## What else is captured
 
 - **Tag per WebView.** Each WebView gets its own interceptor. The tag is the name passed to `addJavascriptInterface` (`Android`), unless you set `tag`.
@@ -278,3 +297,4 @@ appToWebResponse("com.example.MainActivity.BridgeInterface", "onAppToWebResponse
   - Calls made through reflection.
   - `androidx.webkit` message channels (`addWebMessageListener`, `WebMessagePort`).
   - Values computed inside the method body. Only the method's parameters can be mapped.
+  - The re-entries a `suspend` function receives when it resumes (with `null` arguments). Only the first call is recorded.
