@@ -79,6 +79,8 @@ fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
 
 On the device, `DariHooks` (inside `dari`) reads the mapping, picks the values out of the arguments and calls `onWebToAppRequest(...)` on an interceptor. Because the plugin works on bytecode, it handles Java and Kotlin the same way.
 
+Why not a Kotlin compiler plugin? It runs inside `kotlinc`, so it only sees Kotlin sources. It can't touch bridges written in Java, which is common for WebView code, or bridges inside third-party AARs. Its IR API also isn't stable, so it usually needs a build per Kotlin version. AGP's instrumentation API works on the compiled classes of every language and AAR, at the cost of reading less source-level detail (parameter names, `suspend`) back from bytecode.
+
 The plugin also rewrites two more things:
 
 - **`webView.addJavascriptInterface(bridge, name)` calls** now go through `DariHooks`. Dari can then tell which WebView a bridge object belongs to.
@@ -284,6 +286,66 @@ appToWebResponse("com.example.WebBridge", "postMessage") {
   - Responses use the interceptor that recorded the matching request.
   - Mapped methods that are not bridge objects use a `WebView` parameter if there is one, otherwise the WebView seen most recently.
 - **Page URL.** Taken from `doUpdateVisitedHistory`, so redirects, link clicks and SPA history changes count too. This needs a `WebViewClient` subclass that overrides `doUpdateVisitedHistory`; an empty override is enough.
+
+## Performance
+
+### Runtime: one bridge round trip
+
+Measured with `BridgeOverheadBenchmark` (`sample/src/androidTest`) on a Samsung SM-S936N with Android 17 (API 37), **debug build** of the sample. It calls debug-only bridges (`sample/src/debug`) directly, not through JavaScript, so it times capture itself without the WebView bridge's own cost.
+
+- One sample is a request call plus a response call.
+- Each case runs 100 warm-up iterations, then 1,000 timed ones.
+- Values are median / p95 in µs.
+- Each trio has the same bridge body. The cases differ in capture:
+  - **No capture**: no Dari calls;
+  - **Manual**: `DariInterceptor` calls in the body;
+  - **Plugin**: a `dari { }` mapping.
+- The "JSON string" bridges get one JSON message per call and parse it to dispatch, as a real one-string bridge must. Manual capture reuses that parsed object. The plugin maps it with `json(arg(0), "...")`.
+
+**Positional bridge** (`arg(n)`), recording with `dari`
+
+| Payload | No capture | Manual | Plugin |
+| --- | --- | --- | --- |
+| 100 B | 1.0 / 1.1 | 238.6 / 432.7 | 178.8 / 226.9 |
+| 10 KB | 1.1 / 1.3 | 126.8 / 180.8 | 138.0 / 182.2 |
+| 1 MB | 2.0 / 7.7 | 2,692 / 4,013 | 2,736 / 4,092 |
+
+Plugin and manual capture cost the same. The time goes to recording the entry (copying, truncating and queueing the write), not to the hook. That is about 0.15–0.25 ms per round trip up to 10 KB, and about 2.7 ms at 1 MB. The 100 B row runs first after app start, which is why it is slower than 10 KB.
+
+**JSON string bridge** (`json(arg(0), "...")`), recording with `dari`
+
+| Payload | No capture | Manual | Plugin |
+| --- | --- | --- | --- |
+| 100 B | 16.7 / 18.5 | 178.1 / 244.6 | 209.6 / 282.8 |
+| 10 KB | 1,603 / 1,754 | 3,039 / 3,313 | 4,771 / 5,462 |
+| 1 MB | 208,004 / 258,337 | 364,244 / 494,927 | 696,886 / 782,211 |
+
+With small messages `json()` costs about the same as manual capture. From 10 KB up it costs more, because each hook parses the message again and turns the `data` object back into a string. Manual code reuses the object the bridge already parsed. That adds about 1.7 ms at 10 KB and about 330 ms at 1 MB, on the JavaBridge thread. Mapping `data = arg(0)` (the raw string) skips the re-serialization, but the other `json()` fields still parse the message once per hook. For large JSON messages, manual calls are cheaper.
+
+**With `dari-noop`** (the plugin's hooks run, nothing is recorded)
+
+| Payload | Positional: no capture | Positional: plugin | JSON: no capture | JSON: plugin |
+| --- | --- | --- | --- | --- |
+| 100 B | 0.8 / 0.9 | 8.3 / 8.5 | 30.5 / 80.4 | 18.1 / 82.3 |
+| 10 KB | 5.4 / 5.5 | 4.8 / 6.3 | 1,607 / 1,832 | 1,614 / 1,849 |
+| 1 MB | 1.1 / 5.9 | 3.0 / 15.3 | 258,411 / 268,779 | 192,969 / 233,727 |
+
+A debug build that uses `dari-noop` pays a few µs per call at most; the noop hooks don't parse anything. Differences in the JSON columns are run-to-run noise from the bridge's own parse. Release builds aren't instrumented at all, so they have no overhead.
+
+Caveats:
+- A debug build runs without ahead-of-time compilation, so absolute numbers are higher than in a release build. The comparison between columns is what matters.
+- At 1 MB the store fills memory quickly: 500 buffered entries of that size exceed the default 256 MB heap. The benchmark empties the store every 20 iterations, outside the timed part.
+
+### Build time
+
+`:sample:assembleDebug` on a MacBook Pro (Apple M2, 8 cores, 16 GB, macOS 27), Gradle 9.1.0, AGP 9.0.0, Kotlin 2.2.10, JDK 21. The daemon was warm, and the build cache and configuration cache were off. "Clean" means `./gradlew clean` first, so every module rebuilds. "Incremental" means a one-line change in a bridge class. Values are the median, with the range in brackets.
+
+| Build | Without plugin | `PROJECT` scope (default) | `ALL` scope |
+| --- | --- | --- | --- |
+| Clean | 52.4 s (29.9–78.4, 6 runs) | 24.9 s (18.8–68.0, 6 runs) | 139.1 s (89.8–508.8, 3 runs) |
+| Incremental | 3.9 s (3.8–4.5, 3 runs) | 3.8 s (3.1–8.6, 3 runs) | not measured |
+
+`PROJECT` scope adds no measurable build time. Its transform (`:sample:transformDebugClassesWithAsm`) took 0.13 s in a profiled clean build, next to 5.8 s for `:sample:compileDebugKotlin`. The gap between the clean medians is run-to-run variance, not the plugin: other projects' Gradle builds ran on the same Mac during some runs, and the ranges overlap. `ALL` re-dexes every AAR in the app, which makes it clearly slower. Its 508.8 s run overlapped three other builds. With a cold Gradle cache, `ALL` took about 5 minutes longer in an earlier test.
 
 ## Rules
 
