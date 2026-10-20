@@ -55,7 +55,7 @@ DSL(domain-specific language)은 한 가지 일을 위한 작은 언어입니다
 
 Kotlin과 Java는 JVM 바이트코드로 컴파일됩니다. 바이트코드는 메서드마다 명령어 목록을 담은 `.class` 파일이고, Android는 이후 이를 DEX로 바꿉니다.
 
-[ASM](https://asm.ow2.io/)은 이 바이트코드를 읽고 고치는 표준 라이브러리입니다. AGP는 instrumentation API로 ASM을 열어 둡니다. 플러그인이 `AsmClassVisitorFactory`를 등록하면, AGP가 dex 변환 전에 모든 클래스를 거기에 통과시킵니다. Firebase Performance, Sentry, Hilt도 같은 방식으로 컴파일된 코드를 바꿉니다.
+[ASM](https://asm.ow2.io/)은 이 바이트코드를 읽고 고치는 표준 라이브러리입니다. AGP는 공식 [instrumentation API](https://developer.android.com/build/extend-agp)로 ASM을 열어 둡니다. 플러그인이 [`AsmClassVisitorFactory`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/instrumentation/AsmClassVisitorFactory)를 등록하면, AGP가 dex 변환 전에 모든 클래스를 거기에 통과시킵니다. Firebase Performance, Sentry, Hilt도 같은 방식으로 컴파일된 코드를 바꿉니다.
 
 예를 들어 다음 메서드를 매핑했다고 합시다:
 
@@ -80,8 +80,22 @@ Kotlin 컴파일러 플러그인을 쓰지 않은 이유: 컴파일러 플러그
 
 플러그인은 다음 두 가지도 바꿉니다:
 
-- **`webView.addJavascriptInterface(bridge, name)` 호출**이 `DariHooks`를 거치게 됩니다. 덕분에 Dari가 브릿지 객체가 어느 WebView에 속하는지 알 수 있습니다.
-- **`WebViewClient.doUpdateVisitedHistory` override**가 페이지 URL을 알려 줍니다.
+- **[`webView.addJavascriptInterface(bridge, name)`](https://developer.android.com/reference/android/webkit/WebView#addJavascriptInterface(java.lang.Object,java.lang.String)) 호출**이 `DariHooks`를 거치게 됩니다. 덕분에 Dari가 브릿지 객체가 어느 WebView에 속하는지 알 수 있습니다.
+- **[`WebViewClient.doUpdateVisitedHistory`](https://developer.android.com/reference/android/webkit/WebViewClient#doUpdateVisitedHistory(android.webkit.WebView,java.lang.String,boolean)) override**가 페이지 URL을 알려 줍니다.
+
+### 공식 API만 사용
+
+모든 단계가 공개 문서화된 API를 씁니다. 플러그인은 리플렉션이나 숨겨진(비공개) API를 쓰지 않고, 컴파일된 클래스도 AGP의 instrumentation 파이프라인을 통해서만 바꿉니다.
+
+| 하는 일 | 공식 API |
+| --- | --- |
+| 컴파일된 클래스 수정 | AGP [`Instrumentation.transformClassesWith`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/variant/Instrumentation)와 [`AsmClassVisitorFactory`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/instrumentation/AsmClassVisitorFactory) ([Android Gradle 플러그인 확장](https://developer.android.com/build/extend-agp)) |
+| 변환할 클래스 범위 | AGP [`InstrumentationScope`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/instrumentation/InstrumentationScope) |
+| debug 빌드만 | AGP [`Component.debuggable`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/variant/Component) |
+| 바이트코드 읽기·쓰기 | [ASM](https://asm.ow2.io/), AGP에 이미 포함된 버전 |
+| 브릿지 메서드 | [`@JavascriptInterface`](https://developer.android.com/reference/android/webkit/JavascriptInterface) |
+| 브릿지 → WebView | [`WebView.addJavascriptInterface`](https://developer.android.com/reference/android/webkit/WebView#addJavascriptInterface(java.lang.Object,java.lang.String)) |
+| 페이지 URL | [`WebViewClient.doUpdateVisitedHistory`](https://developer.android.com/reference/android/webkit/WebViewClient#doUpdateVisitedHistory(android.webkit.WebView,java.lang.String,boolean)) |
 
 ## 설정
 
