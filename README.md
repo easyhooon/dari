@@ -138,6 +138,7 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
 | Dependencies | `dari` + `dari-noop` | The same `dari` + `dari-noop` |
 | Extra setup | None | `mavenCentral()` in `pluginManagement` of `settings.gradle.kts`, and `plugins { id("io.github.easyhooon.dari") }` plus a `dari { }` mapping in the app module's `build.gradle.kts` |
 | Bridge code | Interceptor calls where requests enter and responses leave | No Dari calls |
+| Performance | Baseline | Same as manual, except bridges that pass large JSON strings ([Performance](https://easyhooon.github.io/dari/docs/gradle-plugin/performance)) |
 
 - **The dependency alone doesn't turn on the plugin way.** Adding or upgrading `dari` changes nothing until you also apply the plugin and write `dari { }`. Without them, only your own interceptor calls are recorded.
 - **Upgrading with manual calls:** bump the version. No code changes.

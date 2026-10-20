@@ -139,6 +139,7 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
 | 의존성 | `dari` + `dari-noop` | 같은 `dari` + `dari-noop` |
 | 추가 설정 | 없음 | `settings.gradle.kts`의 `pluginManagement`에 `mavenCentral()`, 앱 모듈 `build.gradle.kts`에 `plugins { id("io.github.easyhooon.dari") }`와 `dari { }` 매핑 |
 | 브릿지 코드 | 요청이 들어오고 응답이 나가는 곳에서 인터셉터 호출 | Dari 호출 없음 |
+| 성능 | 기준 | 직접 호출과 같음. 큰 JSON 문자열을 넘기는 브릿지만 예외([성능](https://easyhooon.github.io/dari/ko/docs/gradle-plugin/performance)) |
 
 - **의존성만으로는 플러그인 방식이 켜지지 않습니다.** `dari`를 추가하거나 버전을 올려도 플러그인을 적용하고 `dari { }`를 작성하기 전에는 아무것도 바뀌지 않습니다. 그 전까지는 직접 호출한 인터셉터만 기록됩니다.
 - **직접 호출 방식으로 쓰던 앱의 업그레이드:** 버전만 올리면 됩니다. 코드 변경은 없습니다.

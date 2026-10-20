@@ -3,6 +3,19 @@ title: Performance
 description: Measured capture cost and build time
 ---
 
+## Summary
+
+- **Positional bridges** (`arg(n)`): plugin and manual capture cost the same at every size, about 0.13–0.24 ms per round trip up to 10 KB and about 2.7 ms at 1 MB. The cost is recording the entry, not the hook.
+- **One-JSON-string bridges** (`json()`): about the same at 100 B. From 10 KB up, manual calls are faster: 3.0 vs 4.8 ms at 10 KB, 364 vs 697 ms at 1 MB. Each hook parses the message again and re-serializes `data`, while manual code reuses the object the bridge already parsed.
+- **Release builds** aren't instrumented, so they have no cost. A debug build with `dari-noop` pays a few µs per call.
+- **Build time**: `PROJECT` scope adds no measurable time; `ALL` makes clean builds clearly slower.
+
+**Which to use.** For positional bridges, or bridges with small messages, the plugin is fine. For bridges that often carry JSON messages of 10 KB or more, prefer manual calls. You can mix the two per bridge in one app:
+- map only the other bridges in `dari { }`;
+- keep manual `DariInterceptor` calls in the heavy one.
+
+A mapped method that already calls `DariInterceptor` is skipped with a build warning, so it isn't recorded twice. `onlyIf` doesn't help here, because the `json()` fields are parsed before it is checked.
+
 ## Runtime: one bridge round trip
 
 Measured with `BridgeOverheadBenchmark` (`sample/src/androidTest`) on a Samsung SM-S936N with Android 17 (API 37), **debug build** of the sample. It calls debug-only bridges (`sample/src/debug`) directly, not through JavaScript, so it times capture itself without the WebView bridge's own cost.
