@@ -32,7 +32,7 @@ private val ON_VISITED_HISTORY = Method("onVisitedHistory", "(L$WEB_VIEW;Ljava/l
 
 /** A mapped method and the spec the runtime hook evaluates. Class names use dots, `$` or `.` for nesting. */
 data class MappingTarget(val className: String, val methodName: String, val spec: String) : Serializable {
-    fun matches(binaryClassName: String): Boolean = className.replace('$', '.') == binaryClassName.replace('$', '.')
+    fun matches(binaryClassName: String): Boolean = normalizeClassName(className) == normalizeClassName(binaryClassName)
 
     private companion object {
         private const val serialVersionUID = 1L
@@ -82,8 +82,9 @@ internal class DariClassVisitor(
     }
 
     override fun visitEnd() {
+        // DariCheckMappingsTask reports this for every variant build; here it only shows up with --info.
         targets.filter { it.methodName !in matched }.forEach {
-            log.warn("Dari: $className has no method '${it.methodName}' with a body; that mapping captures nothing")
+            log.info("Dari: $className has no method '${it.methodName}' with a body; that mapping captures nothing")
         }
         super.visitEnd()
     }
