@@ -3,7 +3,9 @@ package com.easyhooon.dari.gradle
 import android.webkit.WebView
 import com.easyhooon.dari.auto.DariHooks
 import fixtures.MyWebView
+import org.gradle.api.GradleException
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -17,6 +19,7 @@ import kotlin.coroutines.resume
 class DariClassVisitorTest {
 
     private val warnings = mutableListOf<String>()
+    private val errors = mutableListOf<String>()
     private val infos = mutableListOf<String>()
     private val log = object : DariLog {
         override fun info(message: String) {
@@ -25,6 +28,10 @@ class DariClassVisitorTest {
 
         override fun warn(message: String) {
             warnings += message
+        }
+
+        override fun error(message: String) {
+            errors += message
         }
     }
 
@@ -36,6 +43,13 @@ class DariClassVisitorTest {
         MappingTarget("fixtures.ManualBridge", "onRequest", "MANUAL"),
         MappingTarget("fixtures.Bridge", "missing", "MISSING"),
         MappingTarget("fixtures.SuspendBridge", "send", "SUSPEND"),
+        MappingTarget(
+            "fixtures.NamedBridge",
+            "onRequest",
+            """{"id":{"argName":"requestId"},"data":{"arg":0},"empty":{"isNull":{"argName":"requestId"}}}""",
+        ),
+        MappingTarget("fixtures.NamedBridge", "send", """{"id":{"argName":"requestId"},"size":{"argName":"size"}}"""),
+        MappingTarget("fixtures.BadNamedBridge", "onRequest", """{"id":{"argName":"requestId"}}"""),
     )
 
     private val loader = TransformingLoader()
@@ -111,6 +125,48 @@ class DariClassVisitorTest {
     }
 
     @Test
+    fun `parameter names resolve to argument indexes, past this and two-slot long and double`() {
+        val bridge = loader.new("fixtures.NamedBridge")
+        bridge.javaClass.getMethod("onRequest", String::class.java, Long::class.java, Double::class.java, String::class.java)
+            .invoke(bridge, "h", 9L, 0.5, "req_1")
+        bridge.javaClass.getMethod("onRequest", String::class.java).invoke(bridge, "req_2")
+
+        assertEquals(
+            listOf(
+                """mapped {"id":{"arg":3},"data":{"arg":0},"empty":{"isNull":{"arg":3}}} NamedBridge [h, 9, 0.5, req_1]""",
+                """mapped {"id":{"arg":0},"data":{"arg":0},"empty":{"isNull":{"arg":0}}} NamedBridge [req_2]""",
+            ),
+            DariHooks.calls,
+        )
+    }
+
+    @Test
+    fun `parameter names resolve in static methods without a this slot`() {
+        loader.loadClass("fixtures.NamedBridge").getMethod("send", Long::class.java, Double::class.java, String::class.java)
+            .invoke(null, 9L, 0.5, "req_1")
+
+        assertEquals(listOf("""mapped {"id":{"arg":2},"size":{"arg":0}} null [9, 0.5, req_1]"""), DariHooks.calls)
+    }
+
+    @Test
+    fun `a name no overload parameter has fails the build with the actual names`() {
+        val error = assertThrows(GradleException::class.java) { loader.loadClass("fixtures.BadNamedBridge") }
+
+        assertTrue(error.message!!, "fixtures.BadNamedBridge.onRequest(Ljava/lang/String;Ljava/lang/String;)V" in error.message!!)
+        assertTrue(error.message!!, "no parameter named 'requestId'" in error.message!!)
+        assertTrue(error.message!!, "[handlerName, reqId]" in error.message!!)
+        assertEquals(listOf(error.message), errors)
+    }
+
+    @Test
+    fun `a name without debug info fails the build`() {
+        val stripped = TransformingLoader(ClassReader.SKIP_DEBUG)
+        val error = assertThrows(GradleException::class.java) { stripped.loadClass("fixtures.NamedBridge") }
+
+        assertTrue(error.message!!, "has no parameter names" in error.message!!)
+    }
+
+    @Test
     fun `addJavascriptInterface goes through the hook for WebView and subclasses`() {
         val webView = WebView()
         val subclass = loader.loadClass("fixtures.MyWebView").getConstructor().newInstance() as WebView
@@ -147,18 +203,18 @@ class DariClassVisitorTest {
     private fun ClassLoader.new(name: String): Any = loadClass(name).getConstructor().newInstance()
 
     /** Loads `fixtures.*` from transformed bytes; stubs and the recording hooks come from the test classpath. */
-    private inner class TransformingLoader : ClassLoader(DariClassVisitorTest::class.java.classLoader) {
+    private inner class TransformingLoader(private val readerFlags: Int = 0) : ClassLoader(DariClassVisitorTest::class.java.classLoader) {
         override fun loadClass(name: String, resolve: Boolean): Class<*> {
             if (!name.startsWith("fixtures.")) return super.loadClass(name, resolve)
             synchronized(getClassLoadingLock(name)) {
                 findLoadedClass(name)?.let { return it }
-                val bytes = transform(name, parent.getResourceAsStream(name.replace('.', '/') + ".class")!!.readBytes())
+                val bytes = transform(name, parent.getResourceAsStream(name.replace('.', '/') + ".class")!!.readBytes(), readerFlags)
                 return defineClass(name, bytes, 0, bytes.size)
             }
         }
     }
 
-    private fun transform(name: String, bytes: ByteArray): ByteArray {
+    private fun transform(name: String, bytes: ByteArray, readerFlags: Int): ByteArray {
         // The defining class loader verifies the result, like D8 does in a real build.
         val writer = object : ClassWriter(COMPUTE_FRAMES) {
             override fun getCommonSuperClass(type1: String, type2: String) = "java/lang/Object"
@@ -172,7 +228,7 @@ class DariClassVisitorTest {
             isWebView = { it == WEB_VIEW || it == MyWebView::class.java.name.replace('.', '/') },
             log = log,
         )
-        ClassReader(bytes).accept(visitor, ClassReader.EXPAND_FRAMES)
+        ClassReader(bytes).accept(visitor, ClassReader.EXPAND_FRAMES or readerFlags)
         return writer.toByteArray()
     }
 }

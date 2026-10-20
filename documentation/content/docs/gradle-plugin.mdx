@@ -161,12 +161,15 @@ The mapping works best when your bridge has one request entry point and one resp
 
 | Expression | Value |
 | --- | --- |
+| `arg("name")` | The parameter called `name`. The plugin turns it into an index at build time. |
 | `arg(n)` | The method's `n`th parameter, starting at 0 (`this` doesn't count). |
 | `constant("x")`, `constant(true)` | A fixed value. |
 | `json(expr, "a.b.0")` | A field from a JSON string, a JSON object such as kotlinx.serialization's `JsonObject` or Gson's `JsonObject` (anything whose `toString()` is JSON), or a nested `json(...)`. A value that isn't JSON yields `null`. |
 | `base64(expr)` | Base64 text decoded to bytes. |
 | `expr.equalsTo("x")` | `true` when the value's text equals `"x"`. |
 | `isNull(expr)` | `true` when the value is `null`, e.g. a missing `error` field. |
+
+Prefer `arg("requestId")` to `arg(1)`. With indexes, swapping two parameters or inserting one still builds and quietly records the wrong values. With names, the build fails when a parameter is renamed or removed, and the error lists the method's actual parameter names. Names come from debug info: Kotlin always writes it, and Java does with the default `-g`. Each overload of a mapped method is resolved on its own, and every one of them needs the name.
 
 ### Options
 
