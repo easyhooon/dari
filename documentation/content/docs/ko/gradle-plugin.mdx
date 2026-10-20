@@ -179,7 +179,10 @@ dari {
 }
 ```
 
-`InstrumentationScope`는 `com.android.build.api.instrumentation` 패키지에 있습니다.
+`scope`에는 AGP가 제공하는 [`InstrumentationScope`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/instrumentation/InstrumentationScope)(`com.android.build.api.instrumentation`)를 씁니다. Dari가 만든 타입이 아닙니다. 빌드 스크립트 맨 위에 `import com.android.build.api.instrumentation.InstrumentationScope`를 추가하세요. 플러그인은 이 값을 AGP의 `transformClassesWith`에 그대로 넘깁니다.
+
+- `PROJECT`: 해당 모듈의 클래스만 변환합니다.
+- `ALL`: 서드파티 AAR을 포함한 의존성의 클래스까지 변환합니다.
 
 ## 사용 예
 

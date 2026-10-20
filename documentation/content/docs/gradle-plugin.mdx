@@ -179,7 +179,10 @@ dari {
 }
 ```
 
-`InstrumentationScope` comes from `com.android.build.api.instrumentation`.
+`scope` takes AGP's own [`InstrumentationScope`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/instrumentation/InstrumentationScope) (`com.android.build.api.instrumentation`); Dari doesn't define it. Add `import com.android.build.api.instrumentation.InstrumentationScope` at the top of the build script. The plugin passes the value to AGP's `transformClassesWith`:
+
+- `PROJECT`: only the module's own classes.
+- `ALL`: also the classes of its dependencies, including third-party AARs.
 
 ## Recipes
 
