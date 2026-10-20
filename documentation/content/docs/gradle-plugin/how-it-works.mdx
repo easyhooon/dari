@@ -1,0 +1,86 @@
+---
+title: How it works
+description: How the plugin rewrites bytecode (ASM) during the build to capture bridge calls
+---
+
+## Library vs plugin
+
+A **library** (`implementation`, `api`) is code that ships in your APK and runs on the device. `dari` is a library. It can record messages, but it cannot change your code, so your bridge has to call it.
+
+A **Gradle plugin** (`plugins { id(...) }`) is code that runs inside Gradle on your machine or CI while the app builds. It is not packaged into the APK. AGP (`com.android.application`), KSP and the Sentry Android Gradle Plugin are all plugins.
+
+| Step | Runs on | What happens |
+| --- | --- | --- |
+| 1. `plugins { ... }` | Your machine or CI (Gradle) | Plugins load and configure the build. |
+| 2. Compile | Your machine or CI (Gradle) | Your code becomes `.class` files. |
+| **3. Transform** | **Your machine or CI (Gradle)** | **The Dari plugin rewrites the compiled classes.** |
+| 4. Dex + package | Your machine or CI (Gradle) | Classes and libraries become the APK. |
+| 5. Run the app | Device | `dari` records what the inserted calls report. |
+
+Inserting calls into your code needs a plugin. Recording and showing messages is the library's job, so the plugin needs `dari` too.
+
+## What is a DSL?
+
+A DSL (domain-specific language) is a small language for one job. Gradle build scripts use Kotlin (or Groovy) to build one: `android { }`, `dependencies { }` and `plugins { }` are all ordinary Kotlin function calls that take a block.
+
+The plugin adds one more block, `dari { }`. Inside it, `webToAppRequest(...) { handlerName = arg(0) }` is plain Kotlin as well:
+
+- `webToAppRequest` is a function on the `dari` extension;
+- `handlerName` is a property;
+- `arg(0)` returns a value that describes "the first parameter".
+
+Nothing runs on the device at this point. The block only records a description that the plugin bakes into your classes.
+
+## What is ASM?
+
+Kotlin and Java compile to JVM bytecode: `.class` files that hold a list of instructions per method. Android turns them into DEX afterwards.
+
+[ASM](https://asm.ow2.io/) is the standard library for reading and rewriting that bytecode. AGP exposes it through its official [instrumentation API](https://developer.android.com/build/extend-agp): a plugin registers an [`AsmClassVisitorFactory`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/instrumentation/AsmClassVisitorFactory), and AGP passes every class through it before dexing. This is also how Firebase Performance, Sentry and Hilt modify compiled code.
+
+For a mapped method such as:
+
+```kotlin
+fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
+    when (handlerName) { /* ... */ }
+}
+```
+
+the plugin adds one call at the very start of the method body in the compiled class. In source terms the result looks like this (your `.kt` file is not changed):
+
+```kotlin
+fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
+    DariHooks.onMappedCall("""{"kind":"WEB_TO_APP_REQUEST","fields":{...}}""", this, arrayOf(handlerName, requestId, data))
+    when (handlerName) { /* ... */ }
+}
+```
+
+On the device, `DariHooks` (inside `dari`) reads the mapping, picks the values out of the arguments and calls `onWebToAppRequest(...)` on an interceptor. Because the plugin works on bytecode, it handles Java and Kotlin the same way.
+
+Why not a Kotlin compiler plugin? It runs inside `kotlinc`, so it only sees Kotlin sources. It can't touch bridges written in Java, which is common for WebView code, or bridges inside third-party AARs. Its IR API also isn't stable, so it usually needs a build per Kotlin version. AGP's instrumentation API works on the compiled classes of every language and AAR, at the cost of reading less source-level detail (parameter names, `suspend`) back from bytecode.
+
+The plugin also rewrites two more things:
+
+- **[`webView.addJavascriptInterface(bridge, name)`](https://developer.android.com/reference/android/webkit/WebView#addJavascriptInterface(java.lang.Object,java.lang.String)) calls** now go through `DariHooks`. Dari can then tell which WebView a bridge object belongs to.
+- **[`WebViewClient.doUpdateVisitedHistory`](https://developer.android.com/reference/android/webkit/WebViewClient#doUpdateVisitedHistory(android.webkit.WebView,java.lang.String,boolean)) overrides** now report the page URL.
+
+## Built on official APIs
+
+Every step uses a public, documented API.
+
+| What | Official API |
+| --- | --- |
+| Rewrite compiled classes | AGP [`Instrumentation.transformClassesWith`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/variant/Instrumentation) with an [`AsmClassVisitorFactory`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/instrumentation/AsmClassVisitorFactory) ([Extend the Android Gradle plugin](https://developer.android.com/build/extend-agp)) |
+| Choose which classes | AGP [`InstrumentationScope`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/instrumentation/InstrumentationScope) |
+| Debug builds only | AGP [`Component.debuggable`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/variant/Component) |
+| Read and write bytecode | [ASM](https://asm.ow2.io/), the copy AGP already ships |
+| Bridge methods | [`@JavascriptInterface`](https://developer.android.com/reference/android/webkit/JavascriptInterface) |
+| Bridge → WebView | [`WebView.addJavascriptInterface`](https://developer.android.com/reference/android/webkit/WebView#addJavascriptInterface(java.lang.Object,java.lang.String)) |
+| Page URL | [`WebViewClient.doUpdateVisitedHistory`](https://developer.android.com/reference/android/webkit/WebViewClient#doUpdateVisitedHistory(android.webkit.WebView,java.lang.String,boolean)) |
+
+## What else is captured
+
+- **Tag per WebView.** Each WebView gets its own interceptor. The tag is the name passed to `addJavascriptInterface` (`Android`), unless you set `tag`.
+  - Requests use the WebView their bridge object was added to.
+  - Responses use the interceptor that recorded the matching request.
+  - Mapped methods that are not bridge objects use a `WebView` parameter if there is one, otherwise the WebView seen most recently.
+- **Page URL.** Taken from `doUpdateVisitedHistory`, so redirects, link clicks and SPA history changes count too. This needs a `WebViewClient` subclass that overrides `doUpdateVisitedHistory`; an empty override is enough.
