@@ -66,11 +66,11 @@ class DariHooksTest {
             "WEB_TO_APP_REQUEST",
             """"handlerName":{"json":[{"arg":0},"action"]},"requestId":{"json":[{"arg":0},"meta.id"]},""" +
                 """"data":{"json":[{"arg":0},"params"]},"displayName":{"const":"Hello"}""",
-            tag = "Hime",
+            tag = "Sample",
         )
         DariHooks.onMappedCall(spec, null, arrayOf("""{"action":"login","meta":{"id":7},"params":{"u":"x"}}"""))
 
-        assertEquals(listOf("Hime w2a-req login Hello 7 {\"u\":\"x\"} null"), calls)
+        assertEquals(listOf("Sample w2a-req login Hello 7 {\"u\":\"x\"} null"), calls)
     }
 
     @Test
