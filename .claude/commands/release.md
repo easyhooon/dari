@@ -17,9 +17,11 @@ The desktop updater, `install-desktop.sh` and the download page all read GitHub'
 
 ## Step 2: Publish to Maven Central (full release only)
 - Skip this step for a desktop-only release; publishing would put an unchanged library and plugin on Maven Central under a new number.
-- Run `./gradlew clean publishAllPublicationsToMavenCentralRepository`
-  - The root task also publishes the included `dari-gradle-plugin` build: the plugin jar and its marker, versioned by `dari`.
-- Verify the build succeeds.
+- Run `./gradlew clean publishAllPublicationsToMavenCentralRepository` for the library modules.
+- Then publish the Gradle plugin in its own run: `./gradlew -p dari-gradle-plugin clean publishAllPublicationsToMavenCentralRepository`
+  - Keep the runs separate. `:sample` applies the plugin, so a root run builds the plugin jar while configuring, and a root `clean` would delete it before upload. In 2.6.0 that left Central with "Bundle has no files".
+  - It uploads the plugin jar and its marker, versioned by `dari`.
+- Verify both runs succeed.
 - Verify the plugin reached Central, because a missing marker breaks `plugins { id("io.github.easyhooon.dari") version "<version>" }`. Each URL must return 200. Central can take up to ~30 minutes, so retry before calling it failed:
   - `curl -sI https://repo1.maven.org/maven2/io/github/easyhooon/dari-gradle-plugin/<version>/dari-gradle-plugin-<version>.pom`
   - `curl -sI https://repo1.maven.org/maven2/io/github/easyhooon/dari/io.github.easyhooon.dari.gradle.plugin/<version>/io.github.easyhooon.dari.gradle.plugin-<version>.pom`
