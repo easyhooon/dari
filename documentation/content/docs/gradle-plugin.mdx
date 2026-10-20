@@ -29,16 +29,13 @@ A **library** (`implementation`, `api`) is code that ships in your APK and runs 
 
 A **Gradle plugin** (`plugins { id(...) }`) is code that runs inside Gradle on your machine or CI while the app builds. It is not packaged into the APK. AGP (`com.android.application`), KSP and the Sentry Android Gradle Plugin are all plugins.
 
-```text
-Build (your machine or CI, inside Gradle)
-  plugins { ... }        plugins load and configure the build
-  compile                your code -> .class files
-  transform              the Dari plugin rewrites the compiled classes   <- here
-  dex + package          classes and libraries -> APK
-
-Runtime (device)
-  your app               dari records what the inserted calls report
-```
+| Step | Runs on | What happens |
+| --- | --- | --- |
+| 1. `plugins { ... }` | Your machine or CI (Gradle) | Plugins load and configure the build. |
+| 2. Compile | Your machine or CI (Gradle) | Your code becomes `.class` files. |
+| **3. Transform** | **Your machine or CI (Gradle)** | **The Dari plugin rewrites the compiled classes.** |
+| 4. Dex + package | Your machine or CI (Gradle) | Classes and libraries become the APK. |
+| 5. Run the app | Device | `dari` records what the inserted calls report. |
 
 Inserting calls into your code needs a plugin. Recording and showing messages is the library's job, so the plugin needs `dari` too.
 

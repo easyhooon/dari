@@ -29,16 +29,13 @@ Dari Gradle 플러그인을 쓰면 호출마다 코드를 넣지 않아도 브�
 
 **Gradle 플러그인**(`plugins { id(...) }`)은 앱을 빌드하는 동안 개발자 PC나 CI의 Gradle 안에서 실행되는 코드입니다. APK에는 들어가지 않습니다. AGP(`com.android.application`), KSP, Sentry Android Gradle Plugin이 모두 플러그인입니다.
 
-```text
-빌드 (개발자 PC 또는 CI, Gradle 안에서)
-  plugins { ... }        플러그인이 로드되어 빌드를 설정
-  compile                내 코드 -> .class 파일
-  transform              Dari 플러그인이 컴파일된 클래스를 수정   <- 여기
-  dex + package          클래스와 라이브러리 -> APK
-
-런타임 (기기)
-  내 앱                   삽입된 호출이 넘긴 내용을 dari가 기록
-```
+| 단계 | 실행 위치 | 하는 일 |
+| --- | --- | --- |
+| 1. `plugins { ... }` | 개발자 PC 또는 CI (Gradle) | 플러그인이 로드되어 빌드를 설정합니다. |
+| 2. 컴파일 | 개발자 PC 또는 CI (Gradle) | 내 코드가 `.class` 파일이 됩니다. |
+| **3. 변환** | **개발자 PC 또는 CI (Gradle)** | **Dari 플러그인이 컴파일된 클래스를 수정합니다.** |
+| 4. dex + 패키징 | 개발자 PC 또는 CI (Gradle) | 클래스와 라이브러리가 APK가 됩니다. |
+| 5. 앱 실행 | 기기 | 삽입된 호출이 넘긴 내용을 `dari`가 기록합니다. |
 
 내 코드에 호출을 넣으려면 플러그인이 필요합니다. 메시지를 기록하고 보여주는 일은 라이브러리가 하므로, 플러그인을 쓸 때도 `dari`가 필요합니다.
 
