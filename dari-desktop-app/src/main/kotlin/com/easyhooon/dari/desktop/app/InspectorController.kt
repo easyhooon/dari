@@ -201,6 +201,9 @@ class InspectorController(
         connectJob = null
         searchJob?.cancel()
         searchJob = null
+        // The detail stays readable; a load cut off here has nothing to retry until the next session.
+        detailJob?.cancel()
+        detailLoad = null
         connection?.let { conn -> scope.launch(Dispatchers.IO) { conn.close() } }
         connection = null
         appAlwaysMasks = false
@@ -226,9 +229,9 @@ class InspectorController(
                     maskingGeneration++
                     detailJob?.cancel()
                     detail = null
-                    detailLoad = DetailLoad.Failed
                     // Session already gone (e.g. user disconnected): the next one applies the saved setting.
                     if (connection !== conn) return@onFailure
+                    detailLoad = DetailLoad.Failed
                     // The app may still send under the old setting; a new session applies the saved one.
                     showNotice("Couldn't change masking, reconnecting")
                     connect()

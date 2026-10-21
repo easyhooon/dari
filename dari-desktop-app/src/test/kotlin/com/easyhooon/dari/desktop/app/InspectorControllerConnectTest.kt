@@ -199,6 +199,7 @@ class InspectorControllerConnectTest {
 
         delay(300)
         assertNull(controller.notice)
+        assertNull(controller.detailLoad)
         assertEquals(ConnectionState.Idle, controller.state)
         assertEquals(1, opens.get())
     }
@@ -223,7 +224,7 @@ class InspectorControllerConnectTest {
         app.holdNextDetail.set(true)
         val controller = sessionController()
         controller.connect()
-        controller.awaitState { it is ConnectionState.Connected }
+        awaitUntil { app.detailHeld.get() }
         assertEquals(DetailLoad.Loading, controller.detailLoad)
         assertNull(controller.detail)
 
@@ -305,8 +306,9 @@ class InspectorControllerConnectTest {
         /** Answers the next messages.detail with an error, as a request timing out on a frozen app would fail. */
         val failNextDetail = AtomicBoolean()
 
-        /** Leaves the next messages.detail unanswered. */
+        /** Leaves the next messages.detail unanswered; [detailHeld] turns true once it arrives. */
         val holdNextDetail = AtomicBoolean()
+        val detailHeld = AtomicBoolean()
 
         init {
             thread(isDaemon = true) {
@@ -346,7 +348,7 @@ class InspectorControllerConnectTest {
                 InspectorOperations.LIST ->
                     InspectorFrame.Result(frame.requestId, json.encodeToJsonElement(ListOutput.serializer(), ListOutput(messages)))
                 InspectorOperations.DETAIL -> when {
-                    holdNextDetail.getAndSet(false) -> null
+                    holdNextDetail.getAndSet(false) -> null.also { detailHeld.set(true) }
                     failNextDetail.getAndSet(false) ->
                         InspectorFrame.Result(frame.requestId, error = InspectorError(InspectorErrorCode.PROVIDER_FAILED, "detail unavailable"))
                     else -> detailResult(frame, masking)
