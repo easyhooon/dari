@@ -122,7 +122,7 @@ dari {
 | --- | --- | --- |
 | `"request"` | Recorded | Skipped |
 | `"response"` | Skipped | Recorded, paired with the App→Web request `a3` |
-| Without `onlyIf` | Records every message, so replies also show up as requests named `unknown` | Treats every message as a reply. Replies are matched by request ID and tag only, so the request `r1` it just recorded is marked ERROR right away, with no response |
+| Without `onlyIf` | Records every message, so replies also show up as requests named `unknown` | Treats every message as a reply. A reply pairs only with an App→Web request, so a request message like `r1` finds nothing to complete and the recorded Web→App request `r1` is left as is |
 
 `onlyIf` is `false` when the field is missing or `null`. The App→Web request `a3` itself is recorded by the mapping on the method that sends it, as in [App to Web](#app-to-web).
 

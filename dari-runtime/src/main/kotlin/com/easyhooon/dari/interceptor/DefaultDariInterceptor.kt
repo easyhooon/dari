@@ -71,7 +71,7 @@ class DefaultDariInterceptor(
         if (requestId == null) return
 
         val (truncatedData, wasTruncated) = MessageEntry.truncateIfNeeded(responseData, maxContentLength)
-        DariRuntime.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
+        DariRuntime.repository.updateEntry(requestId, tag, MessageDirection.WEB_TO_APP) { entry ->
             entry.copy(
                 responseData = truncatedData,
                 responseDataTruncated = wasTruncated,
@@ -116,7 +116,7 @@ class DefaultDariInterceptor(
         if (requestId == null) return
 
         val (truncatedData, wasTruncated) = MessageEntry.truncateIfNeeded(responseData, maxContentLength)
-        DariRuntime.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
+        DariRuntime.repository.updateEntry(requestId, tag, MessageDirection.APP_TO_WEB) { entry ->
             entry.copy(
                 responseData = truncatedData,
                 responseDataTruncated = wasTruncated,
@@ -176,7 +176,7 @@ class DefaultDariInterceptor(
             direction = MessageDirection.WEB_TO_APP,
             part = PayloadPart.RESPONSE,
         )
-        DariRuntime.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
+        DariRuntime.repository.updateEntry(requestId, tag, MessageDirection.WEB_TO_APP) { entry ->
             entry.copy(
                 responseData = rendered.data,
                 responseDataTruncated = rendered.wasTruncated,
@@ -230,7 +230,7 @@ class DefaultDariInterceptor(
     ) {
         if (requestId == null) return
 
-        DariRuntime.repository.updateEntry(requestId = requestId, tag = tag) { entry ->
+        DariRuntime.repository.updateEntry(requestId, tag, MessageDirection.APP_TO_WEB) { entry ->
             val rendered = renderProtobuf(
                 payload = responseData,
                 handlerName = entry.handlerName,
