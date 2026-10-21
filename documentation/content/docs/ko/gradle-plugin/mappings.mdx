@@ -27,7 +27,7 @@ description: dari { } 블록의 위치, 필드, 표현식, 옵션
 | `displayName` | 요청 | 수동 API의 `displayName` 오버로드와 같습니다. |
 | `success` | 응답 | 생략하면 항상 SUCCESS입니다. `false`, `"false"`, `0`이면 ERROR로 기록합니다. |
 | `fireAndForget` | 요청 | `true`면 바로 완료 처리합니다. `false`면 수동 API에 `null`을 넘긴 것처럼 `DariConfig.fireAndForget`을 따릅니다. |
-| `onlyIf` | 전체 | 선택 사항입니다. 생략하면 모든 호출을 기록합니다. 지정하면 값이 `true`일 때만 기록하고, `null`은 `false`로 봅니다. 메서드 하나로 여러 종류의 메시지가 오갈 때 씁니다. |
+| `onlyIf` | 전체 | 매핑을 어떤 호출에 적용할지 고릅니다([예시](./recipes#메서드-하나로-요청과-응답을-보낼-때)). 선택 사항입니다. 생략하면 모든 호출을 기록합니다. 지정하면 값이 `true`일 때만 기록하고, `null`은 `false`로 봅니다. 메서드 하나로 여러 종류의 메시지가 오갈 때 씁니다. |
 | `tag` | 전체 | 이 매핑에서만 `dari { tag }` 값을 덮어씁니다. |
 
 ## 표현식

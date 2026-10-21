@@ -81,17 +81,48 @@ appToWebResponse("com.example.MainActivity.BridgeInterface", "onAppToWebResponse
 
 ## Requests and responses through one method
 
-When one method sends both, e.g. a `type` field of `"request"` or `"response"`, map it twice and filter each mapping with `onlyIf`:
+`onlyIf` picks which calls a mapping applies to. A method that only ever carries one kind of message doesn't need it.
+
+Some bridges send everything through one method and tell the kinds apart with a field:
 
 ```kotlin
-appToWebRequest("com.example.WebBridge", "postMessage") {
-    handlerName = json(arg(0), "action")
-    requestId = json(arg(0), "id")
-    onlyIf = json(arg(0), "type").equalsTo("request")
+// App code: every message from the web arrives through this one method
+class WebBridge {
+    @JavascriptInterface
+    fun postMessage(message: String) { /* branch on type */ }
 }
-appToWebResponse("com.example.WebBridge", "postMessage") {
-    requestId = json(arg(0), "id")
-    data = arg(0)
-    onlyIf = json(arg(0), "type").equalsTo("response")
+// Incoming messages:
+// {"type":"request","handlerName":"getUserInfo","requestId":"r1","data":{"id":7}}   ← a request from the web
+// {"type":"response","requestId":"a3","isSuccess":true,"result":{"ok":true}}       ← the web's reply to an app request
+```
+
+Map the method once per kind, and filter each mapping with `onlyIf`:
+
+```kotlin
+// app/build.gradle.kts
+dari {
+    // Only messages with type == "request" are recorded as Web→App requests
+    webToAppRequest("com.example.WebBridge", "postMessage") {
+        handlerName = json(arg("message"), "handlerName")
+        requestId = json(arg("message"), "requestId")
+        data = json(arg("message"), "data")
+        onlyIf = json(arg("message"), "type").equalsTo("request")
+    }
+    // Only messages with type == "response" are recorded as App→Web responses
+    appToWebResponse("com.example.WebBridge", "postMessage") {
+        requestId = json(arg("message"), "requestId")
+        success = json(arg("message"), "isSuccess")
+        data = json(arg("message"), "result")
+        onlyIf = json(arg("message"), "type").equalsTo("response")
+    }
 }
 ```
+
+| Incoming `type` | Request mapping | Response mapping |
+| --- | --- | --- |
+| `"request"` | Recorded | Skipped |
+| `"response"` | Skipped | Recorded, paired with the App→Web request `a3` |
+| Without `onlyIf` | Records every message, so replies also show up as requests named `unknown` | Treats every message as a reply. Replies are matched by request ID and tag only, so the request `r1` it just recorded is marked ERROR right away, with no response |
+
+`onlyIf` is `false` when the field is missing or `null`. The App→Web request `a3` itself is recorded by the mapping on the method that sends it, as in [App to Web](#app-to-web).
+
