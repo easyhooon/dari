@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.easyhooon.dari.desktop.app.DetailLoad
 import com.easyhooon.dari.desktop.app.ExportFormat
 import com.easyhooon.dari.desktop.app.MessageExport
 import com.easyhooon.dari.desktop.app.isMacOs
@@ -63,11 +64,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun DetailPane(
     detail: WireMessageDetail?,
+    detailLoad: DetailLoad?,
     jsonFoldingEnabled: Boolean,
     onCopy: (onCopied: () -> Unit) -> Unit,
     onCopyPayload: (text: String, what: String) -> Unit,
     onSave: (ExportFormat) -> Unit,
     onClose: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
     newerCount: Int = 0,
     onShowLatest: () -> Unit = {},
@@ -75,7 +78,17 @@ fun DetailPane(
 ) {
     Column(modifier.background(Dari.colors.surface)) {
         if (detail == null) {
-            EmptyState("Select a message", "Its request and response appear here.", Modifier.fillMaxWidth().weight(1f))
+            val emptyModifier = Modifier.fillMaxWidth().weight(1f)
+            when (detailLoad) {
+                DetailLoad.Loading -> EmptyState("Loading details…", null, emptyModifier)
+                // A backgrounded app is frozen by Android and stops answering until it is brought back.
+                DetailLoad.Failed -> EmptyState(
+                    "Couldn't load details",
+                    "The app may be in the background. Bring it to the foreground and retry.",
+                    emptyModifier,
+                ) { QuietButton("Retry", onClick = onRetry) }
+                null -> EmptyState("Select a message", "Its request and response appear here.", emptyModifier)
+            }
             return@Column
         }
         val summary = detail.summary

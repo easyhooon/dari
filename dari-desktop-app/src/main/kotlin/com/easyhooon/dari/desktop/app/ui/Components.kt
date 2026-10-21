@@ -416,11 +416,12 @@ fun Pairs(pairs: List<Pair<String, String>>) {
 
 /** At most two lines: what is missing, and what to do next. */
 @Composable
-fun EmptyState(title: String, hint: String?, modifier: Modifier = Modifier) {
+fun EmptyState(title: String, hint: String?, modifier: Modifier = Modifier, action: (@Composable () -> Unit)? = null) {
     Box(modifier, contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, style = Dari.type.body, color = Dari.colors.textSecondary)
             hint?.let { Text(it, style = Dari.type.caption, color = Dari.colors.textTertiary) }
+            action?.invoke()
         }
     }
 }

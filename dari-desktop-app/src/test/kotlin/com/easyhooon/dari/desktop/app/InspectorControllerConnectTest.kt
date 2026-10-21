@@ -199,8 +199,38 @@ class InspectorControllerConnectTest {
 
         delay(300)
         assertNull(controller.notice)
+        assertNull(controller.detailLoad)
         assertEquals(ConnectionState.Idle, controller.state)
         assertEquals(1, opens.get())
+    }
+
+    @Test
+    fun `a failed detail load shows the failure until retried`(): Unit = runBlocking(dispatcher) {
+        app.messages = listOf(MESSAGE)
+        app.failNextDetail.set(true)
+        val controller = sessionController()
+        controller.connect()
+        awaitUntil { controller.detailLoad == DetailLoad.Failed }
+        assertNull(controller.detail)
+
+        controller.retryDetail()
+        awaitUntil { controller.detail?.requestData == SECRET }
+        assertNull(controller.detailLoad)
+    }
+
+    @Test
+    fun `an unanswered detail load shows loading and a new selection replaces it`(): Unit = runBlocking(dispatcher) {
+        app.messages = listOf(MESSAGE)
+        app.holdNextDetail.set(true)
+        val controller = sessionController()
+        controller.connect()
+        awaitUntil { app.detailHeld.get() }
+        assertEquals(DetailLoad.Loading, controller.detailLoad)
+        assertNull(controller.detail)
+
+        controller.select(MESSAGE.id)
+        awaitUntil { controller.detail?.requestData == SECRET }
+        assertNull(controller.detailLoad)
     }
 
     @Test
@@ -273,6 +303,13 @@ class InspectorControllerConnectTest {
         val holdNextSettings = AtomicBoolean()
         val settingsHeld = AtomicBoolean()
 
+        /** Answers the next messages.detail with an error, as a request timing out on a frozen app would fail. */
+        val failNextDetail = AtomicBoolean()
+
+        /** Leaves the next messages.detail unanswered; [detailHeld] turns true once it arrives. */
+        val holdNextDetail = AtomicBoolean()
+        val detailHeld = AtomicBoolean()
+
         init {
             thread(isDaemon = true) {
                 while (true) {
@@ -310,10 +347,11 @@ class InspectorControllerConnectTest {
             return when (frame.op) {
                 InspectorOperations.LIST ->
                     InspectorFrame.Result(frame.requestId, json.encodeToJsonElement(ListOutput.serializer(), ListOutput(messages)))
-                InspectorOperations.DETAIL -> {
-                    val id = json.decodeFromJsonElement(DetailInput.serializer(), frame.input).id
-                    val detail = WireMessageDetail(messages.first { it.id == id }, requestData = if (masking.get()) MASKED else SECRET)
-                    InspectorFrame.Result(frame.requestId, json.encodeToJsonElement(WireMessageDetail.serializer(), detail))
+                InspectorOperations.DETAIL -> when {
+                    holdNextDetail.getAndSet(false) -> null.also { detailHeld.set(true) }
+                    failNextDetail.getAndSet(false) ->
+                        InspectorFrame.Result(frame.requestId, error = InspectorError(InspectorErrorCode.PROVIDER_FAILED, "detail unavailable"))
+                    else -> detailResult(frame, masking)
                 }
                 InspectorOperations.SETTINGS_UPDATE -> when {
                     holdNextSettings.getAndSet(false) -> null.also { settingsHeld.set(true) }
@@ -334,6 +372,13 @@ class InspectorControllerConnectTest {
                 }
                 else -> InspectorFrame.Result(frame.requestId, frame.input)
             }
+        }
+
+        private fun detailResult(frame: InspectorFrame.Invoke, masking: AtomicBoolean): InspectorFrame.Result {
+            val json = InspectorProtocol.json
+            val id = json.decodeFromJsonElement(DetailInput.serializer(), frame.input).id
+            val detail = WireMessageDetail(messages.first { it.id == id }, requestData = if (masking.get()) MASKED else SECRET)
+            return InspectorFrame.Result(frame.requestId, json.encodeToJsonElement(WireMessageDetail.serializer(), detail))
         }
 
         override fun close() = server.close()
