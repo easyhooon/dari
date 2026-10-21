@@ -81,17 +81,48 @@ appToWebResponse("com.example.MainActivity.BridgeInterface", "onAppToWebResponse
 
 ## 메서드 하나로 요청과 응답을 보낼 때
 
-메서드 하나가 요청과 응답을 모두 보낸다면(예: `type` 필드가 `"request"` 또는 `"response"`), 같은 메서드를 두 번 매핑하고 각 매핑에 `onlyIf`를 겁니다.
+`onlyIf`는 매핑을 어떤 호출에 적용할지 고릅니다. 한 종류의 메시지만 오가는 메서드에는 필요 없습니다.
+
+어떤 브릿지는 모든 메시지를 메서드 하나로 보내고, 필드 하나로 종류를 구분합니다.
 
 ```kotlin
-appToWebRequest("com.example.WebBridge", "postMessage") {
-    handlerName = json(arg(0), "action")
-    requestId = json(arg(0), "id")
-    onlyIf = json(arg(0), "type").equalsTo("request")
+// 앱 코드: 웹에서 오는 모든 메시지가 이 메서드 하나로 들어옴
+class WebBridge {
+    @JavascriptInterface
+    fun postMessage(message: String) { /* type으로 분기 */ }
 }
-appToWebResponse("com.example.WebBridge", "postMessage") {
-    requestId = json(arg(0), "id")
-    data = arg(0)
-    onlyIf = json(arg(0), "type").equalsTo("response")
+// 들어오는 메시지:
+// {"type":"request","handlerName":"getUserInfo","requestId":"r1","data":{"id":7}}   ← 웹이 보낸 요청
+// {"type":"response","requestId":"a3","isSuccess":true,"result":{"ok":true}}       ← 앱 요청에 대한 웹의 응답
+```
+
+종류마다 이 메서드를 한 번씩 매핑하고, 각 매핑을 `onlyIf`로 거릅니다.
+
+```kotlin
+// app/build.gradle.kts
+dari {
+    // type == "request"인 메시지만 Web→App 요청으로 기록
+    webToAppRequest("com.example.WebBridge", "postMessage") {
+        handlerName = json(arg("message"), "handlerName")
+        requestId = json(arg("message"), "requestId")
+        data = json(arg("message"), "data")
+        onlyIf = json(arg("message"), "type").equalsTo("request")
+    }
+    // type == "response"인 메시지만 App→Web 응답으로 기록
+    appToWebResponse("com.example.WebBridge", "postMessage") {
+        requestId = json(arg("message"), "requestId")
+        success = json(arg("message"), "isSuccess")
+        data = json(arg("message"), "result")
+        onlyIf = json(arg("message"), "type").equalsTo("response")
+    }
 }
 ```
+
+| 들어온 `type` | 요청 매핑 | 응답 매핑 |
+| --- | --- | --- |
+| `"request"` | 기록 | 건너뜀 |
+| `"response"` | 건너뜀 | 기록, App→Web 요청 `a3`과 짝지음 |
+| `onlyIf` 없음 | 모든 메시지를 기록해서, 응답도 이름이 `unknown`인 요청으로 보임 | 모든 메시지를 응답으로 보고 `r1` 같은 요청과 짝지으려 함 |
+
+필드가 없거나 `null`이면 `onlyIf`는 `false`입니다. App→Web 요청 `a3` 자체는 그 요청을 보내는 메서드의 매핑이 기록합니다([App → Web](#app--web) 참고).
+
