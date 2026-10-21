@@ -1,7 +1,9 @@
 package com.easyhooon.dari.desktop.app
 
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.runtime.setValue
 import com.easyhooon.dari.desktop.app.adb.Adb
 import com.easyhooon.dari.desktop.app.adb.AdbDevice
@@ -56,8 +58,8 @@ class InspectorController(
     var state by mutableStateOf<ConnectionState>(ConnectionState.Idle)
         private set
 
-    /** Oldest first, keyed by the stable wire id. */
-    var messages by mutableStateOf<Map<Long, WireMessageSummary>>(emptyMap())
+    /** Oldest first, keyed by the stable wire id. Always replaced, never mutated, so identity marks a change. */
+    var messages by mutableStateOf<Map<Long, WireMessageSummary>>(emptyMap(), referentialEqualityPolicy())
         private set
     var selectedId by mutableStateOf<Long?>(null)
         private set
@@ -81,10 +83,10 @@ class InspectorController(
     var originFilter by mutableStateOf<String?>(null)
 
     /** Tags seen in this session, in order of first appearance. */
-    val availableTags: List<String> get() = messages.values.mapNotNull { it.tag }.distinct()
+    val availableTags: List<String> by derivedStateOf { messages.values.mapNotNull { it.tag }.distinct() }
 
     /** Page origins seen in this session, in order of first appearance. */
-    val availableOrigins: List<String> get() = messages.values.mapNotNull { it.pageOrigin }.distinct()
+    val availableOrigins: List<String> by derivedStateOf { messages.values.mapNotNull { it.pageOrigin }.distinct() }
 
     /** The connected app's dari predates 2.2.0 and masks regardless of the setting. */
     var appAlwaysMasks by mutableStateOf(false)
@@ -332,9 +334,12 @@ class InspectorController(
     }
 
     /** Newest first, after the search, direction, status, tag and origin facets. */
-    fun visibleMessages(): List<WireMessageSummary> {
+    fun visibleMessages(): List<WireMessageSummary> = visible
+
+    // Cached so the several readers per frame share one list until an input changes.
+    private val visible by derivedStateOf {
         val query = filter.trim()
-        return messages.values.reversed().filter { message ->
+        messages.values.reversed().filter { message ->
             (directionFilter == null || message.direction == directionFilter) &&
                 (statusFilter == null || message.status == statusFilter) &&
                 (tagFilter == null || message.tag == tagFilter) &&
@@ -365,56 +370,77 @@ class InspectorController(
         selectedId?.let { if (it in messages) loadDetail(it) }
         selectNewestIfNone()
         searchPayloads()
-        for (event in events) apply(event)
-    }
-
-    // Internal so tests can feed events without a device.
-    internal fun apply(event: ObserveEvent) {
-        when (event) {
-            is ObserveEvent.Added -> {
-                merge(listOf(event.message))
-                if (selectedId != null) {
-                    val arrived = arrivedSinceSelection + event.message.id
-                    // Drops evicted ids so the set stays bounded by MAX_MESSAGES.
-                    arrivedSinceSelection = if (arrived.size > messages.size) arrived.filterTo(HashSet()) { it in messages } else arrived
-                }
-                selectNewestIfNone()
-                searchPayloads()
-            }
-            is ObserveEvent.Updated -> {
-                merge(listOf(event.message))
-                if (event.message.id == selectedId) loadDetail(event.message.id)
-                searchPayloads()
-            }
-            ObserveEvent.Cleared -> {
-                messages = emptyMap()
-                arrivedSinceSelection = emptySet()
-                selectedId = null
-                detailJob?.cancel()
-                detail = null
-                detailLoad = null
-            }
+        // Drains whatever queued up during a burst, so the map is copied once per batch, not per event.
+        for (first in events) {
+            val batch = mutableListOf(first)
+            while (batch.size < MAX_MESSAGES) batch += events.tryReceive().getOrNull() ?: break
+            apply(batch)
         }
     }
 
-    // Keeps the detail pane filled so the latest payloads are visible without a click.
-    private fun selectNewestIfNone() {
-        if (selectedId == null && !detailDismissed) {
-            messages.values.lastOrNull()?.let { newest ->
-                selectedId = newest.id
-                loadDetail(newest.id)
+    // Internal so tests can feed events without a device.
+    internal fun apply(event: ObserveEvent) = apply(listOf(event))
+
+    internal fun apply(events: List<ObserveEvent>) {
+        val updated = LinkedHashMap(messages)
+        val added = mutableListOf<Long>()
+        var selectedUpdated = false
+        for (event in events) {
+            when (event) {
+                is ObserveEvent.Added -> {
+                    updated[event.message.id] = event.message
+                    added += event.message.id
+                }
+                is ObserveEvent.Updated -> {
+                    updated[event.message.id] = event.message
+                    if (event.message.id == selectedId) selectedUpdated = true
+                }
+                ObserveEvent.Cleared -> {
+                    updated.clear()
+                    added.clear()
+                    selectedUpdated = false
+                    arrivedSinceSelection = emptySet()
+                    selectedId = null
+                    detailJob?.cancel()
+                    detail = null
+                    detailLoad = null
+                }
             }
+        }
+        messages = updated.trimmed()
+        if (selectedId != null && added.isNotEmpty()) {
+            val arrived = arrivedSinceSelection + added
+            // Drops evicted ids so the set stays bounded by MAX_MESSAGES.
+            arrivedSinceSelection = if (arrived.size > messages.size) arrived.filterTo(HashSet()) { it in messages } else arrived
+        }
+        if (selectedUpdated) selectedId?.let(::loadDetail)
+        // The newest arrival, not the map's tail: an Updated for an evicted id re-appends it there.
+        if (added.isNotEmpty()) selectNewestIfNone(added.lastOrNull { it in messages })
+        if (events.any { it !is ObserveEvent.Cleared }) searchPayloads()
+    }
+
+    // Keeps the detail pane filled so the latest payloads are visible without a click.
+    private fun selectNewestIfNone(newest: Long? = messages.keys.lastOrNull()) {
+        if (selectedId == null && !detailDismissed && newest != null) {
+            selectedId = newest
+            loadDetail(newest)
         }
     }
 
     private fun merge(items: List<WireMessageSummary>) {
         val updated = LinkedHashMap(messages)
         items.forEach { updated[it.id] = it }
-        messages = if (updated.size > MAX_MESSAGES) {
-            updated.entries.drop(updated.size - MAX_MESSAGES).associate { it.key to it.value }
-        } else {
-            updated
+        messages = updated.trimmed()
+    }
+
+    // Evicts the oldest in place instead of rebuilding the map.
+    private fun LinkedHashMap<Long, WireMessageSummary>.trimmed(): Map<Long, WireMessageSummary> {
+        val keys = keys.iterator()
+        repeat(size - MAX_MESSAGES) {
+            keys.next()
+            keys.remove()
         }
+        return this
     }
 
     // Debounced: typing and event bursts send one request once they settle.

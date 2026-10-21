@@ -97,6 +97,33 @@ class InspectorControllerTest {
     }
 
     @Test
+    fun `a batch replays events in order across a clear`() {
+        addAll(1)
+        controller.apply(
+            listOf(
+                ObserveEvent.Added(message(2)),
+                ObserveEvent.Cleared,
+                ObserveEvent.Added(message(3)),
+                ObserveEvent.Updated(message(3, status = "ERROR")),
+            ),
+        )
+        assertEquals(listOf(3L), controller.visibleMessages().map { it.id })
+        assertEquals("ERROR", controller.messages.getValue(3).status)
+        assertEquals(3L, controller.selectedId)
+    }
+
+    @Test
+    fun `a batch past the cap evicts the oldest and keeps order`() {
+        controller.apply((1L..2_001L).map { ObserveEvent.Added(message(it)) })
+        assertEquals(2_000, controller.messages.size)
+        assertEquals(2L, controller.messages.keys.first())
+        assertEquals(2_001L, controller.visibleMessages().first().id)
+
+        addAll(2_002)
+        assertEquals((3L..2_002L).toList(), controller.messages.keys.toList())
+    }
+
+    @Test
     fun `origin filter keeps only that origin and lists origins in first-seen order`() {
         listOf(1L to "https://jp.example.com/a", 2L to null, 3L to "https://kr.example.com/", 4L to "https://jp.example.com/b")
             .forEach { (id, url) -> controller.apply(ObserveEvent.Added(message(id, pageUrl = url))) }
