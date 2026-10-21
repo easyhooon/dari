@@ -388,6 +388,7 @@ private fun Workspace(controller: InspectorController, settings: DesktopSettings
             }
             DetailPane(
                 detail = controller.detail,
+                detailLoad = controller.detailLoad,
                 jsonFoldingEnabled = settings.jsonFoldingEnabled,
                 onCopy = controller::copySelected,
                 onCopyPayload = controller::copy,
@@ -395,6 +396,7 @@ private fun Workspace(controller: InspectorController, settings: DesktopSettings
                     chooseExportFile(null, format)?.let { controller.export(it, format, all = false) }
                 },
                 onClose = controller::closeDetail,
+                onRetry = controller::retryDetail,
                 modifier = Modifier.width(with(density) { detailWidth.coerceIn(minDetail, maxDetail).toDp() })
                     .fillMaxHeight(),
                 newerCount = controller.newerCount(visible),

@@ -32,6 +32,9 @@ sealed interface ConnectionState {
     data class Connected(val app: AppInfo) : ConnectionState
 }
 
+/** Why the selected message has no [InspectorController.detail] yet. */
+enum class DetailLoad { Loading, Failed }
+
 /** UI state and connection lifecycle. All state is read and written on the main thread. */
 class InspectorController(
     private val scope: CoroutineScope,
@@ -62,6 +65,8 @@ class InspectorController(
     // Messages added after the current selection was made; drives the "N new · Show latest" hint.
     private var arrivedSinceSelection by mutableStateOf<Set<Long>>(emptySet())
     var detail by mutableStateOf<WireMessageDetail?>(null)
+        private set
+    var detailLoad by mutableStateOf<DetailLoad?>(null)
         private set
     private var filterText by mutableStateOf("")
     var filter: String
@@ -105,6 +110,7 @@ class InspectorController(
     // Payloads stay on the device, so the app runs the search; only valid for the query it was run with.
     private var payloadMatches by mutableStateOf("" to emptySet<Long>())
     private var searchJob: Job? = null
+    private var detailJob: Job? = null
 
     // ANDROID_SERIAL or a pick in the device menu; automatic picks may be revised later.
     private var deviceChosenByUser = preferredSerial != null
@@ -218,7 +224,9 @@ class InspectorController(
                 .onFailure {
                     AppLog.error("Changing masking failed", it)
                     maskingGeneration++
+                    detailJob?.cancel()
                     detail = null
+                    detailLoad = DetailLoad.Failed
                     // Session already gone (e.g. user disconnected): the next one applies the saved setting.
                     if (connection !== conn) return@onFailure
                     // The app may still send under the old setting; a new session applies the saved one.
@@ -239,7 +247,13 @@ class InspectorController(
         detailDismissed = true
         selectedId = null
         arrivedSinceSelection = emptySet()
+        detailJob?.cancel()
         detail = null
+        detailLoad = null
+    }
+
+    fun retryDetail() {
+        selectedId?.let(::loadDetail)
     }
 
     /** Messages in [visible] that arrived while the selected one was open. */
@@ -337,7 +351,9 @@ class InspectorController(
         val backlog = conn.list()
         messages = emptyMap()
         arrivedSinceSelection = emptySet()
+        detailJob?.cancel()
         detail = null
+        detailLoad = null
         // Ids are only stable per app process, so a reconnect drops matches from the last one.
         payloadMatches = "" to emptySet()
         appLacksPayloadSearch = false
@@ -371,7 +387,9 @@ class InspectorController(
                 messages = emptyMap()
                 arrivedSinceSelection = emptySet()
                 selectedId = null
+                detailJob?.cancel()
                 detail = null
+                detailLoad = null
             }
         }
     }
@@ -423,10 +441,17 @@ class InspectorController(
 
     private fun loadDetail(id: Long) {
         val conn = connection ?: return
+        detailJob?.cancel()
         val generation = maskingGeneration
-        scope.launch {
-            val result = runCatching { conn.detail(id) }.getOrNull()
-            if (selectedId == id && generation == maskingGeneration) detail = result
+        detailLoad = DetailLoad.Loading
+        detailJob = scope.launch {
+            val result = runCatching { conn.detail(id) }
+            // A request timeout also lands here; only this job's own cancellation stops it.
+            ensureActive()
+            if (selectedId != id || generation != maskingGeneration) return@launch
+            result.exceptionOrNull()?.let { AppLog.error("Loading message $id failed", it) }
+            detail = result.getOrNull()
+            detailLoad = if (result.isSuccess) null else DetailLoad.Failed
         }
     }
 
