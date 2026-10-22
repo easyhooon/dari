@@ -93,6 +93,15 @@ compose.desktop {
             .get().metadata.installationPath.asFile.absolutePath
         // Dock name for `run`; packaged apps take it from packageName. The flag exists only on macOS JVMs.
         if (System.getProperty("os.name").startsWith("Mac")) jvmArgs += "-Xdock:name=Dari"
+        // Return idle heap to the OS: the live set is ~20 MB, but G1 kept what bursts committed. G1 is
+        // explicit so non-server-class machines don't pick Serial. No -Xmx: export builds one big string.
+        jvmArgs += listOf(
+            "-XX:+UseG1GC",
+            "-Xms32m",
+            "-XX:G1PeriodicGCInterval=15000",
+            "-XX:MinHeapFreeRatio=10",
+            "-XX:MaxHeapFreeRatio=30",
+        )
 
         // Release tasks (createReleaseDistributable, packageRelease*) shrink the jars with ProGuard.
         // Obfuscation stays off so log and issue-report stack traces remain readable.
