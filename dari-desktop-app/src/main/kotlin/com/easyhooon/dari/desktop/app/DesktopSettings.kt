@@ -51,6 +51,14 @@ class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().no
         prefs.putInt(KEY_WINDOW_HEIGHT, bounds.height)
     }
 
+    /** Whether the main window was zoomed or full screen; [windowBounds] keeps its floating size. */
+    val windowMaximized: Boolean
+        get() = prefs.getBoolean(KEY_WINDOW_MAXIMIZED, false)
+
+    fun saveWindowMaximized(maximized: Boolean) {
+        prefs.putBoolean(KEY_WINDOW_MAXIMIZED, maximized)
+    }
+
     fun updateAppearance(value: Appearance) {
         appearance = value
         prefs.put(KEY_APPEARANCE, value.name)
@@ -93,5 +101,6 @@ class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().no
         const val KEY_WINDOW_Y = "windowY"
         const val KEY_WINDOW_WIDTH = "windowWidth"
         const val KEY_WINDOW_HEIGHT = "windowHeight"
+        const val KEY_WINDOW_MAXIMIZED = "windowMaximized"
     }
 }
