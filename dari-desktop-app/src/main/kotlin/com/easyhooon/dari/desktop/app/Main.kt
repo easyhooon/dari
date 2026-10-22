@@ -102,15 +102,17 @@ fun main() {
         var statsOpen by remember { mutableStateOf(false) }
         val windowState = remember { mainWindowState(settings.windowBounds, settings.windowMaximized) }
         LaunchedEffect(windowState) {
+            // Not debounced, so zooming right before ⌘Q still sticks.
+            snapshotFlow { windowState.placement }
+                .collect { settings.saveWindowMaximized(it != WindowPlacement.Floating) }
+        }
+        LaunchedEffect(windowState) {
             // Saved as it changes, so ⌘Q and crashes keep the last bounds too.
-            snapshotFlow { Triple(windowState.placement, windowState.position, windowState.size) }
+            // Zoomed windows skip this, so un-zooming returns to the last floating size.
+            snapshotFlow { windowState.position to windowState.size }
                 .debounce(500)
-                .collect { (placement, position, size) ->
-                    // Zoomed windows only record the flag, so un-zooming returns to the last floating size.
-                    if (placement != WindowPlacement.Floating) {
-                        settings.saveWindowMaximized(true)
-                    } else if (position is WindowPosition.Absolute) {
-                        settings.saveWindowMaximized(false)
+                .collect { (position, size) ->
+                    if (windowState.placement == WindowPlacement.Floating && position is WindowPosition.Absolute) {
                         settings.saveWindowBounds(
                             WindowBounds(position.x.value.toInt(), position.y.value.toInt(), size.width.value.toInt(), size.height.value.toInt()),
                         )
