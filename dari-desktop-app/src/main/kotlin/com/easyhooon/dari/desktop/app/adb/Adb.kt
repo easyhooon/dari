@@ -55,7 +55,8 @@ class Adb internal constructor(private val runner: (List<String>) -> String) {
     /** Forwards a free local port to the app's abstract socket and returns that port. */
     fun forward(serial: String, applicationId: String): Int {
         val socketName = InspectorProtocol.socketName(applicationId)
-        return run("-s", serial, "forward", "tcp:0", "localabstract:$socketName").trim().toInt()
+        val output = run("-s", serial, "forward", "tcp:0", "localabstract:$socketName")
+        return parseForwardPort(output) ?: throw IOException("unexpected adb forward output: ${output.trim()}")
     }
 
     fun removeForward(serial: String, port: Int) {
@@ -114,6 +115,12 @@ class Adb internal constructor(private val runner: (List<String>) -> String) {
                 HOMEBREW_BIN_DIRS.map { File(it, exe) }
             return candidates.firstOrNull { it.canExecute() }?.absolutePath
         }
+
+        // stderr is merged in, so daemon notices (e.g. "* daemon not running; starting now") can precede the port.
+        internal fun parseForwardPort(output: String): Int? = output.lineSequence()
+            .map { it.trim() }
+            .lastOrNull { it.isNotEmpty() && it.all(Char::isDigit) }
+            ?.toIntOrNull()
 
         // `adb forward --list` lines: `<serial> tcp:<port> localabstract:dari_<applicationId>`.
         fun parseDariForwards(list: String): List<Pair<String, String>> = list.lineSequence()
