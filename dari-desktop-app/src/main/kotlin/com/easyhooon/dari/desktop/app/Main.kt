@@ -100,9 +100,15 @@ fun main() {
         var aboutOpen by remember { mutableStateOf(false) }
         var noticesOpen by remember { mutableStateOf(false) }
         var statsOpen by remember { mutableStateOf(false) }
-        val windowState = remember { mainWindowState(settings.windowBounds) }
+        val windowState = remember { mainWindowState(settings.windowBounds, settings.windowMaximized) }
+        LaunchedEffect(windowState) {
+            // Not debounced, so zooming right before ⌘Q still sticks.
+            snapshotFlow { windowState.placement }
+                .collect { settings.saveWindowMaximized(it != WindowPlacement.Floating) }
+        }
         LaunchedEffect(windowState) {
             // Saved as it changes, so ⌘Q and crashes keep the last bounds too.
+            // Zoomed windows skip this, so un-zooming returns to the last floating size.
             snapshotFlow { windowState.position to windowState.size }
                 .debounce(500)
                 .collect { (position, size) ->
@@ -267,15 +273,20 @@ private fun applyCrashReporting(optedIn: Boolean) {
 private fun loadAppIcon(): BufferedImage? =
     Thread.currentThread().contextClassLoader.getResourceAsStream("dari-icon.png")?.use(ImageIO::read)
 
-/** Restores the last bounds when they still fall on a connected screen; otherwise centers a default window. */
-private fun mainWindowState(saved: WindowBounds?): WindowState {
+/**
+ * Restores the last bounds when they still fall on a connected screen; otherwise centers a default window.
+ * Full screen comes back as zoomed, which avoids opening a separate macOS Space at launch.
+ */
+private fun mainWindowState(saved: WindowBounds?, maximized: Boolean): WindowState {
+    val placement = if (maximized) WindowPlacement.Maximized else WindowPlacement.Floating
     val visible = saved?.takeIf { bounds ->
         bounds.width >= MIN_WINDOW_WIDTH && bounds.height >= MIN_WINDOW_HEIGHT &&
             GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.any { screen ->
                 screen.defaultConfiguration.bounds.intersects(Rectangle(bounds.x, bounds.y, bounds.width, bounds.height))
             }
-    } ?: return WindowState(position = WindowPosition.Aligned(Alignment.Center), size = DpSize(1280.dp, 820.dp))
+    } ?: return WindowState(placement = placement, position = WindowPosition.Aligned(Alignment.Center), size = DpSize(1280.dp, 820.dp))
     return WindowState(
+        placement = placement,
         position = WindowPosition(visible.x.dp, visible.y.dp),
         size = DpSize(visible.width.dp, visible.height.dp),
     )
