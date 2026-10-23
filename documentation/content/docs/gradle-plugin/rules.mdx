@@ -1,6 +1,6 @@
 ---
 title: Rules and limits
-description: What gets transformed, build warnings and what is not covered
+description: What gets transformed, the mapping check and what is not covered
 ---
 
 - **Debug only.** Only debuggable variants are instrumented. Release builds contain no hooks.
@@ -9,14 +9,64 @@ description: What gets transformed, build warnings and what is not covered
   - A bridge inside a third-party AAR needs `scope = InstrumentationScope.ALL`. That re-dexes every AAR in the app; a cold build took about 5 minutes longer in testing.
   - A bridge in another module of your project needs the plugin applied in that module.
 - **Manual logging still works.** The plugin only touches mapped methods. If a mapped method already calls `DariInterceptor`, the plugin skips that method and prints a build warning. It checks only that method's own body: a manual call elsewhere on the same path, such as in a handler, is recorded a second time. Use one way per bridge.
-- **Mapping check.** Each debuggable variant gets a `dariCheck<Variant>Mappings` task, which runs with that variant's `assemble`, `bundle` and `install` tasks and with `check`. It fails the build when a mapping names a class that is not among the compiled classes, or a method the class doesn't declare with a body (abstract and native methods don't count). The error lists every such mapping with similar class or method names, so a typo or a rename can't quietly record nothing.
-  - It searches the module's own classes, plus its dependencies when an app module sets `scope = InstrumentationScope.ALL`.
-  - Each variant is checked on its own classes. A bridge that only exists in one flavor or build type's source set fails the other debuggable variants' check.
-  - `failOnUnmatchedMapping = false` prints the same messages as warnings and lets the build go on. Those mappings record nothing.
-  - The task is cached and runs again only when the classes or the mappings change, so warnings don't repeat on an unchanged build.
-  - To list what was rewritten, run with `--info` and look for `Dari: instrumented`.
+- **Mapping check.** The build fails when a mapping names a class or method that isn't in the code. See [Mapping check](#mapping-check) below.
 - **Not covered.**
   - Calls made through reflection.
   - `androidx.webkit` message channels (`addWebMessageListener`, `WebMessagePort`).
   - Values computed inside the method body. Only the method's parameters can be mapped.
   - The re-entries a `suspend` function receives when it resumes (with `null` arguments). Only the first call is recorded.
+
+## Mapping check
+
+A mapping whose class or method name doesn't match the code still builds, and then records nothing. A typo or a later rename is easy to miss that way, so the plugin checks every mapping against the compiled classes and fails the build instead.
+
+### When it runs
+
+Each debuggable variant gets a `dariCheck<Variant>Mappings` task, such as `dariCheckDebugMappings`. Release variants and modules without mappings get none.
+
+| Task | Runs the check |
+| --- | --- |
+| `assembleDebug`, including Android Studio's Run | Yes |
+| `installDebug`, `bundleDebug` | Yes |
+| `bundleDebugAar` in a library module | Yes |
+| `check` | Yes, for every debuggable variant |
+| `testDebugUnitTest` and other test tasks | No |
+| `assembleRelease` | No |
+
+To run it alone:
+
+```bash
+./gradlew :app:dariCheckDebugMappings
+```
+
+The task is cached. It runs again only when the compiled classes or the mappings change.
+
+### What fails
+
+- **Missing class.** The class is not among the module's compiled classes. With `scope = InstrumentationScope.ALL` in an app module, the app's dependencies are searched too. Nested classes may use `.` or `$`.
+- **Missing method.** The class declares no method of that name with a body. Abstract and native methods don't count, and neither does an inherited method the class doesn't override. The plugin only instruments a body the class declares itself.
+
+The error lists every failing mapping in the form you wrote it, with similar class or method names:
+
+```
+Execution failed for task ':app:dariCheckDebugMappings'.
+> Dari: 2 mapping(s) match no code, so they would record nothing:
+  - dari { webToAppRequest("com.example.Brige", "onBridgeRequest") }: no class com.example.Brige in this module. Did you mean com.example.Bridge? A class in another module needs the plugin applied in that module; one in a library needs scope = InstrumentationScope.ALL.
+  - dari { webToAppResponse("com.example.MainActivity", "sendResponse") }: com.example.MainActivity has no method 'sendResponse' with a body. Did you mean sendResponseToWeb?
+  Fix the class or method name, or set dari { failOnUnmatchedMapping = false } to only warn.
+```
+
+### Warn instead of failing
+
+```kotlin
+dari {
+    failOnUnmatchedMapping = false           // default: true
+}
+```
+
+The same messages are printed as warnings and the build goes on. Those mappings record nothing. Because the task is cached, the warnings only show again when the classes or the mappings change.
+
+### Limits
+
+- Each variant is checked against its own classes. A bridge that exists only in one flavor's or build type's source set fails the check in the other debuggable variants. For now, the only way around this is `failOnUnmatchedMapping = false`.
+- The check confirms that the class and method exist, not what was rewritten. To list the rewritten methods, build with `--info` and look for `Dari: instrumented`.

@@ -1,6 +1,6 @@
 ---
 title: 규칙과 제한
-description: 변환 범위, 빌드 경고, 지원하지 않는 것
+description: 변환 범위, 매핑 검사, 지원하지 않는 것
 ---
 
 - **디버그 전용.** debuggable variant만 변환합니다. 릴리스 빌드에는 훅이 없습니다.
@@ -9,14 +9,64 @@ description: 변환 범위, 빌드 경고, 지원하지 않는 것
   - 서드파티 AAR 안의 브릿지는 `scope = InstrumentationScope.ALL`이 필요합니다. 이 경우 앱의 모든 AAR을 다시 dex 변환하므로, 테스트에서는 콜드 빌드가 약 5분 더 걸렸습니다.
   - 프로젝트의 다른 모듈에 있는 브릿지는 그 모듈에도 플러그인을 적용해야 합니다.
 - **수동 로깅도 계속 동작.** 플러그인은 매핑된 메서드만 건드립니다. 매핑된 메서드가 이미 `DariInterceptor`를 호출하고 있으면 그 메서드는 건너뛰고 빌드 경고를 출력합니다. 확인하는 것은 그 메서드 본문뿐이라, 같은 경로의 다른 곳(예: 핸들러 안)에 있는 직접 호출은 한 번 더 기록됩니다. 브릿지마다 한 가지 방식만 쓰세요.
-- **매핑 검사.** debuggable variant마다 `dariCheck<Variant>Mappings` task가 생기고, 그 variant의 `assemble`, `bundle`, `install` task와 `check`에서 함께 실행됩니다. 매핑한 클래스가 컴파일된 클래스에 없거나, 그 클래스에 해당 이름의 본문 있는 메서드가 없으면(abstract, native 메서드는 해당하지 않음) 빌드가 실패합니다. 오류 메시지에는 해당하는 매핑 전부와 비슷한 클래스·메서드 이름이 나오므로, 오타나 이름 변경 때문에 아무것도 기록되지 않는 상황을 빌드에서 잡을 수 있습니다.
-  - 해당 모듈의 클래스를 검사하고, 앱 모듈에서 `scope = InstrumentationScope.ALL`이면 의존성의 클래스도 함께 검사합니다.
-  - variant마다 그 variant의 클래스로 검사합니다. 특정 flavor나 build type의 source set에만 있는 브릿지는 다른 debuggable variant의 검사에서 실패합니다.
-  - `failOnUnmatchedMapping = false`이면 같은 메시지를 경고로 출력하고 빌드를 계속합니다. 해당 매핑은 아무것도 기록하지 않습니다.
-  - 이 task는 캐시되어 클래스나 매핑이 바뀔 때만 다시 실행되므로, 바뀐 것 없는 빌드에서는 경고가 다시 나오지 않습니다.
-  - 변환된 메서드 목록을 보려면 `--info`로 빌드하고 `Dari: instrumented`를 찾으세요.
+- **매핑 검사.** 매핑한 클래스나 메서드가 코드에 없으면 빌드가 실패합니다. 아래 [매핑 검사](#매핑-검사)를 참고하세요.
 - **지원하지 않는 것.**
   - 리플렉션으로 한 호출
   - `androidx.webkit` 메시지 채널(`addWebMessageListener`, `WebMessagePort`)
   - 메서드 본문 안에서 계산한 값. 매핑할 수 있는 것은 메서드의 파라미터뿐입니다.
   - `suspend` 함수가 재개될 때 들어오는 재진입 호출(인자가 `null`). 첫 호출만 기록합니다.
+
+## 매핑 검사
+
+매핑의 클래스나 메서드 이름이 코드와 맞지 않아도 빌드는 통과하고, 기록만 되지 않습니다. 오타나 나중의 이름 변경을 이렇게 놓치기 쉬우므로, 플러그인이 모든 매핑을 컴파일된 클래스와 대조해서 맞지 않으면 빌드를 실패시킵니다.
+
+### 언제 실행되나
+
+debuggable variant마다 `dariCheckDebugMappings` 같은 `dariCheck<Variant>Mappings` task가 생깁니다. release variant와 매핑이 없는 모듈에는 생기지 않습니다.
+
+| Task | 검사 실행 |
+| --- | --- |
+| `assembleDebug` (Android Studio의 Run 포함) | 실행 |
+| `installDebug`, `bundleDebug` | 실행 |
+| 라이브러리 모듈의 `bundleDebugAar` | 실행 |
+| `check` | 모든 debuggable variant에서 실행 |
+| `testDebugUnitTest` 등 테스트 task | 실행 안 함 |
+| `assembleRelease` | 실행 안 함 |
+
+검사만 따로 실행하려면:
+
+```bash
+./gradlew :app:dariCheckDebugMappings
+```
+
+이 task는 캐시됩니다. 컴파일된 클래스나 매핑이 바뀔 때만 다시 실행됩니다.
+
+### 실패하는 경우
+
+- **클래스가 없음.** 모듈의 컴파일된 클래스에 해당 클래스가 없습니다. 앱 모듈에서 `scope = InstrumentationScope.ALL`이면 앱의 의존성도 함께 찾습니다. 중첩 클래스는 `.`과 `$` 둘 다 쓸 수 있습니다.
+- **메서드가 없음.** 클래스에 해당 이름의 본문 있는 메서드가 선언돼 있지 않습니다. abstract, native 메서드와 override하지 않은 상속 메서드는 해당하지 않습니다. 플러그인은 그 클래스가 직접 선언한 본문만 변환하기 때문입니다.
+
+오류 메시지에는 실패한 매핑이 작성한 형태 그대로 모두 나오고, 비슷한 클래스·메서드 이름이 함께 나옵니다.
+
+```
+Execution failed for task ':app:dariCheckDebugMappings'.
+> Dari: 2 mapping(s) match no code, so they would record nothing:
+  - dari { webToAppRequest("com.example.Brige", "onBridgeRequest") }: no class com.example.Brige in this module. Did you mean com.example.Bridge? A class in another module needs the plugin applied in that module; one in a library needs scope = InstrumentationScope.ALL.
+  - dari { webToAppResponse("com.example.MainActivity", "sendResponse") }: com.example.MainActivity has no method 'sendResponse' with a body. Did you mean sendResponseToWeb?
+  Fix the class or method name, or set dari { failOnUnmatchedMapping = false } to only warn.
+```
+
+### 실패 대신 경고만 내기
+
+```kotlin
+dari {
+    failOnUnmatchedMapping = false           // 기본값: true
+}
+```
+
+같은 메시지를 경고로 출력하고 빌드를 계속합니다. 해당 매핑은 아무것도 기록하지 않습니다. task가 캐시되므로, 경고는 클래스나 매핑이 바뀔 때만 다시 나옵니다.
+
+### 제한
+
+- variant마다 그 variant의 클래스로 검사합니다. 특정 flavor나 build type의 source set에만 있는 브릿지는 다른 debuggable variant의 검사에서 실패합니다. 지금은 `failOnUnmatchedMapping = false`로만 피할 수 있습니다.
+- 검사는 클래스와 메서드가 있는지만 확인하고, 실제로 무엇이 변환됐는지는 보지 않습니다. 변환된 메서드 목록은 `--info`로 빌드하고 `Dari: instrumented`를 찾으면 됩니다.
