@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>dari-web example</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 0; padding: 16px; }
+    button { font: inherit; margin: 0 8px 8px 0; padding: 8px 12px; }
+  </style>
+</head>
+<body>
+  <h1>dari-web example</h1>
+  <p>A fake bridge stands in for the app. Tap the Dari button to see the traffic.</p>
+  <button id="get-user">getUser</button>
+  <button id="get-order">getOrder (nested)</button>
+  <button id="pay">pay (fails)</button>
+  <button id="log">log (fire and forget)</button>
+  <button id="push">App pushes onPush</button>
+
+  <!-- Run `npm run build` first. -->
+  <script src="../dist/index.global.js"></script>
+  <script>
+    // Fake WKWebView bridge: the "app" answers through window.onBridgeResult.
+    window.webkit = { messageHandlers: { bridge: { postMessage(msg) {
+      if (!msg.id) return
+      setTimeout(() => {
+        const ok = msg.name !== 'pay'
+        const data = msg.name === 'getOrder'
+          ? { id: msg.params.id, items: [{ sku: 'A-1', qty: 2, price: { amount: 1200, currency: 'KRW' } }], shipping: { address: { city: 'Seoul' }, express: true } }
+          : ok ? { name: '다리', id: msg.params.id } : { code: 'DECLINED' }
+        window.onBridgeResult(msg.id, ok, data)
+      }, 150 + Math.random() * 300)
+    } } } }
+    window.onBridgeResult = () => {}
+    window.onAppMessage = (msg) => window.webkit.messageHandlers.bridge.postMessage({ name: 'ack', ackId: msg.id })
+
+    window.dari = DariWeb.install({
+      // ?remote=ws://localhost:9333 streams to `npx @easyhooon/dari-web serve`.
+      remote: new URLSearchParams(location.search).get('remote') ?? undefined,
+      hook(recorder) {
+        const handler = window.webkit.messageHandlers.bridge
+        const post = handler.postMessage.bind(handler)
+        handler.postMessage = (msg) => {
+          if (msg.name === 'ack') {
+            recorder.appToWebResponse({ requestId: msg.ackId, isSuccess: true, data: 'handled' })
+          } else {
+            recorder.webToAppRequest({ handlerName: msg.name, requestId: msg.id, data: msg.params, fireAndForget: !msg.id })
+          }
+          post(msg)
+        }
+        const onResult = window.onBridgeResult
+        window.onBridgeResult = (id, ok, data) => {
+          recorder.webToAppResponse({ requestId: id, isSuccess: ok, data })
+          onResult(id, ok, data)
+        }
+        const onApp = window.onAppMessage
+        window.onAppMessage = (msg) => {
+          recorder.appToWebRequest({ handlerName: msg.name, displayName: 'Push from app', requestId: msg.id, data: msg.data })
+          onApp(msg)
+        }
+        return () => {
+          handler.postMessage = post
+          window.onBridgeResult = onResult
+          window.onAppMessage = onApp
+        }
+      },
+      redact: (entry) => ({ ...entry, requestData: entry.requestData && entry.requestData.replace(/"card":"\d+"/, '"card":"****"') }),
+    })
+
+    let seq = 0
+    const call = (name, params, withId = true) =>
+      window.webkit.messageHandlers.bridge.postMessage({ name, id: withId ? String(++seq) : undefined, params })
+    document.getElementById('get-user').onclick = () => call('getUser', { id: 7 })
+    document.getElementById('get-order').onclick = () => call('getOrder', { id: 'o-42' })
+    document.getElementById('pay').onclick = () => call('pay', { amount: 1200, card: '4111111111111111' })
+    document.getElementById('log').onclick = () => call('log', { event: 'tap' }, false)
+    document.getElementById('push').onclick = () => window.onAppMessage({ id: 'p' + ++seq, name: 'onPush', data: { title: 'Hello' } })
+  </script>
+</body>
+</html>

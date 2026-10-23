@@ -7,6 +7,7 @@ on:
     paths:
       - "dari-desktop-app/**"
       - "dari-inspector-protocol/**"
+      - "fixtures/**"
       - "scripts/*desktop-app.sh"
       - "scripts/*macos*.sh"
       - "scripts/test-macos-packaging.py"
@@ -19,6 +20,7 @@ on:
     paths:
       - "dari-desktop-app/**"
       - "dari-inspector-protocol/**"
+      - "fixtures/**"
       - "scripts/*desktop-app.sh"
       - "scripts/*macos*.sh"
       - "scripts/test-macos-packaging.py"

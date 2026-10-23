@@ -1,0 +1,43 @@
+name: Dari Web
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  pull_request:
+    paths:
+      - "dari-web/**"
+      - "fixtures/**"
+      - ".github/workflows/dari-web.yml"
+  push:
+    branches: [main]
+    paths:
+      - "dari-web/**"
+      - "fixtures/**"
+      - ".github/workflows/dari-web.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dari-web
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: dari-web/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      # Includes the shared fixture contract in fixtures/messages.
+      - run: npm test
+      - run: npm run build
+      - name: Check package contents
+        run: npm pack --dry-run
