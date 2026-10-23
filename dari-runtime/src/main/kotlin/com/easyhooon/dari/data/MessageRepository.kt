@@ -1,5 +1,6 @@
 package com.easyhooon.dari.data
 
+import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.data.local.DariDatabase
 import com.easyhooon.dari.data.local.MessageDao
@@ -136,12 +137,30 @@ class MessageRepository internal constructor(
         }
     }
 
-    fun updateEntry(requestId: String, tag: String? = null, transform: (MessageEntry) -> MessageEntry) {
+    /** Matches entries of either direction; prefer the overload taking a [MessageDirection]. */
+    fun updateEntry(requestId: String, tag: String? = null, transform: (MessageEntry) -> MessageEntry) =
+        update(requestId, tag, null, transform)
+
+    /** Updates only entries of [direction], so a response never completes a request going the other way. */
+    fun updateEntry(
+        requestId: String,
+        tag: String?,
+        direction: MessageDirection,
+        transform: (MessageEntry) -> MessageEntry,
+    ) = update(requestId, tag, direction, transform)
+
+    private fun update(
+        requestId: String,
+        tag: String?,
+        direction: MessageDirection?,
+        transform: (MessageEntry) -> MessageEntry,
+    ) {
         var updatedEntry: MessageEntry? = null
         synchronized(lock) {
             _entries.update { current ->
                 current.map { entry ->
-                    if (entry.requestId == requestId && entry.tag == tag) {
+                    val directionMatches = direction == null || entry.direction == direction
+                    if (entry.requestId == requestId && entry.tag == tag && directionMatches) {
                         transform(entry).also { updatedEntry = it }
                     } else {
                         entry
@@ -155,6 +174,7 @@ class MessageRepository internal constructor(
                 dao.updateByRequestId(
                     requestId = requestId,
                     tag = tag,
+                    direction = direction,
                     responseData = entry.responseData,
                     responseDataTruncated = entry.responseDataTruncated,
                     responseContentType = entry.responsePayloadMetadata?.contentType,

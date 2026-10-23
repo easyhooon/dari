@@ -1,5 +1,6 @@
 package com.easyhooon.dari.data
 
+import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,5 +16,11 @@ class MessageRepository(private val maxEntries: Int = 500) {
 
     fun addEntry(entry: MessageEntry) = Unit
     fun updateEntry(requestId: String, tag: String? = null, transform: (MessageEntry) -> MessageEntry) = Unit
+    fun updateEntry(
+        requestId: String,
+        tag: String?,
+        direction: MessageDirection,
+        transform: (MessageEntry) -> MessageEntry,
+    ) = Unit
     fun clear() = Unit
 }
