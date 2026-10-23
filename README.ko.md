@@ -46,7 +46,9 @@ releaseImplementation("io.github.easyhooon:dari-noop:<latest-version>")
 // 브릿지 레이어에서
 val interceptor = Dari.createInterceptor()
 
+// 모든 요청이 들어오는 진입점에서
 interceptor?.onWebToAppRequest(handlerName, requestId, data)
+// 웹으로 응답을 보내는 함수 한 곳에서
 interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
 ```
 
@@ -130,6 +132,21 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
 
 ## 설정
 
+### 캡처하는 두 가지 방법
+
+| | 직접 호출(기본) | Gradle 플러그인(2.6.0 신규, 선택) |
+| --- | --- | --- |
+| 의존성 | `dari` + `dari-noop` | 같은 `dari` + `dari-noop` |
+| 추가 설정 | 없음 | `settings.gradle.kts`의 `pluginManagement`에 `mavenCentral()`, 앱 모듈 `build.gradle.kts`에 `plugins { id("io.github.easyhooon.dari") }`와 `dari { }` 매핑 |
+| 브릿지 코드 | 요청이 들어오고 응답이 나가는 곳에서 인터셉터 호출 | Dari 호출 없음 |
+| 성능 | 기준 | 직접 호출과 같음. 큰 JSON 문자열을 넘기는 브릿지만 예외([성능](https://easyhooon.github.io/dari/ko/docs/gradle-plugin/performance)) |
+
+- **의존성만으로는 플러그인 방식이 켜지지 않습니다.** `dari`를 추가하거나 버전을 올려도 플러그인을 적용하고 `dari { }`를 작성하기 전에는 아무것도 바뀌지 않습니다. 그 전까지는 직접 호출한 인터셉터만 기록됩니다.
+- **직접 호출 방식으로 쓰던 앱의 업그레이드:** 버전만 올리면 됩니다. 코드 변경은 없습니다.
+- **브릿지마다 한 가지 방식만 쓰세요.** 매핑한 메서드가 이미 `DariInterceptor`를 호출하면 플러그인은 그 메서드를 건너뛰고 빌드 경고를 출력합니다. 매핑한 메서드 본문만 확인하므로, 같은 경로의 다른 곳(예: 핸들러 안)에 있는 직접 호출은 한 번 더 기록됩니다.
+
+아래 단계는 직접 호출 방식 설정입니다. 플러그인을 쓰려면 [선택: Gradle 플러그인](#선택-gradle-플러그인)도 따라 하세요.
+
 ### Gradle
 
 앱의 `build.gradle.kts`에 `dari`(debug)와 `dari-noop`(release) 의존성을 추가합니다:
@@ -145,7 +162,7 @@ dependencies {
 
 ### 인터셉터 연동
 
-Dari는 WebView 브릿지 레이어에 인터셉터를 **직접 주입**해야 합니다. 인터셉터 인스턴스를 만들고 브릿지 통신 코드의 적절한 지점에서 메서드를 호출하세요.
+Dari는 WebView 브릿지 레이어에 인터셉터를 **직접 주입**해야 합니다. 핸들러마다 호출하지 말고 메시지가 브릿지로 들어오고 나가는 지점에서 호출하세요. 대부분의 브릿지에는 요청이 들어오는 진입점과 응답을 보내는 함수가 하나씩 있으므로, 몇 번의 호출로 모든 핸들러를 기록할 수 있습니다.
 
 #### 1. 인터셉터 생성
 
@@ -165,25 +182,40 @@ val mainInterceptor: DariInterceptor? = Dari.createInterceptor(tag = "MainWebVie
 
 #### 2. Web-to-App 메시지 가로채기
 
-`@JavascriptInterface` 메서드에서 요청이 도착했을 때와 응답이 준비된 뒤에 인터셉터를 호출합니다:
+요청은 모든 요청이 들어오는 `@JavascriptInterface` 메서드에서, 응답은 웹으로 응답을 보내는 함수 한 곳에서 기록합니다. 그러면 핸들러에는 Dari 코드가 필요 없습니다:
 
 ```kotlin
-// When a request is received from JavaScript
-interceptor?.onWebToAppRequest(handlerName, requestId, data)
+inner class Bridge {
+    @JavascriptInterface
+    fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
+        // Every request enters here
+        interceptor?.onWebToAppRequest(handlerName, requestId, data)
+        when (handlerName) {
+            "getAppInfo" -> sendResponseToWeb(handlerName, requestId, true, appInfoJson())
+            // ...other handlers reply through sendResponseToWeb too
+        }
+    }
+}
 
-// After processing, log the response
-interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
+// Every reply leaves through here
+private fun sendResponseToWeb(handlerName: String, requestId: String, isSuccess: Boolean, data: String) {
+    interceptor?.onWebToAppResponse(handlerName, requestId, data, isSuccess)
+    val script = "onBridgeResponse(${JSONObject.quote(requestId)}, $isSuccess, ${JSONObject.quote(data)})"
+    webView.post { webView.evaluateJavascript(script, null) }
+}
 ```
+
+권한 콜백처럼 나중에 보내는 응답도 같은 함수를 거치면 `requestId`로 요청과 짝지어집니다.
 
 #### 3. App-to-Web 메시지 가로채기
 
-네이티브 코드가 JavaScript로 메시지를 보낼 때와 응답이 돌아왔을 때 인터셉터를 호출합니다:
+반대 방향도 같습니다. JavaScript로 메시지를 보내는 함수와 웹의 응답을 받는 메서드에서 기록합니다:
 
 ```kotlin
-// When sending a message to JavaScript
+// In the function that sends messages to JavaScript
 interceptor?.onAppToWebRequest(handlerName, requestId, data)
 
-// When the web response is received
+// In the @JavascriptInterface method that receives the web's reply
 interceptor?.onAppToWebResponse(requestId, isSuccess, responseData)
 ```
 
@@ -239,6 +271,41 @@ REQUEST와 RESPONSE 탭은 `Decoded`와 `Raw` 보기를 제공합니다. Raw 보
     <td><img src="screenshots/protobuf_raw.png" width="320" /></td>
   </tr>
 </table>
+
+### 선택: Gradle 플러그인
+
+위의 인터셉터 호출 방식이 기본이며 그대로 동작합니다. 브릿지 코드에 Dari 호출을 넣고 싶지 않다면, 선택 사항인 `io.github.easyhooon.dari` Gradle 플러그인이 한 번의 매핑으로 디버그 빌드에 같은 호출을 넣어 줍니다.
+
+`plugins { }`와 `dari { }`는 `dari` / `dari-noop`을 추가한 앱 모듈의 `build.gradle.kts`에 넣습니다. 루트 `build.gradle.kts`나 `settings.gradle.kts`에 넣지 않습니다.
+
+```kotlin
+// settings.gradle.kts: 플러그인은 Maven Central에서 받습니다
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+```
+
+```kotlin
+// app/build.gradle.kts
+plugins {
+    id("io.github.easyhooon.dari") version "<version>"
+}
+
+dari {
+    webToAppRequest("com.example.MainActivity.Bridge", "onBridgeRequest") {
+        handlerName = arg(0); requestId = arg(1); data = arg(2)
+    }
+    webToAppResponse("com.example.MainActivity", "sendResponseToWeb") {
+        handlerName = arg(0); requestId = arg(1); success = arg(2); data = arg(3)
+    }
+}
+```
+
+protobuf 페이로드를 쓸 때만 `Application.onCreate()`에서 `Dari.setProtobufDecoder(...)`로 디코더를 한 번 등록하세요. 매핑 레퍼런스는 [매핑 레퍼런스 문서](https://easyhooon.github.io/dari/ko/docs/gradle-plugin/mappings)를 참고하세요.
 
 ### 사용자 정의 구성
 
@@ -300,6 +367,8 @@ commonMain.dependencies {
 2. 알림을 탭하면 메시지 목록이 열립니다
 3. 메시지를 탭하면 상세 내용(개요, 요청 페이로드, 응답 페이로드)을 볼 수 있습니다
 
+샘플은 Gradle 플러그인으로 브릿지를 캡처합니다(`sample/build.gradle.kts`의 `dari { }`). 같은 캡처를 직접 하는 코드는 위의 [인터셉터 연동](#인터셉터-연동)에 있습니다.
+
 ## 보안 및 개인정보
 
 Dari는 디버그 빌드와 내부 빌드용입니다. 브릿지 페이로드에는 토큰, 개인정보 등 민감한 값이
@@ -319,6 +388,7 @@ Dari는 디버그 빌드와 내부 빌드용입니다. 브릿지 페이로드에
 | `init(context, config)` | 사용자 정의 구성으로 초기화 |
 | `createInterceptor(tag?)` | 태그(선택)를 지정해 `DariInterceptor` 생성(noop에서는 `null` 반환) |
 | `createInterceptor(tag?, protobufDecoder)` | 문자열/JSON 메서드를 모두 유지하면서 protobuf를 지원하는 인터셉터 생성 |
+| `setProtobufDecoder(decoder)` | Gradle 플러그인이 만드는 인터셉터가 쓸 protobuf 디코더. 앱 시작 시 한 번 호출 |
 | `setShakeToOpenEnabled(enabled)` | 런타임에 흔들어서 열기 켜기/끄기(저장됨) |
 | `setDarkMode(value)` | 다크 모드 재정의: `true` / `false` / `null`(시스템 기본값). 저장됨 |
 | `setShowTagChip(show)` | 메시지 목록의 브릿지 태그 칩 표시/숨김. 저장됨 |

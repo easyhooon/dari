@@ -146,6 +146,16 @@
         <span>No flag + no response = forever IN_PROGRESS (contrast)</span>
     </button>
 
+    <div class="section">App &rarr; Web</div>
+    <button class="btn btn-blue" onclick="askAppToCallWeb('getPageState')">
+        Ask App: getPageState
+        <span>The app calls the page, which answers through Android.onAppToWebResponse (also sent on page load)</span>
+    </button>
+    <button class="btn btn-red" onclick="askAppToCallWeb('unsupportedAction')">
+        Ask App: unsupported action
+        <span>The page answers with success = false. Leaving and reopening the app sends appResumed (fire-and-forget)</span>
+    </button>
+
     <div class="section">Protocol Buffers</div>
     <button class="btn btn-blue" onclick="sendProtobufGreeting()">
         Send Protobuf Greeting
@@ -382,12 +392,32 @@
             }
         }
 
+        function askAppToCallWeb(handlerName) {
+            log('↻ asking the app to call ' + handlerName, 'req');
+            Android.requestAppToWeb(handlerName);
+        }
+
+        // Called from native for App-to-Web messages; a null requestId expects no answer.
+        function onAppRequest(handlerName, requestId, data) {
+            log('⇠ app: ' + handlerName, 'res');
+            if (requestId === null) return;
+            if (handlerName === 'getPageState') {
+                var state = { title: document.title, url: location.href, scrollY: window.scrollY };
+                Android.onAppToWebResponse(requestId, true, JSON.stringify(state));
+            } else {
+                var error = { error: 'Unsupported action', handler: handlerName };
+                Android.onAppToWebResponse(requestId, false, JSON.stringify(error));
+            }
+        }
+
         // Called from native side with the response
         function onBridgeResponse(requestId, success, data) {
+            // Large payloads such as fetchLargeData would flood the log, so show a preview.
+            var shown = data.length > 200 ? data.slice(0, 200) + '… (' + data.length + ' chars)' : data;
             if (success) {
-                log('← ' + data, 'res');
+                log('← ' + shown, 'res');
             } else {
-                log('✗ ' + data, 'err');
+                log('✗ ' + shown, 'err');
             }
         }
     </script>

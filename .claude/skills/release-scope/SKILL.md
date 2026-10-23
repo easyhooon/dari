@@ -34,7 +34,7 @@ allowed-tools:
 
 | VERDICT | 조건 | 올릴 버전 | Maven |
 |---|---|---|---|
-| `full` | `dari`, `dari-core`, `dari-noop`, `dari-runtime`, `dari-inspector-protocol`의 main 코드 변경 | `dari`와 `dariDesktop` 둘 다 | 배포 |
+| `full` | `dari`, `dari-core`, `dari-noop`, `dari-runtime`, `dari-inspector-protocol`의 main 코드 변경, `dari-gradle-plugin`의 main 코드·빌드 파일 변경 | `dari`와 `dariDesktop` 둘 다 | 배포 |
 | `desktop` | `dari-desktop-app`만 변경 | `dariDesktop`만 | 건너뜀 |
 | `review` | 공유 빌드 파일(`build.gradle.kts`, `gradle/`, 버전 외 카탈로그 줄 등)만 변경 | 3단계에서 판단 | 판단 |
 | `none` | 문서, 샘플, 테스트, CI, 패키징 도구만 변경 | 없음 | 없음 |
@@ -65,6 +65,7 @@ allowed-tools:
 
 - "이번엔 데스크톱만 고쳤으니 뻔하다" → 2.2.0..2.2.1 구간이 실제로 데스크톱 전용이었는데 Maven까지 배포했다. 뻔해 보여도 스크립트가 1분이면 확인한다.
 - "라이브러리 테스트만 바꿨으니 full이다" → `src/test`만 바뀌면 사용자가 받는 산출물은 같다. 불필요한 Maven 배포는 앱 쪽에 의미 없는 업데이트 알림을 만든다.
+- "플러그인은 Gradle에서만 도니 릴리스와 무관하다" → 플러그인은 `dari`와 같은 버전으로 Maven Central에 배포된다. 플러그인만 고쳐도 사용자가 받으려면 `full`이어야 한다.
 - "프로토콜 파일은 데스크톱에서도 쓰니 desktop이다" → `dari-inspector-protocol`은 Maven으로 앱에도 배포된다. 앱이 받으려면 `full`이어야 한다.
 
 ## 검증 기록
@@ -73,15 +74,17 @@ allowed-tools:
 |---|---|---|
 | 2.1.4..2.2.0 | full | 라이브러리 마스킹 변경(#133) — 맞음 |
 | 2.2.0..2.2.1 | desktop (+ shared build 확인) | 라이브러리 무변경, Sentry 의존성은 데스크톱 전용 — 데스크톱 전용이 맞았음 |
-| 2.2.1..origin/main (2026-10-16) | none | 스테이플링 스크립트(#155)·문서 아이콘만 — 맞음 |
+| 2.2.1..origin/main (2026-10-16, 재실행 시 `5e8739f`) | none | 스테이플링 스크립트(#155)·문서 아이콘만 — 맞음 |
+| 2.5.2..origin/main (2026-10-19) | full | Gradle 플러그인(#218)과 `dari`/`dari-noop` 훅 — 맞음. 플러그인 main 코드가 library로 분류됨 |
 
 모의 실행(스킬만 읽은 에이전트, 2026-10-16): "PR 157로 2.2.2 내려는데 버전 뭐 올려?" → `desktop`, `/release desktop 2.2.2`. "2.2.0 시점이면 데스크톱만 내도 돼?" → `full`, minor 제안. 두 실행 모두 1~4단계를 따랐고, 분리 전 ref 처리와 다음 버전 기준이 불명확하다는 지적을 반영했다.
 
 ## 관리
 
 - Owner: easyhooon
-- 다음 검토: 2027-01-16, 또는 모듈 구성(새 라이브러리 모듈, 데스크톱 경로)이 바뀔 때. 바뀌면 `scripts/release-scope.sh`의 `classify()`를 고치고 위 세 구간을 다시 돌려 판정이 그대로인지 확인한다.
+- 다음 검토: 2027-01-19, 또는 모듈 구성(새 라이브러리 모듈, 데스크톱 경로)이 바뀔 때. 바뀌면 `scripts/release-scope.sh`의 `classify()`를 고치고 위 세 구간을 다시 돌려 판정이 그대로인지 확인한다.
 - 변경 이력
   - 2026-10-16: 처음 작성. `dari`/`dariDesktop` 분리(#158)에 맞춰 판정 기준 정리.
+  - 2026-10-19: `dari-gradle-plugin`의 main 코드와 빌드 파일을 `full`로 분류(전에는 no-release). 플러그인이 2.6.0부터 `dari`와 함께 Maven Central에 배포되기 때문. 위 세 구간과 `2.5.2..origin/main`을 다시 돌려 판정 유지 확인.
   - 2026-10-18: `dari-web`(독립 버전, `dari-web-v*` 태그)과 `fixtures/`를 분류에 추가. 판정에는 영향 없음.
   - 2026-10-16: 커밋이 많은 구간(`1.0.0..HEAD`)에서 `| head`의 SIGPIPE로 exit 141 나던 문제와, 카탈로그 주석 변경을 shared build로 세던 문제 수정. 위 세 구간과 `1.0.0..HEAD`를 다시 돌려 판정 유지 확인.

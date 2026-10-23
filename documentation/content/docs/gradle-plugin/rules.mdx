@@ -1,0 +1,22 @@
+---
+title: Rules and limits
+description: What gets transformed, build warnings and what is not covered
+---
+
+- **Debug only.** Only debuggable variants are instrumented. Release builds contain no hooks.
+- **`dari-noop` is safe.** It ships pass-through hooks, so a debuggable variant built against `dari-noop` runs normally and records nothing.
+- **Scope.** By default only the module's own classes are rewritten.
+  - A bridge inside a third-party AAR needs `scope = InstrumentationScope.ALL`. That re-dexes every AAR in the app; a cold build took about 5 minutes longer in testing.
+  - A bridge in another module of your project needs the plugin applied in that module.
+- **Manual logging still works.** The plugin only touches mapped methods. If a mapped method already calls `DariInterceptor`, the plugin skips that method and prints a build warning. It checks only that method's own body: a manual call elsewhere on the same path, such as in a handler, is recorded a second time. Use one way per bridge.
+- **Mapping check.** Each debuggable variant gets a `dariCheck<Variant>Mappings` task, which runs with that variant's `assemble`, `bundle` and `install` tasks and with `check`. It fails the build when a mapping names a class that is not among the compiled classes, or a method the class doesn't declare with a body (abstract and native methods don't count). The error lists every such mapping with similar class or method names, so a typo or a rename can't quietly record nothing.
+  - It searches the module's own classes, plus its dependencies when an app module sets `scope = InstrumentationScope.ALL`.
+  - Each variant is checked on its own classes. A bridge that only exists in one flavor or build type's source set fails the other debuggable variants' check.
+  - `failOnUnmatchedMapping = false` prints the same messages as warnings and lets the build go on. Those mappings record nothing.
+  - The task is cached and runs again only when the classes or the mappings change, so warnings don't repeat on an unchanged build.
+  - To list what was rewritten, run with `--info` and look for `Dari: instrumented`.
+- **Not covered.**
+  - Calls made through reflection.
+  - `androidx.webkit` message channels (`addWebMessageListener`, `WebMessagePort`).
+  - Values computed inside the method body. Only the method's parameters can be mapped.
+  - The re-entries a `suspend` function receives when it resumes (with `null` arguments). Only the first call is recorded.

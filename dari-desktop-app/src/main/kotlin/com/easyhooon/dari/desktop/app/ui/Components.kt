@@ -27,7 +27,9 @@ import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import com.easyhooon.dari.desktop.app.ui.json.markMatches
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
+import kotlinx.coroutines.delay
 
 enum class StatusKind { PENDING, SUCCESS, ERROR }
 
@@ -141,7 +144,7 @@ fun QuietButton(
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, style = Dari.type.label, color = fg)
+        Text(text, style = Dari.type.label, color = fg, maxLines = 1, softWrap = false)
     }
 }
 
@@ -163,7 +166,7 @@ fun AccentButton(text: String, onClick: () -> Unit, showDownloadIcon: Boolean = 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (showDownloadIcon) DownloadIcon(content)
-        Text(text, style = Dari.type.label.copy(fontWeight = FontWeight.SemiBold), color = content)
+        Text(text, style = Dari.type.label.copy(fontWeight = FontWeight.SemiBold), color = content, maxLines = 1, softWrap = false)
     }
 }
 
@@ -241,7 +244,8 @@ fun <T> Picker(
                 color = Dari.colors.text,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 260.dp),
+                // Measured after the chevron, so a narrow picker shortens the label instead of dropping it.
+                modifier = Modifier.weight(1f, fill = false).widthIn(max = 260.dp),
             )
             secondary?.let { Text(it, style = Dari.type.caption, color = Dari.colors.textTertiary, maxLines = 1) }
             Text("▾", style = Dari.type.caption, color = Dari.colors.textTertiary)
@@ -326,24 +330,57 @@ fun CodeBlock(text: String, onCopy: () -> Unit, modifier: Modifier = Modifier, q
     }
 }
 
-/** Code-block copy control: the two-sheets icon plus a label, as on GitHub and in docs sites. */
+/** How long a copy control reads "Copied" after a click. */
+const val COPIED_FEEDBACK_MILLIS = 1_500L
+
+/**
+ * Code-block copy control: the two-sheets icon plus a label, as on GitHub and in docs sites.
+ * It turns into a check and "Copied" for a moment, so the click is confirmed where it happened.
+ */
 @Composable
 fun CopyButton(onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    val color = if (hovered) Dari.colors.text else Dari.colors.textSecondary
+    var copied by remember { mutableStateOf(false) }
+    // Keyed on a count, not on `copied`, so each copy restarts the timer.
+    var copies by remember { mutableIntStateOf(0) }
+    LaunchedEffect(copies) {
+        if (copies == 0) return@LaunchedEffect
+        copied = true
+        delay(COPIED_FEEDBACK_MILLIS)
+        copied = false
+    }
+    val color = when {
+        copied -> Dari.colors.success
+        hovered -> Dari.colors.text
+        else -> Dari.colors.textSecondary
+    }
     Row(
         Modifier.height(DariMetrics.controlHeight)
             .background(if (hovered) Dari.colors.hover else Color.Transparent, RoundedCornerShape(DariMetrics.radius))
             .hoverable(interaction)
-            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button) {
+                onClick()
+                copies++
+            }
             .pointerHoverIcon(PointerIcon.Hand)
             .padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CopyIcon(color)
-        Text("Copy", style = Dari.type.label, color = color)
+        if (copied) CheckIcon(color) else CopyIcon(color)
+        Text(if (copied) "Copied" else "Copy", style = Dari.type.label, color = color)
+    }
+}
+
+@Composable
+private fun CheckIcon(color: Color) {
+    Canvas(Modifier.size(12.dp)) {
+        val stroke = 1.6.dp.toPx()
+        val w = size.width
+        val h = size.height
+        drawLine(color, Offset(w * 0.12f, h * 0.55f), Offset(w * 0.4f, h * 0.82f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.4f, h * 0.82f), Offset(w * 0.9f, h * 0.2f), stroke, StrokeCap.Round)
     }
 }
 
@@ -379,11 +416,12 @@ fun Pairs(pairs: List<Pair<String, String>>) {
 
 /** At most two lines: what is missing, and what to do next. */
 @Composable
-fun EmptyState(title: String, hint: String?, modifier: Modifier = Modifier) {
+fun EmptyState(title: String, hint: String?, modifier: Modifier = Modifier, action: (@Composable () -> Unit)? = null) {
     Box(modifier, contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, style = Dari.type.body, color = Dari.colors.textSecondary)
             hint?.let { Text(it, style = Dari.type.caption, color = Dari.colors.textTertiary) }
+            action?.invoke()
         }
     }
 }

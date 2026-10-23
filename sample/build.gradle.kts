@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    id("io.github.easyhooon.dari")
 }
 
 android {
@@ -34,6 +35,83 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+}
+
+// Where MainActivity's bridge receives and sends messages; the plugin logs them in debug builds.
+dari {
+    tag = "Sample"
+
+    val activity = "com.easyhooon.dari.sample.MainActivity"
+    val bridge = "$activity.BridgeInterface"
+
+    webToAppRequest(bridge, "onBridgeRequest") {
+        handlerName = arg("handlerName")
+        requestId = arg("requestId")
+        data = arg("data")
+        fireAndForget = arg("handlerName").equalsTo("fireAndForgetPerCall")
+    }
+    webToAppRequest(bridge, "onBridgeRequestFireAndForget") {
+        handlerName = arg("handlerName")
+        data = arg("data")
+        fireAndForget = constant(true)
+    }
+    webToAppRequest(bridge, "onProtobufBridgeRequest") {
+        handlerName = constant("protobufGreeting")
+        requestId = arg("requestId")
+        data = base64(arg("base64Data"))
+    }
+    webToAppResponse(activity, "sendResponseToWeb") {
+        handlerName = arg("handlerName")
+        requestId = arg("requestId")
+        success = arg("success")
+        data = arg("data")
+    }
+    webToAppResponse(activity, "sendProtobufResponseToWeb") {
+        handlerName = constant("protobufGreeting")
+        requestId = arg("requestId")
+        success = arg("success")
+        data = arg("data")
+    }
+    appToWebRequest(activity, "sendToWeb") {
+        handlerName = arg("handlerName")
+        requestId = arg("requestId")
+        data = arg("data")
+        fireAndForget = isNull(arg("requestId"))
+    }
+    appToWebResponse(bridge, "onAppToWebResponse") {
+        requestId = arg("requestId")
+        success = arg("success")
+        data = arg("data")
+    }
+
+    // Debug-only benchmark bridges (src/debug, BridgeOverheadBenchmark).
+    val bench = "com.easyhooon.dari.sample.bench"
+    webToAppRequest("$bench.MappedPositionalBridge", "onRequest") {
+        tag = "Bench"
+        handlerName = arg(0)
+        requestId = arg(1)
+        data = arg(2)
+    }
+    webToAppResponse("$bench.MappedPositionalBridge", "respond") {
+        tag = "Bench"
+        handlerName = arg(0)
+        requestId = arg(1)
+        success = arg(2)
+        data = arg(3)
+    }
+    webToAppRequest("$bench.MappedJsonBridge", "onMessage") {
+        tag = "Bench"
+        handlerName = json(arg(0), "handler")
+        requestId = json(arg(0), "id")
+        data = json(arg(0), "data")
+    }
+    webToAppResponse("$bench.MappedJsonBridge", "reply") {
+        tag = "Bench"
+        handlerName = json(arg(0), "handler")
+        requestId = json(arg(0), "id")
+        success = json(arg(0), "ok")
+        data = json(arg(0), "data")
     }
 }
 

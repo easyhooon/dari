@@ -1,4 +1,6 @@
 pluginManagement {
+    // The sample applies io.github.easyhooon.dari from source.
+    includeBuild("dari-gradle-plugin")
     repositories {
         google {
             content {

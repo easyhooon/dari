@@ -1,0 +1,128 @@
+---
+title: Recipes
+description: Mappings for common bridge layouts
+---
+
+## One JSON string per call
+
+Many bridges pass one JSON string, e.g. `Android.postMessage('{"action":"login","id":"7","params":{...}}')`:
+
+```kotlin
+dari {
+    webToAppRequest("com.example.WebBridge", "postMessage") {
+        handlerName = json(arg(0), "action")
+        requestId = json(arg(0), "id")
+        data = json(arg(0), "params")
+    }
+    webToAppResponse("com.example.WebBridge", "reply") {
+        requestId = json(arg(0), "id")
+        success = isNull(json(arg(0), "error"))
+        data = arg(0)
+    }
+}
+```
+
+## Fire-and-forget
+
+```kotlin
+webToAppRequest("com.example.MainActivity.BridgeInterface", "onBridgeRequestFireAndForget") {
+    handlerName = arg(0)
+    data = arg(1)
+    fireAndForget = constant(true)
+}
+
+// Only some handlers on a shared entry point:
+webToAppRequest("com.example.MainActivity.BridgeInterface", "onBridgeRequest") {
+    handlerName = arg(0)
+    requestId = arg(1)
+    data = arg(2)
+    fireAndForget = arg(0).equalsTo("logEvent")
+}
+```
+
+## Protocol Buffers
+
+Map the payload to bytes, and register the decoder once at app start. Interceptors that the plugin creates use it.
+
+```kotlin
+webToAppRequest("com.example.MainActivity.BridgeInterface", "onProtobufBridgeRequest") {
+    handlerName = constant("protobufGreeting")
+    requestId = arg(0)
+    data = base64(arg(1))
+}
+```
+
+```kotlin
+class App : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        Dari.setProtobufDecoder(protobufDecoder { /* see Protocol Buffers */ })
+    }
+}
+```
+
+`Dari.setProtobufDecoder` is a no-op in `dari-noop`. See [Protocol Buffers](../protobuf) for writing the decoder.
+
+## App to Web
+
+```kotlin
+appToWebRequest("com.example.MainActivity", "sendToWeb") {
+    handlerName = arg(0)
+    requestId = arg(1)
+    data = arg(2)
+    fireAndForget = isNull(arg(1))           // no requestId: the page won't answer
+}
+appToWebResponse("com.example.MainActivity.BridgeInterface", "onAppToWebResponse") {
+    requestId = arg(0)
+    success = arg(1)
+    data = arg(2)
+}
+```
+
+## Requests and responses through one method
+
+`onlyIf` picks which calls a mapping applies to. A method that only ever carries one kind of message doesn't need it.
+
+Some bridges send everything through one method and tell the kinds apart with a field:
+
+```kotlin
+// App code: every message from the web arrives through this one method
+class WebBridge {
+    @JavascriptInterface
+    fun postMessage(message: String) { /* branch on type */ }
+}
+// Incoming messages:
+// {"type":"request","handlerName":"getUserInfo","requestId":"r1","data":{"id":7}}   ← a request from the web
+// {"type":"response","requestId":"a3","isSuccess":true,"result":{"ok":true}}       ← the web's reply to an app request
+```
+
+Map the method once per kind, and filter each mapping with `onlyIf`:
+
+```kotlin
+// app/build.gradle.kts
+dari {
+    // Only messages with type == "request" are recorded as Web→App requests
+    webToAppRequest("com.example.WebBridge", "postMessage") {
+        handlerName = json(arg("message"), "handlerName")
+        requestId = json(arg("message"), "requestId")
+        data = json(arg("message"), "data")
+        onlyIf = json(arg("message"), "type").equalsTo("request")
+    }
+    // Only messages with type == "response" are recorded as App→Web responses
+    appToWebResponse("com.example.WebBridge", "postMessage") {
+        requestId = json(arg("message"), "requestId")
+        success = json(arg("message"), "isSuccess")
+        data = json(arg("message"), "result")
+        onlyIf = json(arg("message"), "type").equalsTo("response")
+    }
+}
+```
+
+| Incoming `type` | Request mapping | Response mapping |
+| --- | --- | --- |
+| `"request"` | Recorded | Skipped |
+| `"response"` | Skipped | Recorded, paired with the App→Web request `a3` |
+| Without `onlyIf` | Records every message, so replies also show up as requests named `unknown` | Treats every message as a reply. Replies are matched by request ID and tag only, so the request `r1` it just recorded is marked ERROR right away, with no response |
+
+`onlyIf` is `false` when the field is missing or `null`. The App→Web request `a3` itself is recorded by the mapping on the method that sends it, as in [App to Web](#app-to-web).
+

@@ -1,0 +1,60 @@
+---
+title: Mapping reference
+description: Where, fields, expressions and options of the dari { } block
+---
+
+## Where
+
+| Function | Map it to | Becomes |
+| --- | --- | --- |
+| `webToAppRequest(class, method)` | the method JavaScript calls (`@JavascriptInterface`) | `onWebToAppRequest` |
+| `webToAppResponse(class, method)` | the method that sends the result back to the page | `onWebToAppResponse` |
+| `appToWebRequest(class, method)` | the method that calls into the page | `onAppToWebRequest` |
+| `appToWebResponse(class, method)` | the method the page calls with its answer | `onAppToWebResponse` |
+
+- `class` is the fully qualified class name. Nested classes may use `.` or `$`.
+- `method` is the method name. Every overload with that name is mapped.
+- The hook runs when the method starts, before its body.
+- `suspend` functions work too. A suspend function is called again each time it resumes; only the first call is recorded. `--info` shows `(suspend; resumptions skipped)` next to the method.
+
+## Fields
+
+| Field | Used by | Notes |
+| --- | --- | --- |
+| `handlerName` | requests (required), `webToAppResponse` | Responses fall back to the request's name. |
+| `requestId` | all; required for responses | Pairs a response with its request. |
+| `data` | all | Text is stored as is. Bytes (from `base64(...)` or a `ByteArray` parameter) go through the protobuf API. |
+| `displayName` | requests | Same as the manual `displayName` overload. |
+| `success` | responses | Leave it out for "always SUCCESS". `false`, `"false"` or `0` record ERROR. |
+| `fireAndForget` | requests | `true` resolves the entry at once. `false` defers to `DariConfig.fireAndForget`, like passing `null` by hand. |
+| `onlyIf` | all | Picks which calls a mapping applies to ([example](./recipes#requests-and-responses-through-one-method)). Optional. Leave it out to record every call. When set, the call is recorded only when it evaluates to `true`; `null` counts as `false`. For one method that carries several kinds of message. |
+| `tag` | all | Overrides `dari { tag }` for this mapping. |
+
+## Expressions
+
+| Expression | Value |
+| --- | --- |
+| `arg("name")` | The parameter called `name`. The plugin turns it into an index at build time. |
+| `arg(n)` | The method's `n`th parameter, starting at 0 (`this` doesn't count). |
+| `constant("x")`, `constant(true)` | A fixed value. |
+| `json(expr, "a.b.0")` | A field from a JSON string, a JSON object such as kotlinx.serialization's `JsonObject` or Gson's `JsonObject` (anything whose `toString()` is JSON), or a nested `json(...)`. A value that isn't JSON yields `null`. |
+| `base64(expr)` | Base64 text decoded to bytes. |
+| `expr.equalsTo("x")` | `true` when the value's text equals `"x"`. |
+| `isNull(expr)` | `true` when the value is `null`, e.g. a missing `error` field. |
+
+Prefer `arg("requestId")` to `arg(1)`. With indexes, swapping two parameters or inserting one still builds and quietly records the wrong values. With names, the build fails when a parameter is renamed or removed, and the error lists the method's actual parameter names. Names come from debug info: Kotlin always writes it, and Java does with the default `-g`. Each overload of a mapped method is resolved on its own, and every one of them needs the name.
+
+## Options
+
+```kotlin
+dari {
+    tag = "Checkout"                         // default: the name passed to addJavascriptInterface
+    scope = InstrumentationScope.ALL         // default: InstrumentationScope.PROJECT
+    failOnUnmatchedMapping = false           // default: true; see "Mapping check" in Rules and limits
+}
+```
+
+`scope` takes AGP's own [`InstrumentationScope`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/instrumentation/InstrumentationScope) (`com.android.build.api.instrumentation`); Dari doesn't define it. Add `import com.android.build.api.instrumentation.InstrumentationScope` at the top of the build script. The plugin passes the value to AGP's `transformClassesWith`:
+
+- `PROJECT`: only the module's own classes.
+- `ALL`: also the classes of its dependencies, including third-party AARs.

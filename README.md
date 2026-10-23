@@ -46,7 +46,9 @@ releaseImplementation("io.github.easyhooon:dari-noop:<latest-version>")
 // In your bridge layer
 val interceptor = Dari.createInterceptor()
 
+// Where every request enters the bridge
 interceptor?.onWebToAppRequest(handlerName, requestId, data)
+// In the one function that sends responses to the web
 interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
 ```
 
@@ -129,6 +131,21 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
 
 ## Setup
 
+### Two Ways to Capture
+
+| | Manual (default) | Gradle plugin (new in 2.6.0, optional) |
+| --- | --- | --- |
+| Dependencies | `dari` + `dari-noop` | The same `dari` + `dari-noop` |
+| Extra setup | None | `mavenCentral()` in `pluginManagement` of `settings.gradle.kts`, and `plugins { id("io.github.easyhooon.dari") }` plus a `dari { }` mapping in the app module's `build.gradle.kts` |
+| Bridge code | Interceptor calls where requests enter and responses leave | No Dari calls |
+| Performance | Baseline | Same as manual, except bridges that pass large JSON strings ([Performance](https://easyhooon.github.io/dari/docs/gradle-plugin/performance)) |
+
+- **The dependency alone doesn't turn on the plugin way.** Adding or upgrading `dari` changes nothing until you also apply the plugin and write `dari { }`. Without them, only your own interceptor calls are recorded.
+- **Upgrading with manual calls:** bump the version. No code changes.
+- **Pick one way per bridge.** If a mapped method already calls `DariInterceptor`, the plugin skips that method and prints a build warning. It only checks the mapped method's own body, so a manual call elsewhere on the same path, such as in a handler, is recorded a second time.
+
+The steps below set up the manual way. For the plugin, also follow [Optional: Gradle Plugin](#optional-gradle-plugin).
+
 ### Gradle
 
 Add the `dari` (debug) and `dari-noop` (release) dependencies to your app's `build.gradle.kts`:
@@ -144,7 +161,7 @@ That's it for initialization. Dari auto-initializes via `androidx.startup` when 
 
 ### Interceptor Integration
 
-Dari requires **manual injection** of the interceptor into your WebView bridge layer. Create an interceptor instance and call its methods at the appropriate points in your bridge communication code.
+Dari requires **manual injection** of the interceptor into your WebView bridge layer. Call it where messages enter and leave the bridge, not in each handler: most bridges have one entry point for incoming requests and one function that sends replies, so a few calls cover every handler.
 
 #### 1. Create the interceptor
 
@@ -164,25 +181,40 @@ When a `tag` is provided, all messages captured by that interceptor are automati
 
 #### 2. Intercept Web-to-App messages
 
-Call the interceptor in your `@JavascriptInterface` method when a request arrives and after the response is ready:
+Log the request in the `@JavascriptInterface` method every request enters, and the response in the one function that sends replies back. Handlers then need no Dari code:
 
 ```kotlin
-// When a request is received from JavaScript
-interceptor?.onWebToAppRequest(handlerName, requestId, data)
+inner class Bridge {
+    @JavascriptInterface
+    fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
+        // Every request enters here
+        interceptor?.onWebToAppRequest(handlerName, requestId, data)
+        when (handlerName) {
+            "getAppInfo" -> sendResponseToWeb(handlerName, requestId, true, appInfoJson())
+            // ...other handlers reply through sendResponseToWeb too
+        }
+    }
+}
 
-// After processing, log the response
-interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
+// Every reply leaves through here
+private fun sendResponseToWeb(handlerName: String, requestId: String, isSuccess: Boolean, data: String) {
+    interceptor?.onWebToAppResponse(handlerName, requestId, data, isSuccess)
+    val script = "onBridgeResponse(${JSONObject.quote(requestId)}, $isSuccess, ${JSONObject.quote(data)})"
+    webView.post { webView.evaluateJavascript(script, null) }
+}
 ```
+
+Replies sent later, e.g. from a permission callback, are still paired by `requestId` as long as they go through the same function.
 
 #### 3. Intercept App-to-Web messages
 
-Call the interceptor when your native code sends a message to JavaScript and when the response comes back:
+Same idea in the other direction: log in the function that sends messages to JavaScript and in the method that receives the web's reply:
 
 ```kotlin
-// When sending a message to JavaScript
+// In the function that sends messages to JavaScript
 interceptor?.onAppToWebRequest(handlerName, requestId, data)
 
-// When the web response is received
+// In the @JavascriptInterface method that receives the web's reply
 interceptor?.onAppToWebResponse(requestId, isSuccess, responseData)
 ```
 
@@ -238,6 +270,41 @@ The REQUEST and RESPONSE tabs provide `Decoded` and `Raw` views. The raw view re
     <td><img src="screenshots/protobuf_raw.png" width="320" /></td>
   </tr>
 </table>
+
+### Optional: Gradle Plugin
+
+The interceptor calls above stay the default and keep working. If you'd rather keep Dari out of your bridge code, the optional `io.github.easyhooon.dari` Gradle plugin inserts the same calls into debug builds from a one-time mapping.
+
+`plugins { }` and `dari { }` go in the app module's `build.gradle.kts`, the module that adds `dari` / `dari-noop`. They don't go in the root `build.gradle.kts` or in `settings.gradle.kts`.
+
+```kotlin
+// settings.gradle.kts: the plugin resolves from Maven Central
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+```
+
+```kotlin
+// app/build.gradle.kts
+plugins {
+    id("io.github.easyhooon.dari") version "<version>"
+}
+
+dari {
+    webToAppRequest("com.example.MainActivity.Bridge", "onBridgeRequest") {
+        handlerName = arg(0); requestId = arg(1); data = arg(2)
+    }
+    webToAppResponse("com.example.MainActivity", "sendResponseToWeb") {
+        handlerName = arg(0); requestId = arg(1); success = arg(2); data = arg(3)
+    }
+}
+```
+
+Only for protobuf payloads: register the decoder once in `Application.onCreate()` with `Dari.setProtobufDecoder(...)`. See the [mapping reference](https://easyhooon.github.io/dari/docs/gradle-plugin/mappings).
 
 ### Custom Configuration
 
@@ -299,6 +366,8 @@ The `sample/` module contains a working WebView demo with realistic bridge scena
 2. Tap the notification to open the message list
 3. Tap any message to see its details (overview, request payload, response payload)
 
+The sample captures its bridge with the Gradle plugin (`dari { }` in `sample/build.gradle.kts`). The [Interceptor Integration](#interceptor-integration) code above shows the same capture done by hand.
+
 ## Security & Privacy
 
 Dari is intended for debug and internal builds. Bridge payloads may contain
@@ -319,6 +388,7 @@ are never sent. Turn it off in Settings → Privacy → **Send crash reports**.
 | `init(context, config)` | Initialize with custom configuration |
 | `createInterceptor(tag?)` | Create a `DariInterceptor` with an optional tag (returns `null` in noop) |
 | `createInterceptor(tag?, protobufDecoder)` | Create a protobuf-capable interceptor while retaining all string/JSON methods |
+| `setProtobufDecoder(decoder)` | Protobuf decoder for interceptors the Gradle plugin creates. Call once at app start |
 | `setShakeToOpenEnabled(enabled)` | Enable/disable shake-to-open at runtime (persisted) |
 | `setDarkMode(value)` | Override dark mode: `true` / `false` / `null` (system default). Persisted |
 | `setShowTagChip(show)` | Show/hide bridge tag chips in the message list. Persisted |

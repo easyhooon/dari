@@ -3,6 +3,21 @@ title: 설치 및 설정
 description: Android 프로젝트에 Dari 추가하기
 ---
 
+## 캡처하는 두 가지 방법
+
+| | 직접 호출(기본) | Gradle 플러그인(2.6.0 신규, 선택) |
+| --- | --- | --- |
+| 의존성 | `dari` + `dari-noop` | 같은 `dari` + `dari-noop` |
+| 추가 설정 | 없음 | `settings.gradle.kts`의 `pluginManagement`에 `mavenCentral()`, 앱 모듈 `build.gradle.kts`에 `plugins { id("io.github.easyhooon.dari") }`와 `dari { }` 매핑 |
+| 브릿지 코드 | 요청이 들어오고 응답이 나가는 곳에서 인터셉터 호출 | Dari 호출 없음 |
+| 성능 | 기준 | 직접 호출과 같음. 큰 JSON 문자열을 넘기는 브릿지만 예외([성능](./gradle-plugin/performance)) |
+
+- **의존성만으로는 플러그인 방식이 켜지지 않습니다.** `dari`를 추가하거나 버전을 올려도 플러그인을 적용하고 `dari { }`를 작성하기 전에는 아무것도 바뀌지 않습니다. 그 전까지는 직접 호출한 인터셉터만 기록됩니다.
+- **직접 호출 방식으로 쓰던 앱의 업그레이드:** 버전만 올리면 됩니다. 코드 변경은 없습니다.
+- **브릿지마다 한 가지 방식만 쓰세요.** 매핑한 메서드가 이미 `DariInterceptor`를 호출하면 플러그인은 그 메서드를 건너뛰고 빌드 경고를 출력합니다. 매핑한 메서드 본문만 확인하므로, 같은 경로의 다른 곳(예: 핸들러 안)에 있는 직접 호출은 한 번 더 기록됩니다.
+
+이 페이지는 직접 호출 방식을 설정합니다. 플러그인을 쓰려면 같은 의존성에 [Gradle 플러그인](./gradle-plugin) 설정을 더하세요.
+
 ## 의존성 추가
 
 앱 모듈의 `build.gradle.kts`에 의존성을 추가합니다:
@@ -45,21 +60,31 @@ class MyApp : Application() {
 val interceptor = Dari.createInterceptor(tag = "MyBridge")
 ```
 
-각 브릿지 지점에서 인터셉터 메서드를 호출합니다. 릴리즈 빌드에서는 `dari-noop`이 `null`을 반환하므로 safe call을 사용합니다:
+핸들러마다 호출하지 말고, 요청이 브릿지로 들어오는 지점과 응답을 보내는 함수 한 곳에서 호출합니다. 릴리즈 빌드에서는 `dari-noop`이 `null`을 반환하므로 safe call을 사용합니다:
 
 ```kotlin
-// Web → App: 요청 수신
-interceptor?.onWebToAppRequest(
-    handlerName = "getUserInfo",
-    requestId = "req_001",
-    requestData = """{"userId": 123}""",
-)
+inner class Bridge {
+    @JavascriptInterface
+    fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
+        // 모든 요청이 여기로 들어옴
+        interceptor?.onWebToAppRequest(handlerName, requestId, data)
+        when (handlerName) {
+            "getAppInfo" -> sendResponseToWeb(handlerName, requestId, true, appInfoJson())
+            // ...다른 핸들러도 sendResponseToWeb으로 응답
+        }
+    }
+}
 
-// Web → App: 응답 전송
-interceptor?.onWebToAppResponse(
-    handlerName = "getUserInfo",
-    requestId = "req_001",
-    responseData = """{"name": "John"}""",
-    isSuccess = true,
-)
+// 모든 응답이 여기서 나감
+private fun sendResponseToWeb(handlerName: String, requestId: String, isSuccess: Boolean, data: String) {
+    interceptor?.onWebToAppResponse(handlerName, requestId, data, isSuccess)
+    val script = "onBridgeResponse(${JSONObject.quote(requestId)}, $isSuccess, ${JSONObject.quote(data)})"
+    webView.post { webView.evaluateJavascript(script, null) }
+}
 ```
+
+권한 콜백처럼 나중에 보내는 응답도 같은 함수를 거치면 `requestId`로 요청과 짝지어집니다.
+
+## 브릿지 코드 없이 (선택)
+
+위의 인터셉터 호출이 기본 방식이며 그대로 동작합니다. 브릿지 코드를 건드리고 싶지 않다면 [Gradle 플러그인](./gradle-plugin)이 한 번의 `dari { }` 매핑으로 디버그 빌드에 같은 호출을 넣어 줍니다.

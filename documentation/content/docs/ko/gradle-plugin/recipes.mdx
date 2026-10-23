@@ -1,0 +1,128 @@
+---
+title: 사용 예
+description: 자주 쓰는 브릿지 구조별 매핑 예시
+---
+
+## 호출마다 JSON 문자열 하나
+
+브릿지가 `Android.postMessage('{"action":"login","id":"7","params":{...}}')`처럼 JSON 문자열 하나를 넘기는 경우가 많습니다:
+
+```kotlin
+dari {
+    webToAppRequest("com.example.WebBridge", "postMessage") {
+        handlerName = json(arg(0), "action")
+        requestId = json(arg(0), "id")
+        data = json(arg(0), "params")
+    }
+    webToAppResponse("com.example.WebBridge", "reply") {
+        requestId = json(arg(0), "id")
+        success = isNull(json(arg(0), "error"))
+        data = arg(0)
+    }
+}
+```
+
+## Fire-and-forget
+
+```kotlin
+webToAppRequest("com.example.MainActivity.BridgeInterface", "onBridgeRequestFireAndForget") {
+    handlerName = arg(0)
+    data = arg(1)
+    fireAndForget = constant(true)
+}
+
+// 공용 진입점에서 일부 핸들러만:
+webToAppRequest("com.example.MainActivity.BridgeInterface", "onBridgeRequest") {
+    handlerName = arg(0)
+    requestId = arg(1)
+    data = arg(2)
+    fireAndForget = arg(0).equalsTo("logEvent")
+}
+```
+
+## Protocol Buffers
+
+페이로드를 바이트로 매핑하고, 앱 시작 시 디코더를 한 번 등록하세요. 플러그인이 만드는 인터셉터가 이 디코더를 씁니다.
+
+```kotlin
+webToAppRequest("com.example.MainActivity.BridgeInterface", "onProtobufBridgeRequest") {
+    handlerName = constant("protobufGreeting")
+    requestId = arg(0)
+    data = base64(arg(1))
+}
+```
+
+```kotlin
+class App : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        Dari.setProtobufDecoder(protobufDecoder { /* Protocol Buffers 문서 참고 */ })
+    }
+}
+```
+
+`dari-noop`에서 `Dari.setProtobufDecoder`는 아무 일도 하지 않습니다. 디코더 작성법은 [Protocol Buffers](../protobuf)를 참고하세요.
+
+## App → Web
+
+```kotlin
+appToWebRequest("com.example.MainActivity", "sendToWeb") {
+    handlerName = arg(0)
+    requestId = arg(1)
+    data = arg(2)
+    fireAndForget = isNull(arg(1))           // requestId가 없으면 페이지가 응답하지 않음
+}
+appToWebResponse("com.example.MainActivity.BridgeInterface", "onAppToWebResponse") {
+    requestId = arg(0)
+    success = arg(1)
+    data = arg(2)
+}
+```
+
+## 메서드 하나로 요청과 응답을 보낼 때
+
+`onlyIf`는 매핑을 어떤 호출에 적용할지 고릅니다. 한 종류의 메시지만 오가는 메서드에는 필요 없습니다.
+
+어떤 브릿지는 모든 메시지를 메서드 하나로 보내고, 필드 하나로 종류를 구분합니다.
+
+```kotlin
+// 앱 코드: 웹에서 오는 모든 메시지가 이 메서드 하나로 들어옴
+class WebBridge {
+    @JavascriptInterface
+    fun postMessage(message: String) { /* type으로 분기 */ }
+}
+// 들어오는 메시지:
+// {"type":"request","handlerName":"getUserInfo","requestId":"r1","data":{"id":7}}   ← 웹이 보낸 요청
+// {"type":"response","requestId":"a3","isSuccess":true,"result":{"ok":true}}       ← 앱 요청에 대한 웹의 응답
+```
+
+종류마다 이 메서드를 한 번씩 매핑하고, 각 매핑을 `onlyIf`로 거릅니다.
+
+```kotlin
+// app/build.gradle.kts
+dari {
+    // type == "request"인 메시지만 Web→App 요청으로 기록
+    webToAppRequest("com.example.WebBridge", "postMessage") {
+        handlerName = json(arg("message"), "handlerName")
+        requestId = json(arg("message"), "requestId")
+        data = json(arg("message"), "data")
+        onlyIf = json(arg("message"), "type").equalsTo("request")
+    }
+    // type == "response"인 메시지만 App→Web 응답으로 기록
+    appToWebResponse("com.example.WebBridge", "postMessage") {
+        requestId = json(arg("message"), "requestId")
+        success = json(arg("message"), "isSuccess")
+        data = json(arg("message"), "result")
+        onlyIf = json(arg("message"), "type").equalsTo("response")
+    }
+}
+```
+
+| 들어온 `type` | 요청 매핑 | 응답 매핑 |
+| --- | --- | --- |
+| `"request"` | 기록 | 건너뜀 |
+| `"response"` | 건너뜀 | 기록, App→Web 요청 `a3`과 짝지음 |
+| `onlyIf` 없음 | 모든 메시지를 기록해서, 응답도 이름이 `unknown`인 요청으로 보임 | 모든 메시지를 응답으로 봄. 응답은 request ID와 tag만으로 짝지으므로, 방금 기록된 요청 `r1`이 응답 없이 바로 ERROR로 바뀜 |
+
+필드가 없거나 `null`이면 `onlyIf`는 `false`입니다. App→Web 요청 `a3` 자체는 그 요청을 보내는 메서드의 매핑이 기록합니다([App → Web](#app--web) 참고).
+

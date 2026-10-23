@@ -1,5 +1,5 @@
 You are releasing a new version of dari. Arguments: $ARGUMENTS
-- `<version>` (e.g. `2.3.0`): a full release. The library goes to Maven Central and the desktop app ships with the same number.
+- `<version>` (e.g. `2.3.0`): a full release. The library and the Gradle plugin go to Maven Central and the desktop app ships with the same number.
 - `desktop <version>` (e.g. `desktop 2.2.2`): a desktop-only release. Nothing goes to Maven Central.
 - `web <version>` (e.g. `web 0.1.1`): an npm release of `dari-web` only. See "Web release" below; skip Steps 1–5.
 - No version: read it from `gradle/libs.versions.toml`, using `dari` for a full release and `dariDesktop` for `desktop`, or from `dari-web/package.json` for `web`.
@@ -12,14 +12,20 @@ The desktop updater, `install-desktop.sh` and the download page all read GitHub'
 - Run `gh release list --limit 3` and note the latest tag. The new version must be higher, or installed desktop apps never see it.
 - **Full release**: set both `dari` and `dariDesktop` to the version.
 - **Desktop-only release**: set only `dariDesktop`; leave `dari` alone.
-  - First run `git diff --stat <latest_tag>..HEAD -- dari dari-core dari-noop dari-runtime dari-inspector-protocol`. If it lists anything, stop and ask the user: library or protocol changes need a full release, or apps never get them.
+  - First run `git diff --stat <latest_tag>..HEAD -- dari dari-core dari-noop dari-runtime dari-inspector-protocol dari-gradle-plugin`. If it lists anything, stop and ask the user: library or protocol changes need a full release, or apps never get them.
 - Make the bump in a PR: branch `chore/bump-desktop-<version>` (or `chore/bump-version-<version>` for a full release) from `origin/main`, commit `chore: bump the desktop app to <version>`, open the PR, wait for CI, then merge it.
 - The bump must be on `main` before tagging, because `desktop-release.yml` checks out the tag and fails when `dariDesktop` doesn't match it.
 
 ## Step 2: Publish to Maven Central (full release only)
-- Skip this step for a desktop-only release; publishing would put an unchanged library on Maven Central under a new number.
-- Run `./gradlew clean publishAllPublicationsToMavenCentralRepository`
-- Verify the build succeeds.
+- Skip this step for a desktop-only release; publishing would put an unchanged library and plugin on Maven Central under a new number.
+- Run `./gradlew clean publishAllPublicationsToMavenCentralRepository` for the library modules.
+- Then publish the Gradle plugin in its own run: `./gradlew -p dari-gradle-plugin clean publishAllPublicationsToMavenCentralRepository`
+  - Keep the runs separate. `:sample` applies the plugin, so a root run builds the plugin jar while configuring, and a root `clean` would delete it before upload. In 2.6.0 that left Central with "Bundle has no files".
+  - It uploads the plugin jar and its marker, versioned by `dari`.
+- Verify both runs succeed.
+- Verify the plugin reached Central, because a missing marker breaks `plugins { id("io.github.easyhooon.dari") version "<version>" }`. Each URL must return 200. Central can take up to ~30 minutes, so retry before calling it failed:
+  - `curl -sI https://repo1.maven.org/maven2/io/github/easyhooon/dari-gradle-plugin/<version>/dari-gradle-plugin-<version>.pom`
+  - `curl -sI https://repo1.maven.org/maven2/io/github/easyhooon/dari/io.github.easyhooon.dari.gradle.plugin/<version>/io.github.easyhooon.dari.gradle.plugin-<version>.pom`
 
 ## Step 3: Create GitHub Release
 - Run `git log --oneline <latest_tag>..HEAD` to get the commits since last release.

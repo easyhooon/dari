@@ -26,7 +26,9 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -43,6 +45,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.easyhooon.dari.desktop.app.DetailLoad
 import com.easyhooon.dari.desktop.app.ExportFormat
 import com.easyhooon.dari.desktop.app.MessageExport
 import com.easyhooon.dari.desktop.app.isMacOs
@@ -51,6 +54,7 @@ import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
 import com.easyhooon.dari.inspector.protocol.WirePayloadMetadata
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -60,11 +64,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun DetailPane(
     detail: WireMessageDetail?,
+    detailLoad: DetailLoad?,
     jsonFoldingEnabled: Boolean,
-    onCopy: () -> Unit,
+    onCopy: (onCopied: () -> Unit) -> Unit,
     onCopyPayload: (text: String, what: String) -> Unit,
     onSave: (ExportFormat) -> Unit,
     onClose: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
     newerCount: Int = 0,
     onShowLatest: () -> Unit = {},
@@ -72,7 +78,17 @@ fun DetailPane(
 ) {
     Column(modifier.background(Dari.colors.surface)) {
         if (detail == null) {
-            EmptyState("Select a message", "Its request and response appear here.", Modifier.fillMaxWidth().weight(1f))
+            val emptyModifier = Modifier.fillMaxWidth().weight(1f)
+            when (detailLoad) {
+                DetailLoad.Loading -> EmptyState("Loading details…", null, emptyModifier)
+                // A backgrounded app is frozen by Android and stops answering until it is brought back.
+                DetailLoad.Failed -> EmptyState(
+                    "Couldn't load details",
+                    "The app may be in the background. Bring it to the foreground and retry.",
+                    emptyModifier,
+                ) { QuietButton("Retry", onClick = onRetry) }
+                null -> EmptyState("Select a message", "Its request and response appear here.", emptyModifier)
+            }
             return@Column
         }
         val summary = detail.summary
@@ -171,14 +187,24 @@ private fun NewerHint(count: Int, onClick: () -> Unit) {
 
 /** The in-app detail screen's share and save actions, desktop style. */
 @Composable
-private fun ExportMenu(onCopy: () -> Unit, onSave: (ExportFormat) -> Unit) {
+private fun ExportMenu(onCopy: (onCopied: () -> Unit) -> Unit, onSave: (ExportFormat) -> Unit) {
     var open by remember { mutableStateOf(false) }
+    // The menu closes on click, so the button confirms the copy instead, once it has succeeded.
+    var copied by remember { mutableStateOf(false) }
+    // Keyed on a count, not on `copied`, so each copy restarts the timer.
+    var copies by remember { mutableIntStateOf(0) }
+    LaunchedEffect(copies) {
+        if (copies == 0) return@LaunchedEffect
+        copied = true
+        delay(COPIED_FEEDBACK_MILLIS)
+        copied = false
+    }
     Box {
-        QuietButton("Export ▾", onClick = { open = true })
+        QuietButton(if (copied) "✓ Copied" else "Export ▾", onClick = { open = true })
         DariMenu(expanded = open, onDismiss = { open = false }) {
             DariMenuItem("Copy as Text", onClick = {
                 open = false
-                onCopy()
+                onCopy { copies++ }
             })
             DariMenuItem("Save as Text…", onClick = {
                 open = false

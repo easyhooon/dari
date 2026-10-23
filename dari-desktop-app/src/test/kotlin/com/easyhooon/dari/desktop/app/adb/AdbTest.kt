@@ -5,6 +5,7 @@ import java.io.IOException
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class AdbTest {
@@ -65,6 +66,31 @@ class AdbForwardListTest {
             listOf("R3CY70P3F4H" to "tcp:56778", "emulator-5554" to "tcp:61157"),
             Adb.parseDariForwards(list),
         )
+    }
+}
+
+class AdbForwardTest {
+    private fun adbReturning(output: String) = Adb { output }
+
+    @Test
+    fun `reads the port`() {
+        assertEquals(56778, adbReturning("56778\n").forward("emulator-5554", "com.example.app"))
+    }
+
+    @Test
+    fun `skips daemon notices before the port`() {
+        val output = """
+            * daemon not running; starting now at tcp:5037
+            * daemon started successfully
+            56778
+        """.trimIndent()
+
+        assertEquals(56778, adbReturning(output).forward("emulator-5554", "com.example.app"))
+    }
+
+    @Test
+    fun `throws IOException when there is no port`() {
+        assertFailsWith<IOException> { adbReturning("").forward("emulator-5554", "com.example.app") }
     }
 }
 

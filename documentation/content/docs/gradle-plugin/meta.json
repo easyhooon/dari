@@ -1,0 +1,11 @@
+{
+  "title": "Gradle Plugin",
+  "pages": [
+    "index",
+    "how-it-works",
+    "mappings",
+    "recipes",
+    "performance",
+    "rules"
+  ]
+}

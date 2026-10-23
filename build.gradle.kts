@@ -34,6 +34,18 @@ tasks.matching { it.name == "preBuild" }.configureEach {
     dependsOn("installGitHooks")
 }
 
+// The plugin is an included build, so root lint and tests don't reach it on their own.
+// Clean and publish stay out: :sample applies the plugin, so its jar is built while the root configures,
+// and a root `clean` in the same run deletes it before publishing. Release publishes it with `-p dari-gradle-plugin`.
+val pluginBuild = gradle.includedBuild("dari-gradle-plugin")
+listOf("detekt", "ktlintCheck", "ktlintFormat").forEach { name ->
+    tasks.matching { it.name == name }.configureEach { dependsOn(pluginBuild.task(":$name")) }
+}
+tasks.register("testGradlePlugin") {
+    description = "Runs the Dari Gradle plugin's unit tests."
+    dependsOn(pluginBuild.task(":test"))
+}
+
 allprojects {
     apply {
         plugin(rootProject.libs.plugins.detekt.get().pluginId)
