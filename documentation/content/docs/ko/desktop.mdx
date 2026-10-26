@@ -164,6 +164,14 @@ Dari.setDesktopInspectorEnabled(false)
     android:value="true" />
 ```
 
+Gradle 플러그인을 쓴다면 그 빌드 타입도 지정합니다. 플러그인은 따로 지정하지 않으면 debuggable variant만 계측합니다. 그 빌드는 `dari-noop`이 아니라 `dari`에 의존해야 합니다. release는 계속 `dari-noop`을 씁니다.
+
+```kotlin
+dari {
+    nonDebuggableBuildTypes.add("staging")
+}
+```
+
 ## 데스크톱 전용
 
 QA에 쓰는 스테이징 빌드처럼 데스크톱 앱에서만 메시지를 보고 싶은 빌드에는 다음 항목을 넣습니다. 알림을 띄우지 않고, 흔들어도 열리지 않으며, 런처 바로가기도 지웁니다. 메시지는 그대로 캡처되고 데스크톱 앱에서 평소처럼 볼 수 있습니다.

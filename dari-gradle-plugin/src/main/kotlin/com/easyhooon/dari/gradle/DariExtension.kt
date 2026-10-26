@@ -4,6 +4,7 @@ import com.android.build.api.instrumentation.InstrumentationScope
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
 
 /**
  * `dari { }`: where the app's bridge receives requests and sends responses.
@@ -22,6 +23,12 @@ abstract class DariExtension {
      * False only prints a warning, and the mapping records nothing.
      */
     abstract val failOnUnmatchedMapping: Property<Boolean>
+
+    /**
+     * Non-debuggable build types to instrument as well, e.g. a minified `staging`. Debuggable ones always are.
+     * Those builds also need `com.easyhooon.dari.desktop.ALLOW_NON_DEBUGGABLE` to open the desktop socket.
+     */
+    abstract val nonDebuggableBuildTypes: SetProperty<String>
 
     internal val mappings = mutableListOf<Pending>()
 

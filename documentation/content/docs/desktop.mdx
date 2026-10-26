@@ -165,6 +165,14 @@ A non-debuggable internal build, such as staging, can opt in with this entry in 
     android:value="true" />
 ```
 
+With the Gradle plugin, also list that build type. The plugin instruments only debuggable variants unless told otherwise. That build must depend on `dari`, not `dari-noop`. Keep release on `dari-noop`.
+
+```kotlin
+dari {
+    nonDebuggableBuildTypes.add("staging")
+}
+```
+
 ## Desktop only
 
 For builds where only the desktop app should show messages, such as a staging build used for QA, add this entry. Dari then shows no notification, doesn't open on shake, and removes its launcher shortcut. Messages are still captured, and the desktop app shows them as usual.
