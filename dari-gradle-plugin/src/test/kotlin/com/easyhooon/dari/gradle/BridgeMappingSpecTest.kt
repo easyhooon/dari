@@ -11,6 +11,7 @@ class BridgeMappingSpecTest {
         override val scope get() = throw UnsupportedOperationException()
         override val tag get() = throw UnsupportedOperationException()
         override val failOnUnmatchedMapping get() = throw UnsupportedOperationException()
+        override val nonDebuggableBuildTypes get() = throw UnsupportedOperationException()
     }
 
     @Test

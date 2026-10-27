@@ -29,12 +29,13 @@ private val SKIPPED_PREFIXES = listOf(
     "android.", "androidx.", "kotlin.", "kotlinx.", "java.", "javax.", "com.google.", "org.jetbrains.", "org.intellij.",
 )
 
-/** `io.github.easyhooon.dari`: captures mapped bridge calls in debuggable variants. */
+/** `io.github.easyhooon.dari`: captures mapped bridge calls in debuggable variants and opted-in build types. */
 class DariPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         val extension = project.extensions.create("dari", DariExtension::class.java)
         extension.scope.convention(InstrumentationScope.PROJECT)
         extension.failOnUnmatchedMapping.convention(true)
+        extension.nonDebuggableBuildTypes.convention(emptySet())
         listOf("com.android.application", "com.android.library").forEach { id ->
             project.pluginManager.withPlugin(id) { register(project, extension) }
         }
@@ -43,8 +44,8 @@ class DariPlugin : Plugin<Project> {
     private fun register(project: Project, extension: DariExtension) {
         val components = project.extensions.getByType(AndroidComponentsExtension::class.java)
         components.onVariants { variant ->
-            // Release builds ship no hooks; debuggable ones work with both dari and dari-noop.
-            if (!variant.debuggable) return@onVariants
+            // Release builds ship no hooks unless opted in; debuggable ones work with both dari and dari-noop.
+            if (!variant.debuggable && variant.buildType !in extension.nonDebuggableBuildTypes.get()) return@onVariants
             val tag = extension.tag.orNull
             val targets = extension.mappings.map { MappingTarget(it.className, it.methodName, it.spec.toSpec(tag)) }
             variant.instrumentation.transformClassesWith(DariClassVisitorFactory::class.java, extension.scope.get()) {

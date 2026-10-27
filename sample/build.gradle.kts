@@ -28,7 +28,16 @@ android {
                 "proguard-rules.pro",
             )
         }
+        // Release-like (minified, not debuggable) but still inspectable with Dari.
+        create("staging") {
+            initWith(getByName("release"))
+            isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
+    // The bench bridges live in the debug source set; staging maps them too.
+    sourceSets.getByName("staging").kotlin.directories.add("src/debug/java")
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -41,6 +50,7 @@ android {
 // Where MainActivity's bridge receives and sends messages; the plugin logs them in debug builds.
 dari {
     tag = "Sample"
+    nonDebuggableBuildTypes.add("staging")
 
     val activity = "com.easyhooon.dari.sample.MainActivity"
     val bridge = "$activity.BridgeInterface"
@@ -118,6 +128,7 @@ dari {
 dependencies {
     debugImplementation(project(":dari"))
     releaseImplementation(project(":dari-noop"))
+    "stagingImplementation"(project(":dari"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
