@@ -2,6 +2,7 @@ package com.easyhooon.dari.data
 
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
+import com.easyhooon.dari.MessageStatus
 import com.easyhooon.dari.data.local.DariDatabase
 import com.easyhooon.dari.data.local.MessageDao
 import com.easyhooon.dari.data.local.toEntity
@@ -118,22 +119,23 @@ class MessageRepository internal constructor(
                 if (updated.size > maxEntries) updated.drop(updated.size - maxEntries) else updated
             }
             _events.tryEmit(RepositoryEvent.Added(InspectorEntry(tempId, entryWithTempId)))
-        }
 
-        // Insert to DB asynchronously and update with actual id
-        launchWrite {
-            val actualId = dao.insert(entry.toEntity())
-            synchronized(lock) {
-                _entries.update { current ->
-                    current.map { e ->
-                        if (e.id == tempId) e.copy(id = actualId) else e
+            // Insert to DB asynchronously and update with actual id. Queued under the lock,
+            // so a response arriving on another thread can't queue its update before this insert.
+            launchWrite {
+                val actualId = dao.insert(entry.toEntity())
+                synchronized(lock) {
+                    _entries.update { current ->
+                        current.map { e ->
+                            if (e.id == tempId) e.copy(id = actualId) else e
+                        }
                     }
+                    wireIds[actualId] = tempId
+                    pruneWireIds()
                 }
-                wireIds[actualId] = tempId
-                pruneWireIds()
+                dao.trimOldEntries(maxEntries)
+                retentionCutoff()?.let { dao.deleteOlderThan(it) }
             }
-            dao.trimOldEntries(maxEntries)
-            retentionCutoff()?.let { dao.deleteOlderThan(it) }
         }
     }
 
@@ -155,37 +157,35 @@ class MessageRepository internal constructor(
         direction: MessageDirection?,
         transform: (MessageEntry) -> MessageEntry,
     ) {
-        var updatedEntry: MessageEntry? = null
+        val updatedEntries = ArrayList<MessageEntry>()
         synchronized(lock) {
             _entries.update { current ->
-                current.map { entry ->
-                    val directionMatches = direction == null || entry.direction == direction
-                    if (entry.requestId == requestId && entry.tag == tag && directionMatches) {
-                        transform(entry).also { updatedEntry = it }
-                    } else {
-                        entry
-                    }
+                updatedEntries.clear()
+                val targets = responseTargets(current, requestId, tag, direction)
+                current.mapIndexed { index, entry ->
+                    if (index in targets) transform(entry).also(updatedEntries::add) else entry
                 }
             }
-            updatedEntry?.let { _events.tryEmit(RepositoryEvent.Updated(InspectorEntry(wireIdOf(it.id), it))) }
-        }
-        updatedEntry?.let { entry ->
-            launchWrite {
-                dao.updateByRequestId(
-                    requestId = requestId,
-                    tag = tag,
-                    direction = direction,
-                    responseData = entry.responseData,
-                    responseDataTruncated = entry.responseDataTruncated,
-                    responseContentType = entry.responsePayloadMetadata?.contentType,
-                    responseOriginalSizeBytes = entry.responsePayloadMetadata?.originalSizeBytes,
-                    responseDecodeStatus = entry.responsePayloadMetadata?.decodeStatus,
-                    responseRawPreviewBase64 = entry.responsePayloadMetadata?.rawPreview?.base64,
-                    responseRawPreviewSizeBytes = entry.responsePayloadMetadata?.rawPreview?.previewSizeBytes,
-                    responseRawPreviewTruncated = entry.responsePayloadMetadata?.rawPreview?.truncated,
-                    status = entry.status,
-                    responseTimestamp = entry.responseTimestamp,
-                )
+            updatedEntries.forEach { _events.tryEmit(RepositoryEvent.Updated(InspectorEntry(wireIdOf(it.id), it))) }
+            updatedEntries.forEach { entry ->
+                launchWrite {
+                    // Writes run in the order they were queued under the lock, so the insert of an entry
+                    // added in this process has already run and recorded its DB id.
+                    val id = persistedIdOf(entry.id) ?: return@launchWrite
+                    dao.updateResponse(
+                        id = id,
+                        responseData = entry.responseData,
+                        responseDataTruncated = entry.responseDataTruncated,
+                        responseContentType = entry.responsePayloadMetadata?.contentType,
+                        responseOriginalSizeBytes = entry.responsePayloadMetadata?.originalSizeBytes,
+                        responseDecodeStatus = entry.responsePayloadMetadata?.decodeStatus,
+                        responseRawPreviewBase64 = entry.responsePayloadMetadata?.rawPreview?.base64,
+                        responseRawPreviewSizeBytes = entry.responsePayloadMetadata?.rawPreview?.previewSizeBytes,
+                        responseRawPreviewTruncated = entry.responsePayloadMetadata?.rawPreview?.truncated,
+                        status = entry.status,
+                        responseTimestamp = entry.responseTimestamp,
+                    )
+                }
             }
         }
     }
@@ -206,6 +206,29 @@ class MessageRepository internal constructor(
     }
 
     private fun wireIdOf(id: Long): Long = wireIds[id] ?: id
+
+    // Temp ids are negative; an entry trimmed before its DB id was recorded yields null.
+    private fun persistedIdOf(id: Long): Long? =
+        if (id > 0) id else synchronized(lock) { wireIds.entries.firstOrNull { it.value == id }?.key }
+
+    // One entry per direction: the latest IN_PROGRESS match, else the latest without a response
+    // (fire-and-forget). Latest, so a request that never got an answer can't take the next call's.
+    private fun responseTargets(
+        entries: List<MessageEntry>,
+        requestId: String,
+        tag: String?,
+        direction: MessageDirection?,
+    ): Set<Int> = entries.indices
+        .filter { i ->
+            val entry = entries[i]
+            entry.requestId == requestId && entry.tag == tag && (direction == null || entry.direction == direction)
+        }
+        .groupBy { entries[it].direction }
+        .values
+        .mapNotNullTo(HashSet()) { matches ->
+            matches.lastOrNull { entries[it].status == MessageStatus.IN_PROGRESS }
+                ?: matches.lastOrNull { entries[it].responseTimestamp == null }
+        }
 
     // Drop mappings for entries already trimmed from memory; called with lock held.
     private fun pruneWireIds() {
