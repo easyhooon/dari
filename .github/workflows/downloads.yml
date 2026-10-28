@@ -55,6 +55,7 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
           python3 scripts/notify-discord.py \
+            --scarf-status "${{ steps.scarf.outputs.status || 'failed' }}" \
             --scarf-path stats-data/docs/downloads-30d-observed.csv \
             --stats-path stats-data/docs/repo-stats-daily.csv
       - name: Commit chart if changed

@@ -5,6 +5,7 @@ import argparse
 import csv
 import datetime as dt
 import html
+import os
 import re
 import urllib.error
 import urllib.parse
@@ -22,6 +23,10 @@ SVG_PATH = ROOT / "docs" / "downloads-30d-observed.svg"
 HEADER = ["observed_utc", "rolling_30d_downloads"]
 
 
+class RoundedBadgeValue(ValueError):
+    """A valid display value that cannot be used as an exact observation."""
+
+
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, request, fp, code, message, headers, new_url):
         return None
@@ -31,12 +36,17 @@ def parse_badge_redirect(location: str) -> int:
     url = urllib.parse.urlparse(location)
     if url.scheme != "https" or url.netloc != "img.shields.io" or url.path != "/static/v1":
         raise ValueError("unexpected badge redirect")
-    query = urllib.parse.parse_qs(url.query)
+    query = urllib.parse.parse_qs(url.query, keep_blank_values=True)
     if query.get("label") != ["Scarf: Downloads"]:
         raise ValueError("unexpected badge label")
-    message = query.get("message", [""])[0]
+    messages = query.get("message", [])
+    if len(messages) != 1:
+        raise ValueError("expected one badge message")
+    message = messages[0]
     match = re.fullmatch(r"(0|[1-9][0-9]*)/month", message)
     if not match:
+        if re.fullmatch(r"(0|[1-9][0-9]*)(\.[0-9]+)?[kKMGTPE]/month", message):
+            raise RoundedBadgeValue(f"badge value is not an exact integer: {message}")
         raise ValueError(f"badge value is not an exact integer: {message}")
     return int(match.group(1))
 
@@ -44,7 +54,8 @@ def parse_badge_redirect(location: str) -> int:
 def fetch_count() -> int:
     request = urllib.request.Request(BADGE_URL, headers={"User-Agent": "dari-readme-chart/1.0"})
     try:
-        urllib.request.build_opener(NoRedirect()).open(request, timeout=20)
+        with urllib.request.build_opener(NoRedirect()).open(request, timeout=20):
+            pass
     except urllib.error.HTTPError as error:
         if error.code not in (301, 302, 303, 307, 308):
             raise
@@ -149,8 +160,12 @@ def update(now=None, count=None, data_path=DATA_PATH, svg_path=SVG_PATH):
     observed = now or dt.datetime.now(dt.timezone.utc)
     if observed.utcoffset() != dt.timedelta(0):
         raise ValueError("observation time must be UTC")
-    value = fetch_count() if count is None else count
-    if not isinstance(value, int) or value < 0:
+    try:
+        value = fetch_count() if count is None else count
+    except RoundedBadgeValue as error:
+        print(f"::warning::Scarf sample skipped: {error}; history and chart unchanged")
+        return "rounded"
+    if type(value) is not int or value < 0:
         raise ValueError("invalid badge count")
     history = read_history(data_path)
     history = [(stamp, old) for stamp, old in history if stamp.date() != observed.date()]
@@ -158,11 +173,26 @@ def update(now=None, count=None, data_path=DATA_PATH, svg_path=SVG_PATH):
     history.sort()
     write_history(data_path, history)
     svg_path.write_text(render_svg(history), encoding="utf-8")
+    return "observed"
 
 
-if __name__ == "__main__":
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-path", type=Path, default=DATA_PATH)
     parser.add_argument("--svg-path", type=Path, default=SVG_PATH)
-    args = parser.parse_args()
-    update(data_path=args.data_path, svg_path=args.svg_path)
+    args = parser.parse_args(argv)
+    status = update(data_path=args.data_path, svg_path=args.svg_path)
+    if output := os.environ.get("GITHUB_OUTPUT"):
+        with open(output, "a", encoding="utf-8") as stream:
+            stream.write(f"status={status}\n")
+    if summary := os.environ.get("GITHUB_STEP_SUMMARY"):
+        with open(summary, "a", encoding="utf-8") as stream:
+            stream.write(
+                "Scarf: exact observation recorded.\n" if status == "observed" else
+                "Scarf: rounded badge; exact count unavailable. Sample skipped; "
+                "CSV and SVG unchanged.\n"
+            )
+
+
+if __name__ == "__main__":
+    main()
