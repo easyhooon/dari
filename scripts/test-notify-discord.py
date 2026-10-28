@@ -56,6 +56,26 @@ class NotifyDiscordTest(unittest.TestCase):
         self.assertIn("사용자 수가 아니며", message)
         self.assertEqual(len(module.read_stats(self.stats)), 2)
 
+    def test_rounded_or_failed_sample_does_not_report_old_same_day_count(self):
+        self.scarf.write_text("observed_utc,rolling_30d_downloads\n2026-10-14T00:07:00Z,170\n"
+                              "2026-10-15T00:01:00Z,190\n", encoding="utf-8")
+        before = self.scarf.read_bytes()
+        for status, expected in (("rounded", "정확한 수치 없음 (배지 축약값으로 수집 건너뜀)"),
+                                 ("failed", "오늘 샘플 실패")):
+            with self.subTest(status=status):
+                message = module.run(self.now, self.scarf, self.stats, (35, 6, None), None, status)
+                self.assertIn(expected, message)
+                self.assertNotIn("**190건**", message)
+                self.assertIn("• Stars: **35개**", message)
+                self.assertEqual(self.scarf.read_bytes(), before)
+
+    def test_rounded_sample_without_history_still_records_repo_stats(self):
+        message = module.run(self.now, self.scarf, self.stats, (35, 6, None), None, "rounded")
+        self.assertIn("정확한 수치 없음", message)
+        self.assertNotIn("오늘 샘플 실패", message)
+        self.assertEqual(module.read_stats(self.stats), [(self.now, 35, 6)])
+        self.assertFalse(self.scarf.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

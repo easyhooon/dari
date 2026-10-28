@@ -100,7 +100,7 @@ def delta(value: int, previous, today: dt.date) -> str:
     return f"{label} {value - old:+,}"
 
 
-def build_message(now, scarf_rows, stats_rows, latest):
+def build_message(now, scarf_rows, stats_rows, latest, scarf_status=None):
     today = now.date()
     scarf_today, scarf_prev = split_today(scarf_rows, today)
     stats_today, stats_prev = split_today(stats_rows, today)
@@ -112,6 +112,10 @@ def build_message(now, scarf_rows, stats_rows, latest):
         f"• 30일 요청 합계: **{scarf_today[1]:,}건** ({delta(scarf_today[1], scarf_prev, today)})"
         if scarf_today else "• 30일 요청 합계: 오늘 샘플 실패"
     )
+    if scarf_status == "rounded":
+        scarf_line = "• 30일 요청 합계: 정확한 수치 없음 (배지 축약값으로 수집 건너뜀)"
+    elif scarf_status == "failed":
+        scarf_line = "• 30일 요청 합계: 오늘 샘플 실패"
     lines = [
         f"📊 **Dari 일일 통계 — {local.month}월 {local.day}일**",
         f"-# {local:%Y-%m-%d %H:%M} KST 관측",
@@ -147,13 +151,13 @@ def post_discord(webhook: str, content: str):
         return json.load(response)
 
 
-def run(now, scarf_path: Path, stats_path: Path, repo_stats, webhook: str | None):
+def run(now, scarf_path: Path, stats_path: Path, repo_stats, webhook: str | None, scarf_status=None):
     stars, installers, latest = repo_stats
     rows = [row for row in read_stats(stats_path) if row[0].date() != now.date()]
     rows.append((now, stars, installers))
     rows.sort()
     write_stats(stats_path, rows)
-    message = build_message(now, update_downloads.read_history(scarf_path), rows, latest)
+    message = build_message(now, update_downloads.read_history(scarf_path), rows, latest, scarf_status)
     if webhook:
         sent = post_discord(webhook, message)
         print(f"Discord accepted message {sent['id']} at {sent['timestamp']}")
@@ -167,6 +171,7 @@ if __name__ == "__main__":
     parser.add_argument("--scarf-path", type=Path, default=ROOT / "docs" / "downloads-30d-observed.csv")
     parser.add_argument("--stats-path", type=Path, default=ROOT / "docs" / "repo-stats-daily.csv")
     parser.add_argument("--repo", default=REPO)
+    parser.add_argument("--scarf-status", choices=("observed", "rounded", "failed"))
     parser.add_argument("--dry-run", action="store_true", help="print the message instead of posting it")
     args = parser.parse_args()
     webhook = None if args.dry_run else os.environ.get("DISCORD_WEBHOOK_URL")
@@ -174,5 +179,5 @@ if __name__ == "__main__":
         raise SystemExit("DISCORD_WEBHOOK_URL is not set")
     run(
         dt.datetime.now(dt.timezone.utc), args.scarf_path, args.stats_path,
-        fetch_repo_stats(args.repo, os.environ.get("GH_TOKEN")), webhook,
+        fetch_repo_stats(args.repo, os.environ.get("GH_TOKEN")), webhook, args.scarf_status,
     )
