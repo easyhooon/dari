@@ -216,7 +216,7 @@ fun main() {
                         Item(
                             if (format == ExportFormat.TEXT) "Export Messages as Text…" else "Export Messages as JSON…",
                             enabled = controller.canExport,
-                            onClick = { chooseExportFile(window, format)?.let { controller.export(it, format, all = true) } },
+                            onClick = { chooseExportFile(window, format, settings)?.let { controller.export(it, format, all = true) } },
                         )
                     }
                     Separator()
