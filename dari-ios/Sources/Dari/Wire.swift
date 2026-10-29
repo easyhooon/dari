@@ -72,7 +72,12 @@ struct InspectorSettings: Codable, Equatable {
 }
 
 struct ListInput: Codable {
-    var limit: Int = 500
+    var limit = 500
+
+    init(from decoder: Decoder) throws {
+        // Synthesized Decodable ignores the default; `{}` must still mean 500, as in Kotlin.
+        limit = try decoder.container(keyedBy: CodingKeys.self).decodeIfPresent(Int.self, forKey: .limit) ?? 500
+    }
 }
 
 struct ListOutput: Codable, Equatable {

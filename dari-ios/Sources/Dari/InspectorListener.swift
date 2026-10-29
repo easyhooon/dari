@@ -42,7 +42,8 @@ final class InspectorListener {
                     running = true
                     generation += 1
                     let current = generation
-                    let thread = Thread { [weak self] in self?.acceptLoop(fd, generation: current) }
+                    // Strong capture: the loop must run to close [fd] even if the listener is released right away.
+                    let thread = Thread { self.acceptLoop(fd, generation: current) }
                     thread.name = "dari-inspector-accept"
                     thread.start()
                     return
@@ -69,7 +70,9 @@ final class InspectorListener {
         address.sin_family = sa_family_t(AF_INET)
         address.sin_port = port.bigEndian
         address.sin_addr.s_addr = INADDR_LOOPBACK.bigEndian
-        // No SO_REUSEADDR: a second simulator app must fail here and move on to the next port.
+        // Lets a relaunched app reclaim its port from TIME_WAIT; a port with a live listener still fails with EADDRINUSE.
+        var on: Int32 = 1
+        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, socklen_t(MemoryLayout<Int32>.size))
         let bound = withUnsafePointer(to: &address) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
                 Darwin.bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
@@ -94,7 +97,7 @@ final class InspectorListener {
                 close(client)
                 continue
             }
-            let thread = Thread { [weak self] in self?.serve(client) }
+            let thread = Thread { self.serve(client) }
             thread.name = "dari-inspector-session"
             thread.start()
         }

@@ -7,10 +7,14 @@ import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
 
 /**
  * Finds Dari iOS apps in Simulators. Simulators share the Mac's loopback, so each app listens on the first
  * free port of [ports] (`Dari.defaultPorts` in the Swift SDK) and the desktop probes the span. No adb or usbmuxd.
+ *
+ * Two Simulators running the same bundle id are not told apart yet; [open] picks the first one.
  */
 class IosSimulator(
     private val clientVersion: String,
@@ -18,17 +22,19 @@ class IosSimulator(
     private val connect: (port: Int) -> Socket = ::loopbackSocket,
 ) {
     /** Blocking: applicationIds of the Dari apps answering on the span, in port order. */
-    fun apps(): List<String> = ports.mapNotNull { port -> probe(port)?.use { it.app.applicationId } }.distinct()
+    fun apps(): List<String> = probeAll().mapNotNull { conn -> conn?.use { it.app.applicationId } }.distinct()
 
     /** Blocking: connects to [applicationId] wherever in the span it landed this launch. */
     fun open(applicationId: String): InspectorConnection {
-        for (port in ports) {
-            val conn = probe(port) ?: continue
-            if (conn.app.applicationId == applicationId) return conn
-            conn.close()
-        }
-        throw IOException("$applicationId isn't running Dari in a Simulator")
+        val found = probeAll().filterNotNull()
+        val match = found.firstOrNull { it.app.applicationId == applicationId }
+        found.filter { it !== match }.forEach { it.close() }
+        return match ?: throw IOException("$applicationId isn't running Dari in a Simulator")
     }
+
+    // In parallel, so a suspended app that accepts but never answers costs one timeout per poll, not one per port.
+    private fun probeAll(): List<InspectorConnection?> =
+        ports.map { port -> CompletableFuture.supplyAsync({ probe(port) }, probeExecutor) }.map { it.join() }
 
     // Anything else on these ports, including a process that answers with junk, is skipped.
     private fun probe(port: Int): InspectorConnection? = try {
@@ -46,9 +52,13 @@ class IosSimulator(
         val DEFAULT_PORTS = 38_670..38_677
 
         private const val CONNECT_TIMEOUT_MS = 200
-        private const val PROBE_TIMEOUT_MS = 1_000
 
-        val isSupported: Boolean get() = System.getProperty("os.name").orEmpty().startsWith("Mac")
+        // Loopback answers in well under a millisecond; this only bounds apps that are suspended.
+        private const val PROBE_TIMEOUT_MS = 250
+
+        private val probeExecutor = Executors.newCachedThreadPool { runnable ->
+            Thread(runnable, "dari-ios-probe").apply { isDaemon = true }
+        }
 
         private fun loopbackSocket(port: Int): Socket {
             val socket = Socket()
