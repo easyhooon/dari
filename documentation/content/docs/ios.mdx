@@ -6,13 +6,14 @@ description: Record WKWebView bridge traffic in an iOS app and inspect it in the
 The `Dari` Swift package records your WKWebView bridge traffic and sends it to the same [desktop app](./desktop) you use for Android. The list, details, filters, masking, search, and export work the same way. There is no in-app inspector screen on iOS.
 
 <Callout type="warn">
-Preview. Apps running in an iOS Simulator connect today. USB connections to a physical iPhone are not supported yet ([#255](https://github.com/easyhooon/dari/issues/255)).
+Preview. Apps connect from an iOS Simulator, or from an iPhone or iPad attached to the Mac over USB. Wi-Fi connections and Windows or Linux hosts are not supported yet ([#255](https://github.com/easyhooon/dari/issues/255)).
 </Callout>
 
 ## Requirements
 
 - iOS 15 or later
-- The Dari desktop app on the Mac that runs the Simulator. Windows and Linux can't run Simulators.
+- The Dari desktop app on a Mac. iOS connections need macOS: Simulators run only there, and USB devices are reached through macOS's usbmuxd.
+- For a physical device: a USB cable, the device unlocked once with **Trust This Computer** accepted, and the app installed from Xcode
 - adb is optional. Without it, the desktop app shows only iOS apps.
 
 ## Install
@@ -98,10 +99,25 @@ Automatic capture without these calls, like the Android [Gradle plugin](./gradle
 
 ## Connect
 
-1. Run the app in a Simulator.
-2. Open the Dari desktop app on the same Mac. The app appears under the **iOS Simulator** device, and Dari connects on its own when it's the only Dari app there.
+1. Run the app in a Simulator, or on an iPhone or iPad attached over USB.
+2. Open the Dari desktop app on the same Mac. Simulator apps appear under the **iOS Simulator** device; a USB device appears under its own name. Dari connects on its own when it finds exactly one Dari app there.
 
-Each app listens on the first free port in `38670...38677` on `127.0.0.1`, so up to eight Dari apps can run in Simulators at the same time. When an app relaunches, the desktop app finds it again, even if it landed on a different port.
+Each app listens on the first free port in `38670...38677` on `127.0.0.1`, so up to eight Dari apps can run on one target at the same time. When an app relaunches, the desktop app finds it again, even if it landed on a different port.
+
+## How the connection works
+
+The app never opens a port to the network. It listens only on its own loopback address, `127.0.0.1`. The desktop app reaches that address in one of two ways.
+
+**Simulator.** A Simulator app runs as a process on your Mac and shares the Mac's loopback. The desktop app connects to `127.0.0.1:38670` and the next ports directly.
+
+**USB device.** An iPhone's loopback is inside the iPhone, so the Mac can't reach it over the network. macOS runs **usbmuxd**, the daemon Finder and Xcode use to talk to devices over the cable. A program on the Mac asks usbmuxd to connect to a port on the device, and usbmuxd turns the USB link into a byte stream to that port. This is called *port tunnelling*. It does on iOS what `adb forward` does on [Android](./desktop):
+
+1. The desktop app asks usbmuxd (`/var/run/usbmuxd`) for the attached devices, and reads each one's name from lockdownd, the service every iOS device runs on port 62078.
+2. For each port in `38670...38677`, it asks usbmuxd to connect to that port on the device. usbmuxd answers right away when nothing listens there.
+3. On ports that accept, the desktop app sends the Dari handshake. A Dari app answers with its bundle ID, and the app is listed.
+4. The connection you pick keeps using the same tunnel. Unplugging the cable closes it, and the desktop app reconnects when the device comes back.
+
+No Wi-Fi, IP address, or extra tool is involved. A device on the same Wi-Fi but not on the cable doesn't appear.
 
 ## Staging builds
 
@@ -124,4 +140,6 @@ Swift Package Manager can't link a package to some configurations only. The Dari
 
 - **The app isn't listed.** The app must be in the foreground. Suspended Simulator apps don't answer. Check that `start()` ran and that something is listening: `lsof -nP -iTCP:38670-38677 -sTCP:LISTEN`.
 - **Two Simulators run the same app.** The desktop app connects to the first one it finds. Quit one of them.
+- **The iPhone isn't listed.** Unlock it and accept **Trust This Computer**, then check that Finder shows it. A device shows up only over the cable.
+- **The iPhone is listed but the app isn't.** Bring the app to the foreground. iOS suspends apps in the background, and a suspended app can't answer.
 - **`start()` throws `noFreePort`.** Eight Dari apps already hold the ports. Quit some, or pass a different range in `DariConfiguration(ports:)`. The desktop app only probes the default range.

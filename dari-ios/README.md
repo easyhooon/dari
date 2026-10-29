@@ -2,7 +2,7 @@
 
 Records WKWebView bridge traffic and shows it in the Dari desktop app. There is no in-app inspector screen on iOS.
 
-Status: Simulator connections work. USB connections to a physical iPhone are not supported yet (#255).
+Status: Simulator and USB (macOS) connections work. Wi-Fi and Windows/Linux hosts are not supported yet (#255).
 
 The full integration guide, including Staging builds and troubleshooting, is in [`documentation/content/docs/ios.mdx`](../documentation/content/docs/ios.mdx). `sample-ios/` has a runnable sample app.
 
@@ -48,8 +48,8 @@ Requests and responses are paired by `requestId`, the same way as on Android. A 
 
 ## Connect
 
-1. Run the app in a Simulator.
-2. Open the Dari desktop app on the same Mac. The app appears under the **iOS Simulator** device.
+1. Run the app in a Simulator, or on an iPhone or iPad attached over USB.
+2. Open the Dari desktop app on the same Mac. Simulator apps appear under the **iOS Simulator** device; USB devices appear under their own name, reached through usbmuxd.
 
 Each app listens on the first free port in `Dari.defaultPorts` (127.0.0.1:38670–38677), so up to eight Dari apps can run in Simulators at once.
 
