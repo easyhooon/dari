@@ -36,11 +36,11 @@ import com.easyhooon.dari.desktop.app.update.Updater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.withContext
 import java.awt.Desktop
 import java.awt.Dimension
 import java.awt.GraphicsEnvironment
-import java.awt.Rectangle
 import java.awt.Taskbar
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
@@ -100,24 +100,15 @@ fun main() {
         var aboutOpen by remember { mutableStateOf(false) }
         var noticesOpen by remember { mutableStateOf(false) }
         var statsOpen by remember { mutableStateOf(false) }
-        val windowState = remember { mainWindowState(settings.windowBounds, settings.windowMaximized) }
+        val restoredBounds = remember {
+            val screens = GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.map { it.defaultConfiguration.bounds }
+            settings.windowBounds?.takeIfRestorable(screens)
+        }
+        val windowState = remember { mainWindowState(restoredBounds, settings.windowMaximized) }
         LaunchedEffect(windowState) {
             // Not debounced, so zooming right before ⌘Q still sticks.
             snapshotFlow { windowState.placement }
                 .collect { settings.saveWindowMaximized(it != WindowPlacement.Floating) }
-        }
-        LaunchedEffect(windowState) {
-            // Saved as it changes, so ⌘Q and crashes keep the last bounds too.
-            // Zoomed windows skip this, so un-zooming returns to the last floating size.
-            snapshotFlow { windowState.position to windowState.size }
-                .debounce(500)
-                .collect { (position, size) ->
-                    if (windowState.placement == WindowPlacement.Floating && position is WindowPosition.Absolute) {
-                        settings.saveWindowBounds(
-                            WindowBounds(position.x.value.toInt(), position.y.value.toInt(), size.width.value.toInt(), size.height.value.toInt()),
-                        )
-                    }
-                }
         }
         LaunchedEffect(settings) {
             snapshotFlow { settings.crashReportsEnabled }
@@ -166,7 +157,27 @@ fun main() {
             state = windowState,
         ) {
             // Without a floor the window can shrink to a bare title bar (seen as 80×28), which looks like no window at all.
-            LaunchedEffect(window) { window.minimumSize = Dimension(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT) }
+            LaunchedEffect(window) {
+                window.minimumSize = Dimension(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
+                // On macOS, bounds on a secondary screen are dropped before the first show and the
+                // window falls back to the minimum size on the main screen, so set them once more.
+                if (restoredBounds != null && windowState.placement == WindowPlacement.Floating) {
+                    window.bounds = restoredBounds.rectangle
+                }
+                // Saved as it changes, so ⌘Q and crashes keep the last bounds too.
+                // The first value can still be that startup fallback, so only changes are saved.
+                // Zoomed windows skip this, so un-zooming returns to the last floating size.
+                snapshotFlow { windowState.position to windowState.size }
+                    .drop(1)
+                    .debounce(500)
+                    .collect { (position, size) ->
+                        if (windowState.placement == WindowPlacement.Floating && position is WindowPosition.Absolute) {
+                            settings.saveWindowBounds(
+                                WindowBounds(position.x.value.toInt(), position.y.value.toInt(), size.width.value.toInt(), size.height.value.toInt()),
+                            )
+                        }
+                    }
+            }
             if (isMacOs) {
                 // Draw content under a transparent title bar, like native macOS apps.
                 window.rootPane.putClientProperty("apple.awt.fullWindowContent", true)
@@ -274,21 +285,16 @@ private fun loadAppIcon(): BufferedImage? =
     Thread.currentThread().contextClassLoader.getResourceAsStream("dari-icon.png")?.use(ImageIO::read)
 
 /**
- * Restores the last bounds when they still fall on a connected screen; otherwise centers a default window.
+ * Restores [saved] bounds, already checked against the connected screens; otherwise centers a default window.
  * Full screen comes back as zoomed, which avoids opening a separate macOS Space at launch.
  */
 private fun mainWindowState(saved: WindowBounds?, maximized: Boolean): WindowState {
     val placement = if (maximized) WindowPlacement.Maximized else WindowPlacement.Floating
-    val visible = saved?.takeIf { bounds ->
-        bounds.width >= MIN_WINDOW_WIDTH && bounds.height >= MIN_WINDOW_HEIGHT &&
-            GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.any { screen ->
-                screen.defaultConfiguration.bounds.intersects(Rectangle(bounds.x, bounds.y, bounds.width, bounds.height))
-            }
-    } ?: return WindowState(placement = placement, position = WindowPosition.Aligned(Alignment.Center), size = DpSize(1280.dp, 820.dp))
+    saved ?: return WindowState(placement = placement, position = WindowPosition.Aligned(Alignment.Center), size = DpSize(1280.dp, 820.dp))
     return WindowState(
         placement = placement,
-        position = WindowPosition(visible.x.dp, visible.y.dp),
-        size = DpSize(visible.width.dp, visible.height.dp),
+        position = WindowPosition(saved.x.dp, saved.y.dp),
+        size = DpSize(saved.width.dp, saved.height.dp),
     )
 }
 
@@ -300,9 +306,6 @@ private fun showLogFolder() {
 private fun copyToClipboard(text: String) {
     Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null)
 }
-
-private const val MIN_WINDOW_WIDTH = 640
-private const val MIN_WINDOW_HEIGHT = 400
 
 private fun shortcut(key: Key, shift: Boolean = false) =
     if (isMacOs) KeyShortcut(key, meta = true, shift = shift) else KeyShortcut(key, ctrl = true, shift = shift)
