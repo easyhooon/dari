@@ -54,7 +54,8 @@ object MessageExport {
     private fun header(app: AppInfo, exportedAt: Long, dateFormat: SimpleDateFormat): String = buildString {
         val name = listOf(app.appName, app.appVersion).filter { it.isNotBlank() }.joinToString(" ")
         appendLine("App: $name (${app.applicationId})")
-        appendLine("Device: ${app.deviceModel}, SDK ${app.sdkInt}")
+        val os = if (app.platform == "ios") "iOS ${app.osVersion.orEmpty()}".trim() else "SDK ${app.sdkInt}"
+        appendLine("Device: ${app.deviceModel}, $os")
         appendLine("Dari: ${app.dariVersion}")
         app.environment?.takeIf { it.isNotEmpty() }?.let { env ->
             appendLine("Environment: ${env.entries.joinToString(", ") { "${it.key}=${it.value}" }}")
@@ -62,9 +63,9 @@ object MessageExport {
         appendLine("Exported: ${dateFormat.format(Date(exportedAt))}")
     }
 
-    // Field names and order match ExportMeta in :dari.
+    // Field names and order match ExportMeta in :dari; iOS apps add their platform at the end.
     private fun meta(app: AppInfo, exportedAt: Long) = JsonObject(
-        linkedMapOf(
+        linkedMapOf<String, JsonElement>(
             "application_id" to JsonPrimitive(app.applicationId),
             "app_name" to JsonPrimitive(app.appName),
             "app_version" to JsonPrimitive(app.appVersion),
@@ -73,7 +74,12 @@ object MessageExport {
             "sdk_int" to JsonPrimitive(app.sdkInt),
             "exported_at" to JsonPrimitive(exportedAt),
             "environment" to (app.environment?.let { env -> JsonObject(env.mapValues { JsonPrimitive(it.value) }) } ?: JsonNull),
-        ),
+        ).apply {
+            if (app.platform == "ios") {
+                put("platform", JsonPrimitive(app.platform))
+                put("os_version", app.osVersion?.let(::JsonPrimitive) ?: JsonNull)
+            }
+        },
     )
 
     /** A payload as shown in the detail pane: pretty JSON when it parses, else the raw text. */

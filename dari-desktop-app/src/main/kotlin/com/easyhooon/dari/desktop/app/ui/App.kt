@@ -50,6 +50,7 @@ import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
 import com.easyhooon.dari.desktop.app.ui.theme.DariTheme
 import com.easyhooon.dari.desktop.app.update.Updater
+import com.easyhooon.dari.inspector.protocol.AppInfo
 import java.awt.Cursor
 
 // Leaves room for the macOS traffic lights inside the transparent title bar.
@@ -417,7 +418,7 @@ private fun statusLine(state: ConnectionState): String = when (state) {
     is ConnectionState.Connecting -> state.reason?.let { "Waiting for app · $it" } ?: "Connecting…"
     // The library version stays in the tooltip; the desktop version is in About.
     is ConnectionState.Connected -> with(state.app) {
-        listOf("$appName v$appVersion", "API $sdkInt").plus(environment?.values.orEmpty()).joinToString(" · ")
+        listOf("$appName v$appVersion", osLabel).plus(environment?.values.orEmpty()).joinToString(" · ")
     }
 }
 
@@ -426,12 +427,21 @@ private fun statusDetails(state: ConnectionState): String = when (state) {
         val env = environment?.takeIf { it.isNotEmpty() }
             ?.entries?.joinToString(", ") { "${it.key}=${it.value}" }
             ?.let { "\nEnvironment: $it" }.orEmpty()
-        "App: $appName ($applicationId) v$appVersion\nDevice: $deviceModel, Android API $sdkInt\nDari library: $dariVersion$env"
+        "App: $appName ($applicationId) v$appVersion\nDevice: $deviceModel, $osDetail\nDari library: $dariVersion$env"
     }
     else -> statusLine(state)
 }
 
+/** `API 36` or `iOS 18.2`; apps before 3.0 send no platform and are all Android. */
+private val AppInfo.osLabel: String get() = if (platform == "ios") "iOS ${osVersion.orEmpty()}".trim() else "API $sdkInt"
+
+private val AppInfo.osDetail: String get() = if (platform == "ios") osLabel else "Android API $sdkInt"
+
 private fun emptyHint(controller: InspectorController): Pair<String, String?> = when {
+    controller.devices.isEmpty() && controller.androidUnavailable ->
+        "No device" to "Run an iOS app with Dari in a Simulator. For Android devices, install adb and reopen Dari."
+    controller.devices.isEmpty() && isMacOs ->
+        "No device" to "Connect an Android device with USB debugging on, or run an iOS app with Dari in a Simulator."
     controller.devices.isEmpty() -> "No device" to "Connect an Android device with USB debugging on."
     controller.state == ConnectionState.Idle && controller.discoveredApps.isEmpty() ->
         "No Dari app found" to "Open a debug build using dari $MIN_DARI_VERSION or later. If it isn't listed, type its applicationId."

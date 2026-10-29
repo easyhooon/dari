@@ -181,9 +181,15 @@ class InspectorConnection private constructor(
         }
 
         /** Blocking: completes the handshake on [socket]. [onClose] runs once, when the connection closes. */
-        internal fun handshake(socket: Socket, applicationId: String, clientVersion: String, onClose: () -> Unit): InspectorConnection {
+        internal fun handshake(
+            socket: Socket,
+            applicationId: String,
+            clientVersion: String,
+            timeoutMs: Int = HANDSHAKE_TIMEOUT_MS,
+            onClose: () -> Unit,
+        ): InspectorConnection {
             try {
-                socket.soTimeout = HANDSHAKE_TIMEOUT_MS
+                socket.soTimeout = timeoutMs
                 FrameWriter(socket.getOutputStream()).write(
                     ClientHello.serializer(),
                     ClientHello(InspectorProtocol.VERSION, "dari-desktop", clientVersion),
