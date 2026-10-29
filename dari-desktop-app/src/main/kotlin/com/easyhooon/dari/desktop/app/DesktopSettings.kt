@@ -3,12 +3,22 @@ package com.easyhooon.dari.desktop.app
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import java.awt.Rectangle
 import java.util.prefs.Preferences
 
 enum class Appearance { SYSTEM, LIGHT, DARK }
 
 /** Main window bounds in screen points, restored on the next launch. */
-data class WindowBounds(val x: Int, val y: Int, val width: Int, val height: Int)
+data class WindowBounds(val x: Int, val y: Int, val width: Int, val height: Int) {
+    val rectangle: Rectangle get() = Rectangle(x, y, width, height)
+}
+
+const val MIN_WINDOW_WIDTH = 640
+const val MIN_WINDOW_HEIGHT = 400
+
+/** These bounds when they are at least the minimum size and still overlap one of [screens]. */
+fun WindowBounds.takeIfRestorable(screens: List<Rectangle>): WindowBounds? =
+    takeIf { width >= MIN_WINDOW_WIDTH && height >= MIN_WINDOW_HEIGHT && screens.any { it.intersects(rectangle) } }
 
 /** Desktop counterparts of the in-app Dari settings (shake-to-open is mobile-only). */
 class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().node(NODE)) {
@@ -49,6 +59,14 @@ class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().no
         prefs.putInt(KEY_WINDOW_Y, bounds.y)
         prefs.putInt(KEY_WINDOW_WIDTH, bounds.width)
         prefs.putInt(KEY_WINDOW_HEIGHT, bounds.height)
+    }
+
+    /** Folder of the last export; the next save dialog opens there. */
+    val lastExportDirectory: String?
+        get() = prefs.get(KEY_LAST_EXPORT_DIRECTORY, null)
+
+    fun saveLastExportDirectory(path: String) {
+        prefs.put(KEY_LAST_EXPORT_DIRECTORY, path)
     }
 
     /** Whether the main window was zoomed or full screen; [windowBounds] keeps its floating size. */
@@ -102,5 +120,6 @@ class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().no
         const val KEY_WINDOW_WIDTH = "windowWidth"
         const val KEY_WINDOW_HEIGHT = "windowHeight"
         const val KEY_WINDOW_MAXIMIZED = "windowMaximized"
+        const val KEY_LAST_EXPORT_DIRECTORY = "lastExportDirectory"
     }
 }
