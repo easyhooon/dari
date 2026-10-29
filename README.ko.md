@@ -61,6 +61,10 @@ interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
 
 연결된 디버그 빌드의 브릿지 메시지를 컴퓨터의 큰 화면에서 확인하세요. 프록시·인증서·포트 설정이 필요 없습니다. Android 앱은 adb로, iOS 앱은 Mac에서 Simulator나 USB 기기로 연결됩니다.
 
+<p align="center">
+  <img src="screenshots/ios_desktop.jpeg" width="900" alt="iOS Simulator의 샘플 앱 브릿지 메시지를 보여주는 Dari 데스크톱 앱" />
+</p>
+
 - Android 기기·에뮬레이터, iOS Simulator·USB 기기(macOS)의 실시간 메시지, 요청과 응답을 나란히 표시
 - 모두 펼치기 / 모두 접기와 원클릭 복사를 지원하는 접이식 JSON, 텍스트·JSON 내보내기
 - 핸들러별 응답 시간 보기: 호출·에러 수와 평균/최소/최대, 느린 순 정렬, 평균 500ms 이상 강조

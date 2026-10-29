@@ -60,6 +60,10 @@ Run the app, trigger a bridge call, and tap the Dari notification. See [Setup](#
 
 See the bridge messages of a connected debug build on your computer, on a bigger screen. No proxy, certificate or port setup: Android apps connect over adb, iOS apps from a Simulator or a USB device on a Mac.
 
+<p align="center">
+  <img src="screenshots/ios_desktop.jpeg" width="900" alt="Dari desktop app showing bridge messages from the iOS sample app in the Simulator" />
+</p>
+
 - Live messages from an Android device or emulator, or an iOS Simulator or USB device (macOS), with the request and response side by side
 - Foldable JSON with Expand all / Collapse all and one-click Copy, plus text and JSON export
 - Response Time view per handler: calls, errors and avg/min/max, slowest first, with averages of 500 ms or more highlighted
