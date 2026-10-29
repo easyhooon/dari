@@ -13,6 +13,7 @@ import com.easyhooon.dari.inspector.protocol.AppInfo
 import com.easyhooon.dari.inspector.protocol.ObserveEvent
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
 import com.easyhooon.dari.inspector.protocol.WireMessageSummary
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -144,7 +145,14 @@ class InspectorController(
         scope.launch {
             adb?.let { withContext(Dispatchers.IO) { it.removeDariForwards() } }
             while (isActive) {
-                refreshDevices()
+                // One failed refresh must not stop device polling for the rest of the session.
+                try {
+                    refreshDevices()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                    AppLog.error("Refreshing devices failed", e)
+                }
                 delay(POLL_INTERVAL_MS)
             }
         }
@@ -528,13 +536,13 @@ class InspectorController(
 
     private suspend fun refreshIosApps(usbSerials: List<String>) {
         val ios = ios ?: return
-        val targets = listOf(IosDevices.SIMULATOR_SERIAL) + usbSerials
-        iosApps = withContext(Dispatchers.IO) {
-            targets.associateWith { serial ->
-                val busy = serial == selectedSerial && state !is ConnectionState.Idle
-                if (busy) iosApps[serial].orEmpty() else ios.apps(serial)
-            }
-        }
+        // Snapshot on the main thread: a connect during probing must not add a second session.
+        val busy = selectedSerial?.takeIf { IosDevices.isIos(it) && state !is ConnectionState.Idle }
+        val previous = iosApps
+        val targets = (listOf(IosDevices.SIMULATOR_SERIAL) + usbSerials).filter { it != busy }
+        val probed = withContext(Dispatchers.IO) { targets.associateWith { ios.apps(it) } }
+        // The busy target keeps its last apps even while unplugged, so the app picker survives a reconnect.
+        iosApps = probed + listOfNotNull(busy?.let { it to previous[it].orEmpty() })
     }
 
     private suspend fun appsOn(serial: String): List<String> = if (IosDevices.isIos(serial)) {

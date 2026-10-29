@@ -6,6 +6,7 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 /**
@@ -14,8 +15,19 @@ import kotlin.concurrent.thread
  */
 internal fun SocketChannel.asLoopbackSocket(): Socket {
     val channel = this
-    ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
-        val outer = Socket(server.inetAddress, server.localPort)
+    val server = try {
+        ServerSocket(0, 1, InetAddress.getLoopbackAddress())
+    } catch (e: IOException) {
+        channel.close()
+        throw e
+    }
+    server.use {
+        val outer = try {
+            Socket(server.inetAddress, server.localPort)
+        } catch (e: IOException) {
+            channel.close()
+            throw e
+        }
         val inner = try {
             server.accept().also { accepted ->
                 // Another local process could race to the ephemeral port; only our own client may pass.
@@ -29,20 +41,23 @@ internal fun SocketChannel.asLoopbackSocket(): Socket {
             channel.close()
             throw e
         }
+        // An end of stream is passed on as a half-close; everything closes once both directions end or one fails.
+        val ended = AtomicInteger()
         val closeAll = {
             runCatching { inner.close() }
             runCatching { channel.close() }
         }
         thread(name = "dari-usbmux-down", isDaemon = true) {
-            runCatching {
+            val clean = runCatching {
                 val buffer = ByteBuffer.allocate(BUFFER_BYTES)
                 val output = inner.getOutputStream()
                 while (channel.read(buffer.clear()) >= 0) output.write(buffer.array(), 0, buffer.position())
-            }
-            closeAll()
+                inner.shutdownOutput()
+            }.isSuccess
+            if (!clean || ended.incrementAndGet() == 2) closeAll()
         }
         thread(name = "dari-usbmux-up", isDaemon = true) {
-            runCatching {
+            val clean = runCatching {
                 val bytes = ByteArray(BUFFER_BYTES)
                 val input = inner.getInputStream()
                 while (true) {
@@ -50,8 +65,9 @@ internal fun SocketChannel.asLoopbackSocket(): Socket {
                     if (count < 0) break
                     channel.writeFully(ByteBuffer.wrap(bytes, 0, count))
                 }
-            }
-            closeAll()
+                channel.shutdownOutput()
+            }.isSuccess
+            if (!clean || ended.incrementAndGet() == 2) closeAll()
         }
         return outer
     }

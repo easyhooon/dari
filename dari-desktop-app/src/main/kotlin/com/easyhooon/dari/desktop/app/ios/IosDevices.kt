@@ -16,16 +16,29 @@ class IosDevices(
     private var attached: Map<String, UsbmuxDevice> = emptyMap()
     private val names = ConcurrentHashMap<String, String>()
 
-    /** Blocking: devices attached over USB right now. Their names are read once per device. */
+    // Serial → when its name last failed to load, so a nameless device isn't asked again on every poll.
+    private val nameFailures = ConcurrentHashMap<String, Long>()
+
+    /** Blocking: devices attached over USB right now. A failed query keeps the last list, so devices don't flicker. */
     fun usbDevices(): List<AdbDevice> {
         val mux = usbmux ?: return emptyList()
-        val found = runCatching { mux.devices() }.getOrDefault(emptyList())
+        val found = runCatching { mux.devices() }.getOrElse { return attached.values.map(::toAdbDevice) }
         attached = found.associateBy { USB_PREFIX + it.serial }
-        return found.map { device ->
-            val serial = USB_PREFIX + device.serial
-            val name = names[serial] ?: mux.deviceName(device.deviceId)?.also { names[serial] = it }
-            AdbDevice(serial, "iOS device", name)
-        }
+        found.forEach { device -> loadName(mux, device) }
+        return found.map(::toAdbDevice)
+    }
+
+    private fun loadName(mux: Usbmux, device: UsbmuxDevice) {
+        val serial = USB_PREFIX + device.serial
+        if (names.containsKey(serial)) return
+        val failedAt = nameFailures[serial]
+        if (failedAt != null && System.currentTimeMillis() - failedAt < NAME_RETRY_MS) return
+        mux.deviceName(device.deviceId)?.let { names[serial] = it } ?: nameFailures.put(serial, System.currentTimeMillis())
+    }
+
+    private fun toAdbDevice(device: UsbmuxDevice): AdbDevice {
+        val serial = USB_PREFIX + device.serial
+        return AdbDevice(serial, "iOS device", names[serial])
     }
 
     /** Blocking: Dari apps answering on [serial], which must be an iOS target. */
@@ -47,6 +60,7 @@ class IosDevices(
         const val SIMULATOR_SERIAL = "ios-simulator"
         val SIMULATOR = AdbDevice(SIMULATOR_SERIAL, "iOS Simulator")
         private const val USB_PREFIX = "ios:"
+        private const val NAME_RETRY_MS = 30_000L
 
         fun isIos(serial: String): Boolean = serial == SIMULATOR_SERIAL || serial.startsWith(USB_PREFIX)
     }

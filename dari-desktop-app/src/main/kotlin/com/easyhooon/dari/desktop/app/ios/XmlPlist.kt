@@ -19,13 +19,19 @@ internal object XmlPlist {
 
     fun decode(bytes: ByteArray): Map<String, Any?> {
         val document = try {
-            factory.newDocumentBuilder().parse(ByteArrayInputStream(bytes))
+            factory.get().newDocumentBuilder().parse(ByteArrayInputStream(bytes))
         } catch (e: SAXException) {
             throw IOException("Malformed plist", e)
         }
         val root = document.documentElement.children().firstOrNull() ?: throw IOException("Empty plist")
+        val decoded = try {
+            value(root)
+        } catch (e: RuntimeException) {
+            // A bad integer or a dict with a dangling key; callers only expect IOException.
+            throw IOException("Malformed plist", e)
+        }
         @Suppress("UNCHECKED_CAST")
-        return value(root) as? Map<String, Any?> ?: throw IOException("Plist root is not a dict")
+        return decoded as? Map<String, Any?> ?: throw IOException("Plist root is not a dict")
     }
 
     private fun StringBuilder.appendValue(value: Any) {
@@ -65,12 +71,14 @@ internal object XmlPlist {
 
     private fun escape(text: String) = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
-    // Replies carry Apple's DOCTYPE; never fetch it or expand external entities.
-    private val factory = DocumentBuilderFactory.newInstance().apply {
-        setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-        setFeature("http://xml.org/sax/features/external-general-entities", false)
-        setFeature("http://xml.org/sax/features/external-parameter-entities", false)
-        setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
-        isExpandEntityReferences = false
+    // Replies carry Apple's DOCTYPE; never fetch it or expand external entities. Per thread: probes run in parallel.
+    private val factory = ThreadLocal.withInitial {
+        DocumentBuilderFactory.newInstance().apply {
+            setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+            setFeature("http://xml.org/sax/features/external-general-entities", false)
+            setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+            setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
+            isExpandEntityReferences = false
+        }
     }
 }

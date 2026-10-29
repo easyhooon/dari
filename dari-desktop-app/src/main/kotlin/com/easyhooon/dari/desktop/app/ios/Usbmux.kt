@@ -5,8 +5,11 @@ import java.net.StandardProtocolFamily
 import java.net.UnixDomainSocketAddress
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.channels.ClosedChannelException
 import java.nio.channels.SocketChannel
 import java.nio.file.Path
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /** An iPhone or iPad attached over USB, as usbmuxd reports it. [deviceId] is valid only while it stays attached. */
 data class UsbmuxDevice(val deviceId: Int, val serial: String)
@@ -21,8 +24,10 @@ class Usbmux(private val socketPath: Path = DEFAULT_SOCKET) {
 
     /** Blocking: devices attached over USB. Wi-Fi pairings are skipped; they would need a network path. */
     fun devices(): List<UsbmuxDevice> = open().use { channel ->
-        channel.request(message("ListDevices"))
-        val list = channel.reply()["DeviceList"] as? List<*> ?: throw IOException("usbmuxd sent no DeviceList")
+        val list = withDeadline(channel) {
+            channel.request(message("ListDevices"))
+            channel.reply()["DeviceList"] as? List<*> ?: throw IOException("usbmuxd sent no DeviceList")
+        }
         list.mapNotNull { entry ->
             val device = entry as? Map<*, *> ?: return@mapNotNull null
             val properties = device["Properties"] as? Map<*, *> ?: return@mapNotNull null
@@ -36,12 +41,14 @@ class Usbmux(private val socketPath: Path = DEFAULT_SOCKET) {
     fun connect(deviceId: Int, port: Int): SocketChannel {
         val channel = open()
         try {
-            // usbmuxd wants the port in network byte order even inside the plist integer.
-            channel.request(message("Connect") + mapOf("DeviceID" to deviceId, "PortNumber" to swapBytes(port)))
-            val result = (channel.reply()["Number"] as? Long)?.toInt()
+            val result = withDeadline(channel) {
+                // usbmuxd wants the port in network byte order even inside the plist integer.
+                channel.request(message("Connect") + mapOf("DeviceID" to deviceId, "PortNumber" to swapBytes(port)))
+                (channel.reply()["Number"] as? Long)?.toInt()
+            }
             if (result != RESULT_OK) throw IOException("usbmuxd could not connect to port $port (result $result)")
             return channel
-        } catch (e: IOException) {
+        } catch (e: Throwable) {
             channel.close()
             throw e
         }
@@ -50,11 +57,13 @@ class Usbmux(private val socketPath: Path = DEFAULT_SOCKET) {
     /** Blocking: the name set on the device, e.g. "Jihun's iPhone", read from lockdownd without pairing. */
     fun deviceName(deviceId: Int): String? = runCatching {
         connect(deviceId, LOCKDOWN_PORT).use { channel ->
-            val request = XmlPlist.encode(mapOf("Request" to "GetValue", "Key" to "DeviceName", "Label" to CLIENT_NAME))
-            channel.writeFully(ByteBuffer.allocate(4 + request.size).putInt(request.size).put(request).flip())
-            val length = channel.readFully(4).int
-            if (length !in 1..MAX_PLIST_BYTES) throw IOException("Bad lockdown reply length $length")
-            XmlPlist.decode(channel.readFully(length).array())["Value"] as? String
+            withDeadline(channel) {
+                val request = XmlPlist.encode(mapOf("Request" to "GetValue", "Key" to "DeviceName", "Label" to CLIENT_NAME))
+                channel.writeFully(ByteBuffer.allocate(4 + request.size).putInt(request.size).put(request).flip())
+                val length = channel.readFully(4).int
+                if (length !in 1..MAX_PLIST_BYTES) throw IOException("Bad lockdown reply length $length")
+                XmlPlist.decode(channel.readFully(length).array())["Value"] as? String
+            }
         }
     }.getOrNull()
 
@@ -67,6 +76,18 @@ class Usbmux(private val socketPath: Path = DEFAULT_SOCKET) {
             throw e
         }
         return channel
+    }
+
+    // Unix-domain channels have no read timeout, so a daemon or device that never answers gets its channel closed.
+    private fun <T> withDeadline(channel: SocketChannel, block: () -> T): T {
+        val watchdog = deadlines.schedule({ runCatching { channel.close() } }, DEADLINE_MS, TimeUnit.MILLISECONDS)
+        try {
+            return block()
+        } catch (e: ClosedChannelException) {
+            throw IOException("usbmuxd did not answer in time", e)
+        } finally {
+            watchdog.cancel(false)
+        }
     }
 
     private fun SocketChannel.request(values: Map<String, Any>) {
@@ -104,6 +125,11 @@ class Usbmux(private val socketPath: Path = DEFAULT_SOCKET) {
         private const val LIBUSBMUX_VERSION = 3
         private const val RESULT_OK = 0
         private const val MAX_PLIST_BYTES = 1 shl 20
+        private const val DEADLINE_MS = 2_000L
+
+        private val deadlines = Executors.newSingleThreadScheduledExecutor { runnable ->
+            Thread(runnable, "dari-usbmux-deadline").apply { isDaemon = true }
+        }
 
         internal fun swapBytes(port: Int): Int = ((port and 0xFF) shl 8) or ((port shr 8) and 0xFF)
     }

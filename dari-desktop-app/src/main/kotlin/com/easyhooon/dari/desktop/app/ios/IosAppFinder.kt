@@ -35,12 +35,16 @@ class IosAppFinder(
     private fun probeAll(): List<InspectorConnection?> =
         ports.map { port -> CompletableFuture.supplyAsync({ probe(port) }, probeExecutor) }.map { it.join() }
 
-    // Anything else on these ports, including a process that answers with junk, is skipped.
+    // Anything else on these ports, including a process that answers with junk, is skipped. Never throws, so
+    // probeAll's joins can't fail and leave the connections other ports opened behind.
+    @Suppress("TooGenericExceptionCaught")
     private fun probe(port: Int): InspectorConnection? = try {
         InspectorConnection.handshake(connect(port), "iOS app", clientVersion, onClose = {}, timeoutMs = PROBE_TIMEOUT_MS)
     } catch (_: IOException) {
         null
     } catch (_: SerializationException) {
+        null
+    } catch (_: RuntimeException) {
         null
     }
 
@@ -49,7 +53,7 @@ class IosAppFinder(
 
         private const val CONNECT_TIMEOUT_MS = 200
 
-        // Loopback answers in well under a millisecond; this only bounds apps that are suspended.
+        // Loopback and USB tunnels answer within milliseconds; this only bounds apps that are suspended.
         private const val PROBE_TIMEOUT_MS = 250
 
         private val probeExecutor = Executors.newCachedThreadPool { runnable ->
