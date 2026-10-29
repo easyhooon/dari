@@ -1,0 +1,8 @@
+{
+    "type": "result",
+    "requestId": "3",
+    "output": {
+        "type": "cleared"
+    },
+    "isFinal": false
+}

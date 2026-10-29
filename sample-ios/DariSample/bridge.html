@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dari iOS Sample</title>
+    <style>
+        :root { color-scheme: light dark; }
+        body { font-family: -apple-system, sans-serif; margin: 0; padding: 16px; }
+        h1 { font-size: 22px; margin: 8px 0 2px; }
+        p.subtitle { color: #888; margin: 0 0 16px; font-size: 14px; }
+        h2 { font-size: 13px; text-transform: uppercase; color: #888; margin: 20px 0 8px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        button { font: inherit; font-size: 15px; padding: 12px 8px; border-radius: 10px; border: 1px solid #8884; background: #8881; }
+        #log { margin-top: 20px; font: 12px ui-monospace, monospace; }
+        #log div { padding: 4px 0; border-bottom: 1px solid #8882; word-break: break-all; }
+        .res { color: #2a9d5c; } .err { color: #d64545; }
+    </style>
+</head>
+<body>
+    <h1>Dari iOS Sample</h1>
+    <p class="subtitle">WKWebView bridge scenarios recorded by Dari</p>
+
+    <h2>Web → App</h2>
+    <div class="grid">
+        <button onclick="request('getAppInfo', null)">getAppInfo</button>
+        <button onclick="request('showToast', {message: 'Hello from WebView!'})">showToast</button>
+        <button onclick="request('signIn', {email: 'dari@example.com', password: 'hunter2'})">signIn (masking)</button>
+        <button onclick="request('simulateSlowResponse', null)">Slow (3s)</button>
+        <button onclick="request('simulateError', {errorType: 'network_timeout'})">Error</button>
+        <button onclick="request('noResponsePending', null)">No response</button>
+        <button onclick="fireAndForget('logEvent', {event: 'button_click'})">logEvent (fire-and-forget)</button>
+        <button onclick="request('unknownHandler', null)">Unsupported</button>
+    </div>
+
+    <h2>App → Web</h2>
+    <div class="grid">
+        <button onclick="askAppToCallWeb('getPageState')">getPageState</button>
+        <button onclick="askAppToCallWeb('unsupportedAction')">Unsupported</button>
+    </div>
+
+    <div id="log"></div>
+
+    <script>
+        var counter = 0;
+
+        function log(msg, cls) {
+            var el = document.getElementById('log');
+            var row = document.createElement('div');
+            row.className = cls || '';
+            row.textContent = msg;
+            el.insertBefore(row, el.firstChild);
+        }
+
+        function post(message) {
+            window.webkit.messageHandlers.bridge.postMessage(message);
+        }
+
+        function request(handler, data) {
+            var requestId = 'req_' + Date.now() + '_' + (++counter);
+            log('→ ' + handler);
+            post({ type: 'request', handler: handler, requestId: requestId, data: data === null ? null : JSON.stringify(data) });
+        }
+
+        function fireAndForget(handler, data) {
+            log('→ ' + handler + ' (fire-and-forget)');
+            post({ type: 'fireAndForget', handler: handler, data: JSON.stringify(data) });
+        }
+
+        function askAppToCallWeb(handler) {
+            log('↻ asking the app to call ' + handler);
+            post({ type: 'askAppToCallWeb', handler: handler });
+        }
+
+        // Called by the app with the answer to a request.
+        function onBridgeResponse(requestId, success, data) {
+            log((success ? '← ' : '✗ ') + data, success ? 'res' : 'err');
+        }
+
+        // Called by the app for App → Web messages; answered with an appToWebResponse.
+        function onAppRequest(handler, requestId, data) {
+            log('⇠ app: ' + handler, 'res');
+            var success = handler === 'getPageState';
+            var result = success
+                ? { title: document.title, url: location.href, scrollY: window.scrollY }
+                : { error: 'Unsupported action', handler: handler };
+            post({ type: 'appToWebResponse', requestId: requestId, success: success, data: JSON.stringify(result) });
+        }
+    </script>
+</body>
+</html>

@@ -15,6 +15,14 @@ kotlin {
     compilerOptions.jvmTarget.set(JvmTarget.JVM_11)
 }
 
+tasks.test {
+    // Shared with the Swift SDK's tests; see IosWireFixturesTest.
+    val fixtures = rootProject.layout.projectDirectory.dir("dari-ios/Tests/DariTests/Fixtures").asFile
+    systemProperty("dari.iosFixtures", fixtures.absolutePath)
+    systemProperty("dari.updateIosFixtures", providers.gradleProperty("dari.updateIosFixtures").isPresent)
+    inputs.dir(fixtures).withPropertyName("iosFixtures")
+}
+
 dependencies {
     api(libs.kotlinx.serialization.json)
 

@@ -1,0 +1,127 @@
+---
+title: iOS (preview)
+description: Record WKWebView bridge traffic in an iOS app and inspect it in the desktop app
+---
+
+The `Dari` Swift package records your WKWebView bridge traffic and sends it to the same [desktop app](./desktop) you use for Android. The list, details, filters, masking, search, and export work the same way. There is no in-app inspector screen on iOS.
+
+<Callout type="warn">
+Preview. Apps running in an iOS Simulator connect today. USB connections to a physical iPhone are not supported yet ([#255](https://github.com/easyhooon/dari/issues/255)).
+</Callout>
+
+## Requirements
+
+- iOS 15 or later
+- The Dari desktop app on the Mac that runs the Simulator. Windows and Linux can't run Simulators.
+- adb is optional. Without it, the desktop app shows only iOS apps.
+
+## Install
+
+Until a release is published, add the package from a local checkout of this repository.
+
+1. Clone `https://github.com/easyhooon/dari`.
+2. In Xcode, choose **File → Add Package Dependencies… → Add Local…** and select the `dari-ios` folder.
+3. Add the **Dari** library to your app target.
+
+## Start Dari
+
+Call `start()` once, early in app launch, and only in builds you inspect.
+
+```swift
+import Dari
+
+@main
+struct MyApp: App {
+    init() {
+        #if DEBUG
+        try? Dari.shared.start()
+        Dari.shared.setEnvironment(["server": "dev"]) // optional labels shown in the desktop app
+        #endif
+    }
+    // ...
+}
+```
+
+While Dari is running, any process that can reach the device's loopback can read the recorded messages. Never call `start()` in an App Store build.
+
+`start()` takes a `DariConfiguration`:
+
+| Option | Default | Meaning |
+|---|---|---|
+| `maxEntries` | 500 | Messages kept in memory; the oldest are dropped first |
+| `maxContentLength` | 500,000 | Longer payloads are truncated, as on Android |
+| `fireAndForget` | `false` | Record requests as finished when they are sent |
+| `ports` | `38670...38677` | Loopback ports to try; the desktop app probes the same range |
+
+## Record bridge calls
+
+Create one interceptor per WKWebView, then call it where your bridge receives and answers messages. The methods match Android's [`DariInterceptor`](./interceptor).
+
+```swift
+final class Bridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+    private let dari = Dari.shared.interceptor(tag: "main")
+    weak var webView: WKWebView?
+
+    // Requests recorded afterwards carry this page URL, without its query or fragment.
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        dari.onPageUrlChanged(webView.url?.absoluteString)
+    }
+
+    // Web → App
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        let body = message.body as? [String: Any] ?? [:]
+        let handler = body["handler"] as? String ?? message.name
+        let requestId = body["requestId"] as? String
+        dari.onWebToAppRequest(handlerName: handler, requestId: requestId, requestData: body["data"] as? String)
+
+        let result = #"{"ok":true}"#
+        dari.onWebToAppResponse(handlerName: handler, requestId: requestId, responseData: result, isSuccess: true)
+        // ...send the result back to the page
+    }
+
+    // App → Web
+    func notifyPage(_ requestId: String, _ payload: String) {
+        dari.onAppToWebRequest(handlerName: "onResume", requestId: requestId, data: payload)
+        webView?.evaluateJavaScript("onResume(\(payload))") { value, error in
+            self.dari.onAppToWebResponse(requestId: requestId, isSuccess: error == nil, responseData: value.map { "\($0)" })
+        }
+    }
+}
+```
+
+- Requests and responses are paired by `requestId`. A response completes the newest open request with the same ID, tag, and direction.
+- A nil `requestId`, or `fireAndForget: true`, records a message that is complete as soon as it is sent.
+- Pass `displayName:` when the handler name isn't readable on its own.
+- Calls made before `start()` are ignored.
+
+Automatic capture without these calls, like the Android [Gradle plugin](./gradle-plugin), is not available yet. The options are compared in [this issue comment](https://github.com/easyhooon/dari/issues/255#issuecomment-6491895309).
+
+## Connect
+
+1. Run the app in a Simulator.
+2. Open the Dari desktop app on the same Mac. The app appears under the **iOS Simulator** device, and Dari connects on its own when it's the only Dari app there.
+
+Each app listens on the first free port in `38670...38677` on `127.0.0.1`, so up to eight Dari apps can run in Simulators at the same time. When an app relaunches, the desktop app finds it again, even if it landed on a different port.
+
+## Staging builds
+
+Android inspects a minified, non-debuggable build (`staging`) by opting in through manifest metadata. iOS has no code renaming like R8. Release builds are optimized (`-O`, whole-module) and dead-code stripped, which doesn't affect Dari: it uses no reflection or runtime class lookups.
+
+To inspect a release-like build, add a build configuration (for example **Staging**). Give it its own compilation condition and start Dari under that condition:
+
+1. In the **Staging** configuration, add `DARI` to **Active Compilation Conditions** (`SWIFT_ACTIVE_COMPILATION_CONDITIONS`).
+2. Start Dari with `#if DEBUG || DARI`.
+
+The [sample app](https://github.com/easyhooon/dari/tree/main/sample-ios) has Debug, Staging, and Release configurations set up this way.
+
+Swift Package Manager can't link a package to some configurations only. The Dari code (about 170 KB, arm64) stays in a Release binary even when the app never calls `start()`. It stays inert there: no socket opens and nothing is recorded. If that size matters, keep Dari out of the App Store target altogether, for example with a separate debug target.
+
+## Sample app
+
+`sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, and masking. Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
+
+## Troubleshooting
+
+- **The app isn't listed.** The app must be in the foreground. Suspended Simulator apps don't answer. Check that `start()` ran and that something is listening: `lsof -nP -iTCP:38670-38677 -sTCP:LISTEN`.
+- **Two Simulators run the same app.** The desktop app connects to the first one it finds. Quit one of them.
+- **`start()` throws `noFreePort`.** Eight Dari apps already hold the ports. Quit some, or pass a different range in `DariConfiguration(ports:)`. The desktop app only probes the default range.

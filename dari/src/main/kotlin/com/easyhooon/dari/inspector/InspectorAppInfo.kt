@@ -19,5 +19,7 @@ internal fun inspectorAppInfo(context: Context): AppInfo {
         deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}",
         sdkInt = Build.VERSION.SDK_INT,
         environment = Dari.environment.value.ifEmpty { null },
+        platform = "android",
+        osVersion = Build.VERSION.RELEASE,
     )
 }

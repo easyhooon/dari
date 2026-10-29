@@ -27,6 +27,7 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import java.io.Closeable
@@ -181,9 +182,15 @@ class InspectorConnection private constructor(
         }
 
         /** Blocking: completes the handshake on [socket]. [onClose] runs once, when the connection closes. */
-        internal fun handshake(socket: Socket, applicationId: String, clientVersion: String, onClose: () -> Unit): InspectorConnection {
+        internal fun handshake(
+            socket: Socket,
+            applicationId: String,
+            clientVersion: String,
+            timeoutMs: Int = HANDSHAKE_TIMEOUT_MS,
+            onClose: () -> Unit,
+        ): InspectorConnection {
             try {
-                socket.soTimeout = HANDSHAKE_TIMEOUT_MS
+                socket.soTimeout = timeoutMs
                 FrameWriter(socket.getOutputStream()).write(
                     ClientHello.serializer(),
                     ClientHello(InspectorProtocol.VERSION, "dari-desktop", clientVersion),
@@ -201,6 +208,9 @@ class InspectorConnection private constructor(
                 val app = hello.app ?: throw IOException("Handshake is missing app info")
                 return InspectorConnection(socket, app, onClose)
             } catch (e: IOException) {
+                runCatching { socket.close() }
+                throw e
+            } catch (e: SerializationException) {
                 runCatching { socket.close() }
                 throw e
             }

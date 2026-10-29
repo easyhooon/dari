@@ -31,6 +31,8 @@ tasks.test {
     systemProperty("user.home", logHome)
     environment("XDG_STATE_HOME", logHome)
     environment("LOCALAPPDATA", logHome)
+    // IosLoopbackEndToEndTest runs only when given the Swift SDK's demo binary.
+    providers.gradleProperty("dari.iosDemo").orNull?.let { systemProperty("dari.iosDemo", it) }
 }
 
 // Skiko's macOS runtime jars carry both the arm64 and x64 dylibs. Compose extracts only the host

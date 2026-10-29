@@ -1,0 +1,9 @@
+{
+    "type": "result",
+    "requestId": "5",
+    "error": {
+        "code": "OPERATION_NOT_FOUND",
+        "message": "Unknown op x"
+    },
+    "isFinal": true
+}
