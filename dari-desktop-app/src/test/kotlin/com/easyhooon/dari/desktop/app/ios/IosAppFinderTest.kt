@@ -18,7 +18,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class IosSimulatorTest {
+class IosAppFinderTest {
     private val apps = mutableListOf<FakeIosApp>()
 
     @AfterTest
@@ -26,18 +26,18 @@ class IosSimulatorTest {
 
     @Test
     fun `finds apps across the span and skips ports that refuse or don't speak the protocol`() {
-        val simulator = simulator(listOf(app("com.example.one"), null, silent(), junk(), app("com.example.two")))
-        assertEquals(listOf("com.example.one", "com.example.two"), simulator.apps())
+        val finder = finder(listOf(app("com.example.one"), null, silent(), junk(), app("com.example.two")))
+        assertEquals(listOf("com.example.one", "com.example.two"), finder.apps())
     }
 
     @Test
     fun `opens the app with the requested id wherever it landed`() {
-        val simulator = simulator(listOf(app("com.example.one"), app("com.example.two")))
-        simulator.open("com.example.two").use { assertEquals("com.example.two", it.app.applicationId) }
-        assertFailsWith<IOException> { simulator.open("com.example.missing") }
+        val finder = finder(listOf(app("com.example.one"), app("com.example.two")))
+        finder.open("com.example.two").use { assertEquals("com.example.two", it.app.applicationId) }
+        assertFailsWith<IOException> { finder.open("com.example.missing") }
     }
 
-    private fun simulator(slots: List<Int?>) = IosSimulator("test", ports = slots.indices) { slot ->
+    private fun finder(slots: List<Int?>) = IosAppFinder("test", ports = slots.indices) { slot ->
         val port = slots[slot] ?: throw ConnectException("refused")
         Socket(InetAddress.getLoopbackAddress(), port)
     }

@@ -29,9 +29,9 @@ class IosLoopbackEndToEndTest {
         val process = ProcessBuilder(binary!!.path).redirectErrorStream(true).start().also { demo = it }
         val port = process.inputStream.bufferedReader().readLine().removePrefix("DARI_PORT=").toInt()
 
-        val simulator = IosSimulator("test", ports = port..port)
-        assertEquals(listOf("DariLoopbackDemo"), simulator.apps())
-        simulator.open("DariLoopbackDemo").use { conn ->
+        val finder = IosAppFinder("test", ports = port..port, connect = IosAppFinder::loopbackSocket)
+        assertEquals(listOf("DariLoopbackDemo"), finder.apps())
+        finder.open("DariLoopbackDemo").use { conn ->
             assertEquals("macos", conn.app.platform)
             val events = conn.observe()
             val messages = conn.list()
