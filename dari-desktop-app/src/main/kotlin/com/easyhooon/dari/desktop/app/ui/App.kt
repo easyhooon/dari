@@ -393,7 +393,7 @@ private fun Workspace(controller: InspectorController, settings: DesktopSettings
                 onCopy = controller::copySelected,
                 onCopyPayload = controller::copy,
                 onSave = { format ->
-                    chooseExportFile(null, format)?.let { controller.export(it, format, all = false) }
+                    chooseExportFile(null, format, settings)?.let { controller.export(it, format, all = false) }
                 },
                 onClose = controller::closeDetail,
                 onRetry = controller::retryDetail,

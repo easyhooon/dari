@@ -61,6 +61,14 @@ class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().no
         prefs.putInt(KEY_WINDOW_HEIGHT, bounds.height)
     }
 
+    /** Folder of the last export; the next save dialog opens there. */
+    val lastExportDirectory: String?
+        get() = prefs.get(KEY_LAST_EXPORT_DIRECTORY, null)
+
+    fun saveLastExportDirectory(path: String) {
+        prefs.put(KEY_LAST_EXPORT_DIRECTORY, path)
+    }
+
     /** Whether the main window was zoomed or full screen; [windowBounds] keeps its floating size. */
     val windowMaximized: Boolean
         get() = prefs.getBoolean(KEY_WINDOW_MAXIMIZED, false)
@@ -112,5 +120,6 @@ class DesktopSettings(private val prefs: Preferences = Preferences.userRoot().no
         const val KEY_WINDOW_WIDTH = "windowWidth"
         const val KEY_WINDOW_HEIGHT = "windowHeight"
         const val KEY_WINDOW_MAXIMIZED = "windowMaximized"
+        const val KEY_LAST_EXPORT_DIRECTORY = "lastExportDirectory"
     }
 }

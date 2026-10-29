@@ -200,7 +200,7 @@ private fun ExportMenu(onCopy: (onCopied: () -> Unit) -> Unit, onSave: (ExportFo
         copied = false
     }
     Box {
-        QuietButton(if (copied) "✓ Copied" else "Export ▾", onClick = { open = true })
+        QuietButton(if (copied) "✓ Copied" else "Export", onClick = { open = true }, dropdown = !copied)
         DariMenu(expanded = open, onDismiss = { open = false }) {
             DariMenuItem("Copy as Text", onClick = {
                 open = false

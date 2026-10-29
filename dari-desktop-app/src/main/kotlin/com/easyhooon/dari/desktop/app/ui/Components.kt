@@ -39,8 +39,10 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -126,6 +128,8 @@ fun QuietButton(
     danger: Boolean = false,
     // For symbol-only labels such as "✕", which screen readers would read literally.
     contentDescription: String? = null,
+    // Adds a chevron for buttons that open a menu.
+    dropdown: Boolean = false,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
@@ -144,7 +148,25 @@ fun QuietButton(
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, style = Dari.type.label, color = fg, maxLines = 1, softWrap = false)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(text, style = Dari.type.label, color = fg, maxLines = 1, softWrap = false)
+            if (dropdown) DropdownChevron(fg)
+        }
+    }
+}
+
+/** Down chevron for pickers and menu buttons; a text "▾" at caption size was too small to read as one. */
+@Composable
+fun DropdownChevron(color: Color = Dari.colors.textSecondary) {
+    Canvas(Modifier.size(width = 9.dp, height = 5.dp)) {
+        val stroke = 1.5.dp.toPx()
+        val inset = stroke / 2
+        val path = Path().apply {
+            moveTo(inset, inset)
+            lineTo(size.width / 2, size.height - inset)
+            lineTo(size.width - inset, inset)
+        }
+        drawPath(path, color, style = Stroke(width = stroke, cap = StrokeCap.Round, join = StrokeJoin.Round))
     }
 }
 
@@ -248,7 +270,7 @@ fun <T> Picker(
                 modifier = Modifier.weight(1f, fill = false).widthIn(max = 260.dp),
             )
             secondary?.let { Text(it, style = Dari.type.caption, color = Dari.colors.textTertiary, maxLines = 1) }
-            Text("▾", style = Dari.type.caption, color = Dari.colors.textTertiary)
+            DropdownChevron()
         }
         DariMenu(expanded = expanded, onDismiss = { expanded = false }) {
             options.forEach { option ->
