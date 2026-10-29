@@ -4,6 +4,8 @@
 **English** | [한국어](README.ko.md)
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.easyhooon/dari)](https://central.sonatype.com/artifact/io.github.easyhooon/dari)
+[![Swift versions](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Feasyhooon%2Fdari%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/easyhooon/dari)
+[![Platforms](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Feasyhooon%2Fdari%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/easyhooon/dari)
 [![Documentation](https://img.shields.io/badge/docs-easyhooon.github.io%2Fdari-blue)](https://easyhooon.github.io/dari)
 [![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/easyhooon/dari?utm_source=readme&utm_medium=badge)
 
