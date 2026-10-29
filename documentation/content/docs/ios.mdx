@@ -1,12 +1,12 @@
 ---
-title: iOS (preview)
+title: iOS
 description: Record WKWebView bridge traffic in an iOS app and inspect it in the desktop app
 ---
 
 The `Dari` Swift package records your WKWebView bridge traffic and sends it to the same [desktop app](./desktop) you use for Android. The list, details, filters, masking, search, and export work the same way. There is no in-app inspector screen on iOS.
 
-<Callout type="warn">
-Preview. iOS connections are macOS-only: apps connect from an iOS Simulator, or from an iPhone or iPad attached to the Mac over USB. Building and installing an iOS debug build already needs a Mac, so the desktop app on Windows and Linux shows Android devices only. Connections over Wi-Fi are not offered.
+<Callout>
+iOS connections are macOS-only: apps connect from an iOS Simulator, or from an iPhone or iPad attached to the Mac over USB. Building and installing an iOS debug build already needs a Mac, so the desktop app on Windows and Linux shows Android devices only. Connections over Wi-Fi are not offered.
 </Callout>
 
 ## Requirements
@@ -18,11 +18,23 @@ Preview. iOS connections are macOS-only: apps connect from an iOS Simulator, or 
 
 ## Install
 
-Until a release is published, add the package from a local checkout of this repository.
-
-1. Clone `https://github.com/easyhooon/dari`.
-2. In Xcode, choose **File → Add Package Dependencies… → Add Local…** and select the `dari-ios` folder.
+1. In Xcode, choose **File → Add Package Dependencies…** and enter `https://github.com/easyhooon/dari`.
+2. Choose **Up to Next Major Version** from `3.0.0`.
 3. Add the **Dari** library to your app target.
+
+With `Package.swift`:
+
+```swift
+.package(url: "https://github.com/easyhooon/dari", from: "3.0.0")
+// target dependencies
+.product(name: "Dari", package: "dari")
+```
+
+## Compatibility
+
+- The iOS SDK and the Android library share the version line from 3.0.0. iOS needs Dari desktop 3.0.0 or later.
+- The wire protocol stays at version 1, so desktop 3.x still connects to Android apps on Dari 2.x, and desktop 2.x keeps working with Android apps on 3.x.
+- Android apps need no migration for 3.0.0. The handshake gains optional `platform` and `osVersion` fields, which older peers ignore.
 
 ## Start Dari
 

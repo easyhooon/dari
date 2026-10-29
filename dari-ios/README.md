@@ -1,4 +1,4 @@
-# Dari for iOS (preview)
+# Dari for iOS
 
 Records WKWebView bridge traffic and shows it in the Dari desktop app. There is no in-app inspector screen on iOS.
 
@@ -8,7 +8,7 @@ The full integration guide, including Staging builds and troubleshooting, is in 
 
 ## Install
 
-Add this repository as a Swift package and link the `Dari` product to your app target. Swift Package Manager needs the package at the repository root, so for now point Xcode at this folder as a local package.
+Add `https://github.com/easyhooon/dari` as a Swift package (from `3.0.0`) and link the `Dari` product to your app target. The root `Package.swift` exposes only the library; this folder's manifest adds the tests and the loopback demo.
 
 ## Integrate
 

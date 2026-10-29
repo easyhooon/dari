@@ -1,12 +1,12 @@
 ---
-title: iOS (미리보기)
+title: iOS
 description: iOS 앱의 WKWebView 브릿지 메시지를 기록해 데스크톱 앱에서 확인합니다
 ---
 
 `Dari` Swift 패키지는 WKWebView 브릿지 메시지를 기록해, Android에서 쓰는 [데스크톱 앱](./desktop)으로 보냅니다. 목록, 상세, 필터, 마스킹, 검색, 내보내기가 Android와 똑같이 동작합니다. iOS에는 앱 안의 인스펙터 화면이 없습니다.
 
-<Callout type="warn">
-미리보기입니다. iOS 연결은 macOS 전용입니다. iOS Simulator 앱과, Mac에 USB로 연결한 iPhone·iPad 앱이 연결됩니다. iOS 디버그 빌드를 만들고 설치하는 데 이미 Mac이 필요하므로, Windows·Linux의 데스크톱 앱에는 Android 기기만 나타납니다. Wi-Fi 연결은 제공하지 않습니다.
+<Callout>
+iOS 연결은 macOS 전용입니다. iOS Simulator 앱과, Mac에 USB로 연결한 iPhone·iPad 앱이 연결됩니다. iOS 디버그 빌드를 만들고 설치하는 데 이미 Mac이 필요하므로, Windows·Linux의 데스크톱 앱에는 Android 기기만 나타납니다. Wi-Fi 연결은 제공하지 않습니다.
 </Callout>
 
 ## 요구 사항
@@ -18,11 +18,23 @@ description: iOS 앱의 WKWebView 브릿지 메시지를 기록해 데스크톱 
 
 ## 설치
 
-릴리스가 나오기 전까지는 이 저장소를 로컬에 받아 패키지를 추가합니다.
-
-1. `https://github.com/easyhooon/dari`를 clone합니다.
-2. Xcode에서 **File → Add Package Dependencies… → Add Local…**을 고르고 `dari-ios` 폴더를 선택합니다.
+1. Xcode에서 **File → Add Package Dependencies…**를 고르고 `https://github.com/easyhooon/dari`를 입력합니다.
+2. `3.0.0`부터 **Up to Next Major Version**을 고릅니다.
 3. 앱 타깃에 **Dari** 라이브러리를 추가합니다.
+
+`Package.swift`에서는 다음과 같이 추가합니다.
+
+```swift
+.package(url: "https://github.com/easyhooon/dari", from: "3.0.0")
+// 타깃 의존성
+.product(name: "Dari", package: "dari")
+```
+
+## 호환성
+
+- 3.0.0부터 iOS SDK와 Android 라이브러리는 같은 버전 번호를 씁니다. iOS를 쓰려면 Dari 데스크톱 3.0.0 이상이 필요합니다.
+- 와이어 프로토콜은 버전 1 그대로입니다. 데스크톱 3.x는 Dari 2.x Android 앱에 그대로 연결되고, 데스크톱 2.x도 3.x Android 앱과 계속 동작합니다.
+- Android 앱은 3.0.0으로 올릴 때 바꿀 것이 없습니다. 핸드셰이크에 선택 필드 `platform`, `osVersion`이 추가되며, 이전 버전은 이 필드를 무시합니다.
 
 ## Dari 시작
 
