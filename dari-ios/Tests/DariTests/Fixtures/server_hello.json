@@ -1,0 +1,17 @@
+{
+    "accepted": true,
+    "protocolVersion": 1,
+    "app": {
+        "applicationId": "com.example.app",
+        "appName": "Example",
+        "appVersion": "1.0",
+        "dariVersion": "3.0.0-alpha01",
+        "deviceModel": "iPhone17,1 (Simulator)",
+        "sdkInt": 0,
+        "environment": {
+            "server": "demo"
+        },
+        "platform": "ios",
+        "osVersion": "18.2.0"
+    }
+}

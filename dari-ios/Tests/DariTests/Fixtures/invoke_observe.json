@@ -1,0 +1,6 @@
+{
+    "type": "invoke",
+    "requestId": "8",
+    "op": "messages.observe",
+    "input": {}
+}

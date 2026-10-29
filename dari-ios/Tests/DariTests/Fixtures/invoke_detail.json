@@ -1,0 +1,8 @@
+{
+    "type": "invoke",
+    "requestId": "7",
+    "op": "messages.detail",
+    "input": {
+        "id": 3
+    }
+}

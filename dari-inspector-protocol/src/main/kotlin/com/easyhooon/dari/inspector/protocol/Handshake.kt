@@ -34,4 +34,8 @@ data class AppInfo(
     val sdkInt: Int,
     /** Labels from `Dari.setEnvironment`; null from older apps or when none are set. */
     val environment: Map<String, String>? = null,
+    /** `android` or `ios`; null from apps before 3.0, which are all Android. */
+    val platform: String? = null,
+    /** OS version such as `18.2`; null from apps before 3.0, which report [sdkInt] instead. */
+    val osVersion: String? = null,
 )

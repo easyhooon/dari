@@ -1,0 +1,25 @@
+{
+    "type": "result",
+    "requestId": "2",
+    "output": {
+        "summary": {
+            "id": 3,
+            "requestId": "1",
+            "handlerName": "getUser",
+            "displayName": "Get user",
+            "direction": "WEB_TO_APP",
+            "tag": "demo",
+            "status": "SUCCESS",
+            "requestTimestamp": 1700000000000,
+            "responseTimestamp": 1700000000250,
+            "requestSizeBytes": 8,
+            "responseSizeBytes": 15,
+            "pageUrl": "https://example.com/checkout"
+        },
+        "requestData": "{\"id\":7}",
+        "responseData": "{\"name\":\"Dari\"}",
+        "requestDataTruncated": false,
+        "responseDataTruncated": false
+    },
+    "isFinal": true
+}

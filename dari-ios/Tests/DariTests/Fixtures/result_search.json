@@ -1,0 +1,10 @@
+{
+    "type": "result",
+    "requestId": "6",
+    "output": {
+        "ids": [
+            3
+        ]
+    },
+    "isFinal": true
+}
