@@ -110,6 +110,12 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
     <td><img src="screenshots/share_bottom_sheet.jpeg" width="270" /></td>
     <td><img src="screenshots/dark_mode.jpeg" width="270" /></td>
   </tr>
+  <tr>
+    <td align="center"><b>iOS 샘플</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/ios_sample.jpeg" width="270" /></td>
+  </tr>
 </table>
 
 ## 기능

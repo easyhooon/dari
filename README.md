@@ -109,6 +109,12 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
     <td><img src="screenshots/share_bottom_sheet.jpeg" width="270" /></td>
     <td><img src="screenshots/dark_mode.jpeg" width="270" /></td>
   </tr>
+  <tr>
+    <td align="center"><b>iOS Sample</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/ios_sample.jpeg" width="270" /></td>
+  </tr>
 </table>
 
 ## Features
