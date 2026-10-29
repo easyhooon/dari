@@ -34,7 +34,7 @@ class FinishLinuxUpdateScriptTest {
         assertEquals(0, finish(launcher = recordingLauncher.toString()))
         assertEquals("new", Files.readString(target.resolve("version")))
         assertFalse(Files.exists(workspace))
-        assertEquals(listOf("$target/bin/Dari"), Files.readAllLines(launches))
+        assertEquals(listOf("$target/bin/Dari"), awaitLines(launches))
     }
 
     @Test
@@ -64,6 +64,14 @@ class FinishLinuxUpdateScriptTest {
         Files.createDirectories(folder.resolve("bin"))
         Files.writeString(folder.resolve("version"), version)
         Files.writeString(folder.resolve("bin/Dari"), "#!/bin/sh\n").toFile().setExecutable(true)
+    }
+
+    // The script counts a launcher still running after the settle delay as launched and exits, so the
+    // recording launcher may write after finish() returns.
+    private fun awaitLines(file: Path): List<String> {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (!Files.exists(file) && System.nanoTime() < deadline) Thread.sleep(20)
+        return Files.readAllLines(file)
     }
 
     // pid 999999 is not running, so the script doesn't wait.
