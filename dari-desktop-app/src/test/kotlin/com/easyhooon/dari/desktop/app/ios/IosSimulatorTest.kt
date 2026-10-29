@@ -26,7 +26,7 @@ class IosSimulatorTest {
 
     @Test
     fun `finds apps across the span and skips ports that refuse or don't speak the protocol`() {
-        val simulator = simulator(listOf(app("com.example.one"), null, silent(), app("com.example.two")))
+        val simulator = simulator(listOf(app("com.example.one"), null, silent(), junk(), app("com.example.two")))
         assertEquals(listOf("com.example.one", "com.example.two"), simulator.apps())
     }
 
@@ -47,7 +47,10 @@ class IosSimulatorTest {
     // Accepts and never answers, like an unrelated service on a port in the span.
     private fun silent(): Int = FakeIosApp(null).also(apps::add).port
 
-    private class FakeIosApp(applicationId: String?) : Closeable {
+    // Answers the hello with a well-framed but invalid frame.
+    private fun junk(): Int = FakeIosApp(null, reply = "not json").also(apps::add).port
+
+    private class FakeIosApp(applicationId: String?, reply: String? = null) : Closeable {
         private val server = ServerSocket(0, 50, InetAddress.getLoopbackAddress())
         val port: Int get() = server.localPort
 
@@ -59,6 +62,7 @@ class IosSimulatorTest {
                         runCatching {
                             client.use {
                                 if (applicationId == null) {
+                                    reply?.let { text -> FrameWriter(it.getOutputStream()).writeText(text) }
                                     it.getInputStream().read()
                                     return@use
                                 }

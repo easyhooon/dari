@@ -27,6 +27,7 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import java.io.Closeable
@@ -207,6 +208,9 @@ class InspectorConnection private constructor(
                 val app = hello.app ?: throw IOException("Handshake is missing app info")
                 return InspectorConnection(socket, app, onClose)
             } catch (e: IOException) {
+                runCatching { socket.close() }
+                throw e
+            } catch (e: SerializationException) {
                 runCatching { socket.close() }
                 throw e
             }

@@ -2,6 +2,7 @@ package com.easyhooon.dari.desktop.app.ios
 
 import com.easyhooon.dari.desktop.app.adb.AdbDevice
 import com.easyhooon.dari.desktop.app.client.InspectorConnection
+import kotlinx.serialization.SerializationException
 import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -29,9 +30,12 @@ class IosSimulator(
         throw IOException("$applicationId isn't running Dari in a Simulator")
     }
 
+    // Anything else on these ports, including a process that answers with junk, is skipped.
     private fun probe(port: Int): InspectorConnection? = try {
         InspectorConnection.handshake(connect(port), "iOS app", clientVersion, onClose = {}, timeoutMs = PROBE_TIMEOUT_MS)
     } catch (_: IOException) {
+        null
+    } catch (_: SerializationException) {
         null
     }
 
