@@ -33,6 +33,8 @@ tasks.test {
     environment("LOCALAPPDATA", logHome)
     // IosLoopbackEndToEndTest runs only when given the Swift SDK's demo binary.
     providers.gradleProperty("dari.iosDemo").orNull?.let { systemProperty("dari.iosDemo", it) }
+    // IosUsbEndToEndTest runs only with the bundle id of a Dari app open on a USB-attached iPhone.
+    providers.gradleProperty("dari.iosUsbApp").orNull?.let { systemProperty("dari.iosUsbApp", it) }
 }
 
 // Skiko's macOS runtime jars carry both the arm64 and x64 dylibs. Compose extracts only the host

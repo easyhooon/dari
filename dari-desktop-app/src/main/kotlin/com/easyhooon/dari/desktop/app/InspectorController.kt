@@ -8,11 +8,12 @@ import androidx.compose.runtime.setValue
 import com.easyhooon.dari.desktop.app.adb.Adb
 import com.easyhooon.dari.desktop.app.adb.AdbDevice
 import com.easyhooon.dari.desktop.app.client.InspectorConnection
-import com.easyhooon.dari.desktop.app.ios.IosSimulator
+import com.easyhooon.dari.desktop.app.ios.IosDevices
 import com.easyhooon.dari.inspector.protocol.AppInfo
 import com.easyhooon.dari.inspector.protocol.ObserveEvent
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
 import com.easyhooon.dari.inspector.protocol.WireMessageSummary
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -45,10 +46,10 @@ class InspectorController(
     private val clientVersion: String,
     preferredSerial: String? = null,
     private val maskingEnabled: () -> Boolean = { false },
-    private val iosSimulator: IosSimulator? = null,
+    private val ios: IosDevices? = null,
     // Blocking; replaced in tests so sessions run without a device.
     private val openConnection: ((serial: String, applicationId: String) -> InspectorConnection)? =
-        defaultOpener(adb, iosSimulator, clientVersion),
+        defaultOpener(adb, ios, clientVersion),
 ) {
     var devices by mutableStateOf<List<AdbDevice>>(emptyList())
         private set
@@ -126,17 +127,17 @@ class InspectorController(
     private var autoConnect = true
     private var connectJob: Job? = null
 
-    /** Nothing to connect through: no adb, and not a Mac that can reach iOS Simulators. */
-    val adbMissing: Boolean get() = adb == null && iosSimulator == null
+    /** Nothing to connect through: no adb, and not a Mac that can reach iOS targets. */
+    val adbMissing: Boolean get() = adb == null && ios == null
 
-    /** adb is missing but iOS Simulators still work, so Android devices just don't show up. */
-    val androidUnavailable: Boolean get() = adb == null && iosSimulator != null
+    /** adb is missing but iOS targets still work, so Android devices just don't show up. */
+    val androidUnavailable: Boolean get() = adb == null && ios != null
 
-    // Last apps found in Simulators; kept while connected to one so polling doesn't open extra sessions.
-    private var simulatorApps = emptyList<String>()
+    // Last apps found per iOS target; kept for the connected one so polling doesn't open extra sessions.
+    private var iosApps = emptyMap<String, List<String>>()
 
     fun start() {
-        if (adb == null && iosSimulator == null) return
+        if (adb == null && ios == null) return
         if (adb != null) {
             // Forwards outlive the process when it is killed; clear them now and on JVM exit.
             Runtime.getRuntime().addShutdownHook(Thread { adb.removeDariForwards() })
@@ -144,7 +145,14 @@ class InspectorController(
         scope.launch {
             adb?.let { withContext(Dispatchers.IO) { it.removeDariForwards() } }
             while (isActive) {
-                refreshDevices()
+                // One failed refresh must not stop device polling for the rest of the session.
+                try {
+                    refreshDevices()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                    AppLog.error("Refreshing devices failed", e)
+                }
                 delay(POLL_INTERVAL_MS)
             }
         }
@@ -497,9 +505,12 @@ class InspectorController(
 
     private suspend fun refreshDevices() {
         val android = adb?.let { adb -> withContext(Dispatchers.IO) { runCatching { adb.devices() }.getOrDefault(emptyList()) } }
-        refreshSimulatorApps()
-        val simulator = IosSimulator.DEVICE.takeIf { simulatorApps.isNotEmpty() || selectedSerial == IosSimulator.SERIAL }
-        val found = android.orEmpty() + listOfNotNull(simulator)
+        val iosUsb = ios?.let { withContext(Dispatchers.IO) { it.usbDevices() } }.orEmpty()
+        refreshIosApps(iosUsb.map { it.serial })
+        val simulator = IosDevices.SIMULATOR.takeIf {
+            iosApps[IosDevices.SIMULATOR_SERIAL].orEmpty().isNotEmpty() || selectedSerial == IosDevices.SIMULATOR_SERIAL
+        }
+        val found = android.orEmpty() + iosUsb + listOfNotNull(simulator)
         devices = found
         // Until the user picks a device, prefer one that is actually running a Dari app, and switch
         // to it if it shows up after another device was picked automatically.
@@ -523,23 +534,31 @@ class InspectorController(
         if (autoConnect && state == ConnectionState.Idle && apps.size == 1 && applicationId == apps.single()) connect()
     }
 
-    private suspend fun refreshSimulatorApps() {
-        val simulator = iosSimulator ?: return
-        if (selectedSerial == IosSimulator.SERIAL && state !is ConnectionState.Idle) return
-        simulatorApps = withContext(Dispatchers.IO) { simulator.apps() }
+    private suspend fun refreshIosApps(usbSerials: List<String>) {
+        val ios = ios ?: return
+        // Snapshot on the main thread: a connect during probing must not add a second session.
+        val busy = selectedSerial?.takeIf { IosDevices.isIos(it) && state !is ConnectionState.Idle }
+        val previous = iosApps
+        val targets = (listOf(IosDevices.SIMULATOR_SERIAL) + usbSerials).filter { it != busy }
+        val probed = withContext(Dispatchers.IO) { targets.associateWith { ios.apps(it) } }
+        // The busy target keeps its last apps even while unplugged, so the app picker survives a reconnect.
+        iosApps = probed + listOfNotNull(busy?.let { it to previous[it].orEmpty() })
     }
 
-    private suspend fun appsOn(serial: String): List<String> =
-        if (serial == IosSimulator.SERIAL) simulatorApps else adb?.let { withContext(Dispatchers.IO) { it.dariApps(serial) } }.orEmpty()
+    private suspend fun appsOn(serial: String): List<String> = if (IosDevices.isIos(serial)) {
+        iosApps[serial].orEmpty()
+    } else {
+        adb?.let { withContext(Dispatchers.IO) { it.dariApps(serial) } }.orEmpty()
+    }
 
     private fun ConnectionState.reasonOrNull(): String? = (this as? ConnectionState.Connecting)?.reason
 
     private companion object {
-        fun defaultOpener(adb: Adb?, simulator: IosSimulator?, clientVersion: String): ((String, String) -> InspectorConnection)? {
-            if (adb == null && simulator == null) return null
+        fun defaultOpener(adb: Adb?, ios: IosDevices?, clientVersion: String): ((String, String) -> InspectorConnection)? {
+            if (adb == null && ios == null) return null
             return { serial, applicationId ->
                 when {
-                    serial == IosSimulator.SERIAL && simulator != null -> simulator.open(applicationId)
+                    IosDevices.isIos(serial) && ios != null -> ios.open(serial, applicationId)
                     adb != null -> InspectorConnection.open(adb, serial, applicationId, clientVersion)
                     else -> throw IOException("adb not found")
                 }

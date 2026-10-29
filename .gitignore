@@ -71,3 +71,8 @@ documentation/node_modules/
 documentation/.next/
 documentation/out/
 documentation/.source/
+
+# Swift Package Manager (root Package.swift)
+/.build/
+/.swiftpm/
+/Package.resolved

@@ -21,7 +21,7 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import com.easyhooon.dari.desktop.app.adb.Adb
-import com.easyhooon.dari.desktop.app.ios.IosSimulator
+import com.easyhooon.dari.desktop.app.ios.IosDevices
 import com.easyhooon.dari.desktop.app.ui.AboutWindow
 import com.easyhooon.dari.desktop.app.ui.App
 import com.easyhooon.dari.desktop.app.ui.NoticesWindow
@@ -89,7 +89,7 @@ fun main() {
                 APP_VERSION,
                 System.getenv("ANDROID_SERIAL"),
                 maskingEnabled = { settings.maskingEnabled },
-                iosSimulator = IosSimulator(APP_VERSION).takeIf { isMacOs },
+                ios = IosDevices(APP_VERSION).takeIf { isMacOs },
             )
         }
         val updater = remember { Updater(scope, APP_VERSION) }

@@ -1,14 +1,14 @@
-# Dari for iOS (preview)
+# Dari for iOS
 
 Records WKWebView bridge traffic and shows it in the Dari desktop app. There is no in-app inspector screen on iOS.
 
-Status: Simulator connections work. USB connections to a physical iPhone are not supported yet (#255).
+Status: Simulator and USB connections work. iOS connections are macOS-only by design: building and installing an iOS debug build already needs a Mac. Wi-Fi connections are not offered.
 
 The full integration guide, including Staging builds and troubleshooting, is in [`documentation/content/docs/ios.mdx`](../documentation/content/docs/ios.mdx). `sample-ios/` has a runnable sample app.
 
 ## Install
 
-Add this repository as a Swift package and link the `Dari` product to your app target. Swift Package Manager needs the package at the repository root, so for now point Xcode at this folder as a local package.
+Add `https://github.com/easyhooon/dari` as a Swift package (from `3.0.0`) and link the `Dari` product to your app target. The root `Package.swift` exposes only the library; this folder's manifest adds the tests and the loopback demo.
 
 ## Integrate
 
@@ -48,8 +48,8 @@ Requests and responses are paired by `requestId`, the same way as on Android. A 
 
 ## Connect
 
-1. Run the app in a Simulator.
-2. Open the Dari desktop app on the same Mac. The app appears under the **iOS Simulator** device.
+1. Run the app in a Simulator, or on an iPhone or iPad attached over USB.
+2. Open the Dari desktop app on the same Mac. Simulator apps appear under the **iOS Simulator** device; USB devices appear under their own name, reached through usbmuxd.
 
 Each app listens on the first free port in `Dari.defaultPorts` (127.0.0.1:38670–38677), so up to eight Dari apps can run in Simulators at once.
 

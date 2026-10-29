@@ -439,9 +439,9 @@ private val AppInfo.osDetail: String get() = if (platform == "ios") osLabel else
 
 private fun emptyHint(controller: InspectorController): Pair<String, String?> = when {
     controller.devices.isEmpty() && controller.androidUnavailable ->
-        "No device" to "Run an iOS app with Dari in a Simulator. For Android devices, install adb and reopen Dari."
+        "No device" to "Run an iOS app with Dari in a Simulator or on an iPhone over USB. For Android, install adb and reopen Dari."
     controller.devices.isEmpty() && isMacOs ->
-        "No device" to "Connect an Android device with USB debugging on, or run an iOS app with Dari in a Simulator."
+        "No device" to "Connect an Android device with USB debugging on, or run an iOS app with Dari in a Simulator or on an iPhone."
     controller.devices.isEmpty() -> "No device" to "Connect an Android device with USB debugging on."
     controller.state == ConnectionState.Idle && controller.discoveredApps.isEmpty() ->
         "No Dari app found" to "Open a debug build using dari $MIN_DARI_VERSION or later. If it isn't listed, type its applicationId."
