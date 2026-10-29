@@ -4,13 +4,15 @@ Records WKWebView bridge traffic and shows it in the Dari desktop app. There is 
 
 Status: Simulator connections work. USB connections to a physical iPhone are not supported yet (#255).
 
+The full integration guide, including Staging builds and troubleshooting, is in [`documentation/content/docs/ios.mdx`](../documentation/content/docs/ios.mdx). `sample-ios/` has a runnable sample app.
+
 ## Install
 
 Add this repository as a Swift package and link the `Dari` product to your app target. Swift Package Manager needs the package at the repository root, so for now point Xcode at this folder as a local package.
 
 ## Integrate
 
-Start Dari in debug builds only. While it runs, anything that can reach the device's loopback can read the recorded messages.
+Start Dari only in builds you inspect (Debug, or a Staging configuration with its own compilation condition). While it runs, anything that can reach the device's loopback can read the recorded messages.
 
 ```swift
 import Dari

@@ -1,0 +1,127 @@
+---
+title: iOS (미리보기)
+description: iOS 앱의 WKWebView 브릿지 메시지를 기록해 데스크톱 앱에서 확인합니다
+---
+
+`Dari` Swift 패키지는 WKWebView 브릿지 메시지를 기록해, Android에서 쓰는 [데스크톱 앱](./desktop)으로 보냅니다. 목록, 상세, 필터, 마스킹, 검색, 내보내기가 Android와 똑같이 동작합니다. iOS에는 앱 안의 인스펙터 화면이 없습니다.
+
+<Callout type="warn">
+미리보기입니다. 지금은 iOS Simulator에서 실행한 앱만 연결됩니다. 실기기 iPhone의 USB 연결은 아직 지원하지 않습니다([#255](https://github.com/easyhooon/dari/issues/255)).
+</Callout>
+
+## 요구 사항
+
+- iOS 15 이상
+- Simulator를 실행하는 Mac에 설치한 Dari 데스크톱 앱. Windows와 Linux에서는 Simulator를 실행할 수 없습니다.
+- adb는 없어도 됩니다. adb가 없으면 데스크톱 앱에 iOS 앱만 표시됩니다.
+
+## 설치
+
+릴리스가 나오기 전까지는 이 저장소를 로컬에 받아 패키지를 추가합니다.
+
+1. `https://github.com/easyhooon/dari`를 clone합니다.
+2. Xcode에서 **File → Add Package Dependencies… → Add Local…**을 고르고 `dari-ios` 폴더를 선택합니다.
+3. 앱 타깃에 **Dari** 라이브러리를 추가합니다.
+
+## Dari 시작
+
+앱 실행 초기에 `start()`를 한 번 호출합니다. 검사할 빌드에서만 호출합니다.
+
+```swift
+import Dari
+
+@main
+struct MyApp: App {
+    init() {
+        #if DEBUG
+        try? Dari.shared.start()
+        Dari.shared.setEnvironment(["server": "dev"]) // 데스크톱 앱에 표시할 라벨(선택)
+        #endif
+    }
+    // ...
+}
+```
+
+Dari가 실행 중일 때는 기기의 loopback에 접근할 수 있는 프로세스라면 무엇이든 기록된 메시지를 읽을 수 있습니다. App Store 빌드에서는 절대 `start()`를 호출하지 마세요.
+
+`start()`에는 `DariConfiguration`을 넘길 수 있습니다.
+
+| 옵션 | 기본값 | 의미 |
+|---|---|---|
+| `maxEntries` | 500 | 메모리에 보관할 메시지 수. 가장 오래된 것부터 지웁니다 |
+| `maxContentLength` | 500,000 | 이보다 긴 payload는 Android와 같은 방식으로 자릅니다 |
+| `fireAndForget` | `false` | 요청을 보내는 즉시 완료로 기록합니다 |
+| `ports` | `38670...38677` | 시도할 loopback 포트. 데스크톱 앱도 같은 범위를 확인합니다 |
+
+## 브릿지 호출 기록
+
+WKWebView마다 interceptor를 하나씩 만들고, 브릿지가 메시지를 받고 응답하는 곳에서 호출합니다. 메서드 구성은 Android의 [`DariInterceptor`](./interceptor)와 같습니다.
+
+```swift
+final class Bridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+    private let dari = Dari.shared.interceptor(tag: "main")
+    weak var webView: WKWebView?
+
+    // 이후에 기록하는 요청에 이 페이지 URL이 붙습니다. query와 fragment는 빠집니다.
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        dari.onPageUrlChanged(webView.url?.absoluteString)
+    }
+
+    // Web → App
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        let body = message.body as? [String: Any] ?? [:]
+        let handler = body["handler"] as? String ?? message.name
+        let requestId = body["requestId"] as? String
+        dari.onWebToAppRequest(handlerName: handler, requestId: requestId, requestData: body["data"] as? String)
+
+        let result = #"{"ok":true}"#
+        dari.onWebToAppResponse(handlerName: handler, requestId: requestId, responseData: result, isSuccess: true)
+        // ...결과를 페이지로 전달
+    }
+
+    // App → Web
+    func notifyPage(_ requestId: String, _ payload: String) {
+        dari.onAppToWebRequest(handlerName: "onResume", requestId: requestId, data: payload)
+        webView?.evaluateJavaScript("onResume(\(payload))") { value, error in
+            self.dari.onAppToWebResponse(requestId: requestId, isSuccess: error == nil, responseData: value.map { "\($0)" })
+        }
+    }
+}
+```
+
+- 요청과 응답은 `requestId`로 짝을 맞춥니다. 응답은 ID, tag, 방향이 같은 요청 가운데 아직 열려 있는 가장 최근 요청을 완료합니다.
+- `requestId`가 nil이거나 `fireAndForget: true`를 넘기면, 보내는 즉시 완료된 메시지로 기록합니다.
+- 핸들러 이름만으로 알아보기 어려우면 `displayName:`을 넘깁니다.
+- `start()` 전에 한 호출은 무시됩니다.
+
+Android의 [Gradle 플러그인](./gradle-plugin)처럼 이 호출 없이 자동으로 수집하는 기능은 아직 없습니다. 가능한 방식은 [이슈 코멘트](https://github.com/easyhooon/dari/issues/255#issuecomment-6491895309)에 비교해 두었습니다.
+
+## 연결
+
+1. Simulator에서 앱을 실행합니다.
+2. 같은 Mac에서 Dari 데스크톱 앱을 엽니다. 앱이 **iOS Simulator** 기기 아래에 나타나고, 그곳의 Dari 앱이 하나뿐이면 자동으로 연결합니다.
+
+앱마다 `127.0.0.1`의 `38670...38677` 중 비어 있는 첫 포트에서 listen하므로, Dari 앱을 Simulator에서 최대 8개까지 동시에 실행할 수 있습니다. 앱을 다시 실행해 다른 포트에 자리 잡아도 데스크톱 앱이 다시 찾아 연결합니다.
+
+## Staging 빌드
+
+Android는 manifest 메타데이터로 opt-in해서, minify가 켜지고 debuggable이 아닌 빌드(`staging`)도 검사합니다. iOS에는 R8 같은 코드 이름 변경(난독화)이 없습니다. Release 빌드는 최적화(`-O`, whole-module)와 dead code stripping을 거치지만 Dari에는 영향이 없습니다. Dari는 리플렉션이나 런타임 클래스 조회를 쓰지 않기 때문입니다.
+
+Release와 비슷한 빌드를 검사하려면 빌드 구성(예: **Staging**)을 추가하고, 그 구성 전용 컴파일 조건으로 Dari를 시작합니다.
+
+1. **Staging** 구성의 **Active Compilation Conditions**(`SWIFT_ACTIVE_COMPILATION_CONDITIONS`)에 `DARI`를 추가합니다.
+2. `#if DEBUG || DARI`로 Dari를 시작합니다.
+
+[샘플 앱](https://github.com/easyhooon/dari/tree/main/sample-ios)에 Debug, Staging, Release 구성이 이렇게 설정되어 있습니다.
+
+Swift Package Manager는 패키지를 일부 구성에만 링크할 수 없습니다. 그래서 앱이 `start()`를 호출하지 않아도 Dari 코드(arm64 기준 약 170KB)는 Release 바이너리에 남습니다. 이 코드는 동작하지 않습니다. 소켓을 열지 않고 아무것도 기록하지 않습니다. 용량이 중요하다면 별도의 디버그 타깃을 두는 식으로 App Store 타깃에서 Dari를 아예 빼세요.
+
+## 샘플 앱
+
+`sample-ios/DariSample.xcodeproj`는 Web → App과 App → Web 시나리오가 담긴 페이지를 엽니다. 성공, 에러, 느린 응답, 응답 없음, fire-and-forget, 마스킹을 확인할 수 있습니다. Xcode 16 이상에서 열고 Simulator에서 **DariSample** scheme을 실행하세요.
+
+## 문제 해결
+
+- **앱이 목록에 없습니다.** 앱이 포그라운드에 있어야 합니다. 일시 정지된 Simulator 앱은 응답하지 않습니다. `start()`가 실행됐는지, 포트가 열려 있는지 확인합니다: `lsof -nP -iTCP:38670-38677 -sTCP:LISTEN`
+- **Simulator 두 대에서 같은 앱을 실행했습니다.** 데스크톱 앱은 먼저 찾은 쪽에 연결합니다. 하나를 종료하세요.
+- **`start()`가 `noFreePort`를 던집니다.** Dari 앱 8개가 이미 포트를 쓰고 있습니다. 일부를 종료하거나 `DariConfiguration(ports:)`로 다른 범위를 넘기세요. 단, 데스크톱 앱은 기본 범위만 확인합니다.
