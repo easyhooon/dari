@@ -2,7 +2,7 @@
 
 Records WKWebView bridge traffic and shows it in the Dari desktop app. There is no in-app inspector screen on iOS.
 
-Status: Simulator and USB (macOS) connections work. Wi-Fi and Windows/Linux hosts are not supported yet (#255).
+Status: Simulator and USB connections work. iOS connections are macOS-only by design: building and installing an iOS debug build already needs a Mac. Wi-Fi connections are not offered.
 
 The full integration guide, including Staging builds and troubleshooting, is in [`documentation/content/docs/ios.mdx`](../documentation/content/docs/ios.mdx). `sample-ios/` has a runnable sample app.
 
