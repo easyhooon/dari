@@ -7,9 +7,9 @@
 [![Documentation](https://img.shields.io/badge/docs-easyhooon.github.io%2Fdari-blue)](https://easyhooon.github.io/dari)
 [![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/easyhooon/dari?utm_source=readme&utm_medium=badge)
 
-**Dari** (다리) means **"bridge"** in Korean. Dari is an Android library for inspecting WebView bridge communication in real time, inspired by [Chucker](https://github.com/ChuckerTeam/chucker).
+**Dari** (다리) means **"bridge"** in Korean. Dari is a tool for inspecting WebView bridge communication in Android and iOS apps in real time, inspired by [Chucker](https://github.com/ChuckerTeam/chucker).
 
-Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualizes **WebView JavaScript bridge messages** between your web content and native Android code.
+Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualizes **WebView JavaScript bridge messages** between your web content and native code: an in-app inspector and a desktop app on Android, and the desktop app on iOS.
 
 📖 **[Documentation](https://easyhooon.github.io/dari)** — Setup guide, configuration reference, and API docs.
 
@@ -54,17 +54,23 @@ interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
 
 Run the app, trigger a bridge call, and tap the Dari notification. See [Setup](#setup) for App-to-Web messages, tags, and Protocol Buffers.
 
+**iOS**: add `https://github.com/easyhooon/dari` as a Swift package (from `3.0.0`), call `Dari.shared.start()` in debug builds and record calls with `Dari.shared.interceptor(tag:)`. Messages appear in the [Desktop App](#desktop-app). See the [iOS guide](https://easyhooon.github.io/dari/docs/ios).
+
 ## Desktop App
 
-See the bridge messages of a connected debug build on your computer, on a bigger screen. It needs only adb: no proxy, certificate or port setup.
+See the bridge messages of a connected debug build on your computer, on a bigger screen. No proxy, certificate or port setup: Android apps connect over adb, iOS apps from a Simulator or a USB device on a Mac.
 
-- Live messages from a USB-connected device or emulator, with the request and response side by side
+<p align="center">
+  <img src="screenshots/ios_desktop.jpeg" width="900" alt="Dari desktop app showing bridge messages from the iOS sample app in the Simulator" />
+</p>
+
+- Live messages from an Android device or emulator, or an iOS Simulator or USB device (macOS), with the request and response side by side
 - Foldable JSON with Expand all / Collapse all and one-click Copy, plus text and JSON export
 - Response Time view per handler: calls, errors and avg/min/max, slowest first, with averages of 500 ms or more highlighted
 - Optional masking of tokens, passwords and cookies, applied on the device before data leaves it
 - macOS (signed and notarized, Apple Silicon and Intel), Windows, and Linux (preview), with in-app updates
 
-Requires `dari` 2.0.0 or later in your app's debug build. Apps still on 1.x can't connect until they upgrade.
+Requires `dari` 2.0.0 or later in your app's debug build on Android, or the `Dari` Swift package 3.0.0 or later on iOS. Android apps still on 1.x can't connect until they upgrade.
 
 📥 **[Download](https://easyhooon.github.io/dari/download)** or install from the terminal:
 
@@ -106,6 +112,12 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
     <td><img src="screenshots/tag_filter.jpeg" width="270" /></td>
     <td><img src="screenshots/share_bottom_sheet.jpeg" width="270" /></td>
     <td><img src="screenshots/dark_mode.jpeg" width="270" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>iOS Sample</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/ios_sample.jpeg" width="270" /></td>
   </tr>
 </table>
 
@@ -345,7 +357,9 @@ dari/
 ├── dari-core/     ← KMP contracts for Android, JVM, and iOS
 ├── dari/          ← Debug library (interceptor, UI, notifications)
 ├── dari-noop/     ← Release no-op (same API surface, zero overhead)
-└── sample/        ← Sample app with WebView bridge demo
+├── dari-ios/      ← iOS Swift package (capture and transport to the desktop app)
+├── sample/        ← Sample app with WebView bridge demo
+└── sample-ios/    ← iOS sample app with WKWebView bridge demo
 ```
 
 `dari-core` can be added to `commonMain` in a Kotlin Multiplatform project:
@@ -356,7 +370,7 @@ commonMain.dependencies {
 }
 ```
 
-This shares message models and interceptor contracts across Android, JVM, and iOS targets. The inspector runtime, UI, persistence, notifications, and WebView integration in `dari` remain Android-only.
+This shares message models and interceptor contracts across Android, JVM, and iOS targets. The inspector runtime, UI, persistence, notifications, and WebView integration in `dari` remain Android-only. iOS apps use the `dari-ios` Swift package instead.
 
 ## Sample App
 

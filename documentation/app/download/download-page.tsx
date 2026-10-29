@@ -31,7 +31,7 @@ const copy: Record<DownloadLang, Copy> = {
   en: {
     title: 'Dari for desktop',
     intro:
-      'Watch WebView bridge messages from a connected debug build, live on your computer. It needs no proxy, certificate or port setup, only adb.',
+      'Watch WebView bridge messages from a connected debug build, live on your computer. It needs no proxy, certificate or port setup: adb for Android, a Mac for iOS Simulators and USB devices.',
     terminalHeading: 'Or install on macOS from Terminal',
     checksumNote: 'Verifies the SHA-256 checksum before installing.',
     adbHeading: 'No adb yet?',
@@ -62,7 +62,7 @@ const copy: Record<DownloadLang, Copy> = {
   ko: {
     title: 'Dari 데스크톱',
     intro:
-      '연결된 디버그 빌드의 WebView 브릿지 메시지를 컴퓨터에서 실시간으로 확인하세요. 프록시, 인증서, 포트 설정 없이 adb만 있으면 됩니다.',
+      '연결된 디버그 빌드의 WebView 브릿지 메시지를 컴퓨터에서 실시간으로 확인하세요. 프록시, 인증서, 포트 설정이 필요 없습니다. Android는 adb, iOS Simulator·USB 기기는 Mac이면 됩니다.',
     terminalHeading: '또는 macOS 터미널에서 설치',
     checksumNote: '설치 전에 SHA-256 체크섬을 검증합니다.',
     adbHeading: 'adb가 없나요?',

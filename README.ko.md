@@ -7,9 +7,9 @@
 [![Documentation](https://img.shields.io/badge/docs-easyhooon.github.io%2Fdari-blue)](https://easyhooon.github.io/dari/ko/docs)
 [![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/easyhooon/dari?utm_source=readme&utm_medium=badge)
 
-**Dari**는 한국어 **"다리(bridge)"** 에서 이름을 따왔습니다. [Chucker](https://github.com/ChuckerTeam/chucker)에서 영감을 받은, WebView 브릿지 통신을 실시간으로 검사하는 Android 라이브러리입니다.
+**Dari**는 한국어 **"다리(bridge)"** 에서 이름을 따왔습니다. [Chucker](https://github.com/ChuckerTeam/chucker)에서 영감을 받은, Android·iOS 앱의 WebView 브릿지 통신을 실시간으로 검사하는 도구입니다.
 
-Chucker가 HTTP 트래픽을 가로채 보여 주듯, Dari는 웹 콘텐츠와 네이티브 Android 코드 사이의 **WebView JavaScript 브릿지 메시지**를 캡처하고 시각화합니다.
+Chucker가 HTTP 트래픽을 가로채 보여 주듯, Dari는 웹 콘텐츠와 네이티브 코드 사이의 **WebView JavaScript 브릿지 메시지**를 캡처하고 시각화합니다. Android에서는 앱 안의 인스펙터와 데스크톱 앱으로, iOS에서는 데스크톱 앱으로 확인합니다.
 
 📖 **[문서](https://easyhooon.github.io/dari/ko/docs)** — 설정 가이드, 구성 레퍼런스, API 문서.
 
@@ -54,18 +54,24 @@ interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
 
 앱을 실행하고 브릿지 호출을 일으킨 뒤 Dari 알림을 탭하세요. App-to-Web 메시지, 태그, Protocol Buffers는 [설정](#설정)을 참고하세요.
 
+**iOS**: `https://github.com/easyhooon/dari`를 Swift 패키지로 추가하고(`3.0.0`부터), 디버그 빌드에서 `Dari.shared.start()`를 호출한 뒤 `Dari.shared.interceptor(tag:)`로 호출을 기록합니다. 메시지는 [데스크톱 앱](#데스크톱-앱)에 표시됩니다. 자세한 내용은 [iOS 가이드](https://easyhooon.github.io/dari/ko/docs/ios)를 참고하세요.
+
 
 ## 데스크톱 앱
 
-연결된 디버그 빌드의 브릿지 메시지를 컴퓨터의 큰 화면에서 확인하세요. adb만 있으면 되고, 프록시·인증서·포트 설정이 필요 없습니다.
+연결된 디버그 빌드의 브릿지 메시지를 컴퓨터의 큰 화면에서 확인하세요. 프록시·인증서·포트 설정이 필요 없습니다. Android 앱은 adb로, iOS 앱은 Mac에서 Simulator나 USB 기기로 연결됩니다.
 
-- USB로 연결한 기기나 에뮬레이터의 실시간 메시지, 요청과 응답을 나란히 표시
+<p align="center">
+  <img src="screenshots/ios_desktop.jpeg" width="900" alt="iOS Simulator의 샘플 앱 브릿지 메시지를 보여주는 Dari 데스크톱 앱" />
+</p>
+
+- Android 기기·에뮬레이터, iOS Simulator·USB 기기(macOS)의 실시간 메시지, 요청과 응답을 나란히 표시
 - 모두 펼치기 / 모두 접기와 원클릭 복사를 지원하는 접이식 JSON, 텍스트·JSON 내보내기
 - 핸들러별 응답 시간 보기: 호출·에러 수와 평균/최소/최대, 느린 순 정렬, 평균 500ms 이상 강조
 - 토큰, 비밀번호, 쿠키 마스킹(선택). 데이터가 기기를 떠나기 전에 기기에서 적용
 - macOS(서명 및 공증, Apple Silicon·Intel), Windows, Linux(미리보기), 앱 내 업데이트 지원
 
-앱의 디버그 빌드에 `dari` 2.0.0 이상이 필요합니다. 1.x를 쓰는 앱은 업그레이드해야 연결됩니다.
+Android는 앱의 디버그 빌드에 `dari` 2.0.0 이상, iOS는 `Dari` Swift 패키지 3.0.0 이상이 필요합니다. 1.x를 쓰는 Android 앱은 업그레이드해야 연결됩니다.
 
 📥 **[다운로드](https://easyhooon.github.io/dari/ko/download)** 또는 터미널에서 설치:
 
@@ -107,6 +113,12 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
     <td><img src="screenshots/tag_filter.jpeg" width="270" /></td>
     <td><img src="screenshots/share_bottom_sheet.jpeg" width="270" /></td>
     <td><img src="screenshots/dark_mode.jpeg" width="270" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>iOS 샘플</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/ios_sample.jpeg" width="270" /></td>
   </tr>
 </table>
 
@@ -346,7 +358,9 @@ dari/
 ├── dari-core/     ← KMP contracts for Android, JVM, and iOS
 ├── dari/          ← Debug library (interceptor, UI, notifications)
 ├── dari-noop/     ← Release no-op (same API surface, zero overhead)
-└── sample/        ← Sample app with WebView bridge demo
+├── dari-ios/      ← iOS Swift package (capture and transport to the desktop app)
+├── sample/        ← Sample app with WebView bridge demo
+└── sample-ios/    ← iOS sample app with WKWebView bridge demo
 ```
 
 Kotlin Multiplatform 프로젝트에서는 `dari-core`를 `commonMain`에 추가할 수 있습니다:
@@ -357,7 +371,7 @@ commonMain.dependencies {
 }
 ```
 
-이렇게 하면 메시지 모델과 인터셉터 계약을 Android, JVM, iOS 타깃에서 공유합니다. `dari`의 인스펙터 런타임, UI, 저장소, 알림, WebView 연동은 Android 전용입니다.
+이렇게 하면 메시지 모델과 인터셉터 계약을 Android, JVM, iOS 타깃에서 공유합니다. `dari`의 인스펙터 런타임, UI, 저장소, 알림, WebView 연동은 Android 전용입니다. iOS 앱은 `dari-ios` Swift 패키지를 사용합니다.
 
 ## 샘플 앱
 
