@@ -247,6 +247,7 @@ They take the same `parseScript` as `DariAutoCapture`; `dariCallAsyncJavaScript`
 - Bridge handlers inside third-party SDKs can't carry the macro. Turn on `autoCapture` for those.
 - You can use both: with `autoCapture` on as well, each message is recorded once, under the `autoCapture` tag.
 - Throwing handlers aren't supported, because WebKit's message handler methods don't throw.
+- Declare `parseMessage` outside the type the macro is on. `@DariBridge(parseMessage: MyBridge.parse)` on `MyBridge` fails with "circular reference resolving attached macro", so keep the parser in a separate `enum` or as a global.
 
 ## Connect
 
@@ -285,7 +286,7 @@ Swift Package Manager can't link a package to some configurations only. The Dari
 
 ## Sample app
 
-`sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, and masking. Its bridge has no Dari calls: `SampleBridge.autoCapture` maps the messages and callback scripts for [automatic capture](#automatic-capture). Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
+`sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, and masking. Its bridge records itself with `@DariBridge` and sends callbacks through `dariEvaluateJavaScript`, as in [Compile-time capture with macros](#compile-time-capture-with-macros). The parsers live in `SampleCapture`. To try [automatic capture](#automatic-capture) instead, add `-DariAutoCapture YES` to the scheme's launch arguments. Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
 
 ## Troubleshooting
 

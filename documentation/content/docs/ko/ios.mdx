@@ -247,6 +247,7 @@ let title = try await webView.dariEvaluateJavaScript("document.title", tag: "mai
 - 서드파티 SDK 안의 브릿지 handler에는 매크로를 붙일 수 없습니다. 이런 handler는 `autoCapture`로 수집합니다.
 - 함께 써도 됩니다. `autoCapture`도 켜면 메시지는 `autoCapture`의 tag로 한 번만 기록됩니다.
 - WebKit의 메시지 handler 메서드는 throw하지 않으므로, throw하는 handler는 지원하지 않습니다.
+- `parseMessage`는 매크로를 붙인 타입 바깥에 선언하세요. `MyBridge`에 `@DariBridge(parseMessage: MyBridge.parse)`를 붙이면 "circular reference resolving attached macro" 에러가 나므로, 파서는 별도 `enum`이나 전역에 둡니다.
 
 ## 연결
 
@@ -285,7 +286,7 @@ Swift Package Manager는 패키지를 일부 구성에만 링크할 수 없습�
 
 ## 샘플 앱
 
-`sample-ios/DariSample.xcodeproj`는 Web → App과 App → Web 시나리오가 담긴 페이지를 엽니다. 성공, 에러, 느린 응답, 응답 없음, fire-and-forget, 마스킹을 확인할 수 있습니다. 브릿지 코드에는 Dari 호출이 없고, `SampleBridge.autoCapture`가 메시지와 콜백 스크립트를 [자동 수집](#자동-수집)용으로 매핑합니다. Xcode 16 이상에서 열고 Simulator에서 **DariSample** scheme을 실행하세요.
+`sample-ios/DariSample.xcodeproj`는 Web → App과 App → Web 시나리오가 담긴 페이지를 엽니다. 성공, 에러, 느린 응답, 응답 없음, fire-and-forget, 마스킹을 확인할 수 있습니다. 브릿지는 [매크로로 컴파일 시점 수집](#매크로로-컴파일-시점-수집)처럼 `@DariBridge`로 메시지를 기록하고 `dariEvaluateJavaScript`로 콜백을 보냅니다. 파서는 `SampleCapture`에 있습니다. [자동 수집](#자동-수집)으로 바꿔 보려면 scheme의 launch argument에 `-DariAutoCapture YES`를 추가하세요. Xcode 16 이상에서 열고 Simulator에서 **DariSample** scheme을 실행하세요.
 
 ## 문제 해결
 
