@@ -10,7 +10,7 @@ allowed-tools:
 
 # 릴리스 범위 판정
 
-`gradle/libs.versions.toml`의 `dari`(라이브러리, Maven Central)와 `dariDesktop`(데스크톱 앱, GitHub 릴리스)은 같은 번호 줄을 쓴다. 이 스킬은 마지막 릴리스 이후 바뀐 파일을 보고 둘 중 무엇을 올려야 하는지 정한다. 판정만 하고 파일은 바꾸지 않는다.
+`gradle/libs.versions.toml`의 `dari`(라이브러리, Maven Central)와 `dariDesktop`(데스크톱 앱, GitHub 릴리스), iOS SDK의 `Dari.version`(SPM)은 같은 번호 줄을 쓴다. SPM은 저장소의 git 태그로 버전을 정하므로 모든 태그가 곧 iOS 릴리스다. 이 스킬은 마지막 릴리스 이후 바뀐 파일을 보고 둘 중 무엇을 올려야 하는지 정한다. 판정만 하고 파일은 바꾸지 않는다.
 
 ## 인자
 
@@ -35,10 +35,13 @@ allowed-tools:
 | VERDICT | 조건 | 올릴 버전 | Maven |
 |---|---|---|---|
 | `full` | `dari`, `dari-core`, `dari-noop`, `dari-runtime`, `dari-inspector-protocol`의 main 코드 변경, `dari-gradle-plugin`의 main 코드·빌드 파일 변경 | `dari`와 `dariDesktop` 둘 다 | 배포 |
-| `desktop` | `dari-desktop-app`만 변경 | `dariDesktop`만 | 건너뜀 |
+| `desktop` | `dari-desktop-app`만 변경(iOS 변경은 함께 있어도 됨) | `dariDesktop`만 | 건너뜀 |
+| `ios` | `dari-ios/Sources`나 루트 `Package.swift`만 변경 | `Dari.version`만, 릴리스는 Latest로 표시하지 않음 | 건너뜀 |
 | `review` | 공유 빌드 파일(`build.gradle.kts`, `gradle/`, 버전 외 카탈로그 줄 등)만 변경 | 3단계에서 판단 | 판단 |
 | `none` | 문서, 샘플, 테스트, CI, 패키징 도구만 변경 | 없음 | 없음 |
 
+- 모든 모드에서 `Dari.version`을 새 태그와 같게 올린다. 이유: Android만 바뀐 릴리스도 SPM에는 새 버전으로 보이고, 앱이 데스크톱에 보고하는 버전이 태그와 달라진다.
+- `full`이나 `desktop`에 `Note: the iOS SDK changed too`가 붙으면 iOS 변경을 릴리스 노트에 적는다.
 - `test`(테스트만), `desktop-tooling`(패키징 스크립트·데스크톱 워크플로)은 그 자체로는 릴리스 사유가 아니다. 다음 릴리스를 만들 때 반영된다.
 - 카탈로그에서 `dari`/`dariDesktop` 줄만 바뀐 것(직전 릴리스의 버전 올림)은 변경으로 세지 않는다.
 - 출력에 `dariDesktop=<not split yet, follows dari>`가 보이고 판정이 `desktop`이면: 그 ref에는 데스크톱 버전 분리(#158)가 아직 없다. `/release desktop`은 `dariDesktop` 키가 main에 있어야 동작하므로, 분리를 먼저 머지하라고 안내하거나 정식 릴리스로 진행할지 사용자에게 묻는다. 이유: 키 없이 데스크톱 전용으로 내면 설치 파일 버전과 태그가 어긋나 릴리스 워크플로가 실패한다.
@@ -55,14 +58,15 @@ allowed-tools:
 
 - 판정과 근거가 된 영역(파일 몇 개, 대표 경로)
 - 올릴 키: `dari`·`dariDesktop` 둘 다 / `dariDesktop`만 / 없음
-- 다음 버전 후보: `gh release list --limit 1`로 실제 공개된 최신 릴리스를 확인하고 그보다 크게 잡는다. 비교 기준 태그(`base_tag`)가 아니라 공개된 최신 릴리스가 기준이다. 이유: 설치된 데스크톱 앱 업데이터는 공개된 최신 릴리스보다 높은 버전만 알린다. 과거 구간을 점검한 경우처럼 ref가 이미 릴리스된 태그면 "다음 버전" 대신 그 구간이 어떤 릴리스였어야 했는지만 답한다.
-- 이어서 실행할 명령: `full` → `/release <version>`, `desktop` → `/release desktop <version>`, `none` → 릴리스 없음
+- 다음 버전 후보: `gh release list --limit 3`으로 가장 높은 공개 태그를 확인하고 그보다 크게 잡는다. 비교 기준 태그(`base_tag`)가 아니라 공개된 태그가 기준이다. 이유: 설치된 데스크톱 앱 업데이터는 Latest보다 높은 버전만 알리고, iOS 전용 릴리스는 Latest가 아니어도 SPM 태그를 이미 차지한다. 과거 구간을 점검한 경우처럼 ref가 이미 릴리스된 태그면 "다음 버전" 대신 그 구간이 어떤 릴리스였어야 했는지만 답한다.
+- 이어서 실행할 명령: `full` → `/release <version>`, `desktop` → `/release desktop <version>`, `ios` → `/release ios <version>`, `none` → 릴리스 없음
 
 ## 건너뛰고 싶어지는 이유와 왜 안 되는지
 
 - "이번엔 데스크톱만 고쳤으니 뻔하다" → 2.2.0..2.2.1 구간이 실제로 데스크톱 전용이었는데 Maven까지 배포했다. 뻔해 보여도 스크립트가 1분이면 확인한다.
 - "라이브러리 테스트만 바꿨으니 full이다" → `src/test`만 바뀌면 사용자가 받는 산출물은 같다. 불필요한 Maven 배포는 앱 쪽에 의미 없는 업데이트 알림을 만든다.
 - "플러그인은 Gradle에서만 도니 릴리스와 무관하다" → 플러그인은 `dari`와 같은 버전으로 Maven Central에 배포된다. 플러그인만 고쳐도 사용자가 받으려면 `full`이어야 한다.
+- "Swift 파일은 Gradle 빌드에 없으니 릴리스와 무관하다" → iOS 앱은 SPM 태그로 받는다. 3.0.0..3.1.0 구간이 iOS 전용이었는데 처음엔 `none`으로 나왔다.
 - "프로토콜 파일은 데스크톱에서도 쓰니 desktop이다" → `dari-inspector-protocol`은 Maven으로 앱에도 배포된다. 앱이 받으려면 `full`이어야 한다.
 
 ## 검증 기록
@@ -73,6 +77,8 @@ allowed-tools:
 | 2.2.0..2.2.1 | desktop (+ shared build 확인) | 라이브러리 무변경, Sentry 의존성은 데스크톱 전용 — 데스크톱 전용이 맞았음 |
 | 2.2.1..origin/main (2026-10-16, 재실행 시 `5e8739f`) | none | 스테이플링 스크립트(#155)·문서 아이콘만 — 맞음 |
 | 2.5.2..origin/main (2026-10-19) | full | Gradle 플러그인(#218)과 `dari`/`dari-noop` 훅 — 맞음. 플러그인 main 코드가 library로 분류됨 |
+| 2.9.0..3.0.0 | full (+ iOS note) | Android 라이브러리와 iOS SDK 첫 출시 — 맞음 |
+| 3.0.0..origin/main (2026-11-04, `757a52c`) | ios | iOS `autoCapture`(#264)만 — 맞음. 전에는 `none`으로 잘못 나옴 |
 
 모의 실행(스킬만 읽은 에이전트, 2026-10-16): "PR 157로 2.2.2 내려는데 버전 뭐 올려?" → `desktop`, `/release desktop 2.2.2`. "2.2.0 시점이면 데스크톱만 내도 돼?" → `full`, minor 제안. 두 실행 모두 1~4단계를 따랐고, 분리 전 ref 처리와 다음 버전 기준이 불명확하다는 지적을 반영했다.
 
@@ -82,5 +88,6 @@ allowed-tools:
 - 다음 검토: 2027-01-19, 또는 모듈 구성(새 라이브러리 모듈, 데스크톱 경로)이 바뀔 때. 바뀌면 `scripts/release-scope.sh`의 `classify()`를 고치고 위 세 구간을 다시 돌려 판정이 그대로인지 확인한다.
 - 변경 이력
   - 2026-10-16: 처음 작성. `dari`/`dariDesktop` 분리(#158)에 맞춰 판정 기준 정리.
+  - 2026-11-04: iOS SDK(`dari-ios/Sources`, 루트 `Package.swift`)를 `ios` 영역으로 분류하고 `ios` 판정 추가(전에는 no-release). `Dari.version`을 출력. 위 구간과 `2.9.0..3.0.0`, `3.0.0..origin/main`을 다시 돌려 확인.
   - 2026-10-19: `dari-gradle-plugin`의 main 코드와 빌드 파일을 `full`로 분류(전에는 no-release). 플러그인이 2.6.0부터 `dari`와 함께 Maven Central에 배포되기 때문. 위 세 구간과 `2.5.2..origin/main`을 다시 돌려 판정 유지 확인.
   - 2026-10-16: 커밋이 많은 구간(`1.0.0..HEAD`)에서 `| head`의 SIGPIPE로 exit 141 나던 문제와, 카탈로그 주석 변경을 shared build로 세던 문제 수정. 위 세 구간과 `1.0.0..HEAD`를 다시 돌려 판정 유지 확인.
