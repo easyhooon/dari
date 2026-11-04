@@ -187,7 +187,7 @@ Swift Package Manager can't link a package to some configurations only. The Dari
 
 ## Sample app
 
-`sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, and masking. Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
+`sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, and masking. Its bridge has no Dari calls: `SampleBridge.autoCapture` maps the messages and callback scripts for [automatic capture](#automatic-capture). Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
 
 ## Troubleshooting
 

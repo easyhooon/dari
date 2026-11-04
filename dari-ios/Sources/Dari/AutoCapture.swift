@@ -97,13 +97,14 @@ extension Dari {
     }
 
     /// Records a Web → App message and returns what a reply needs to pair with it.
-    func captureMessage(_ message: WKScriptMessage) -> (DariInterceptor, handlerName: String, requestId: String)? {
+    /// Only [replying] handlers get a generated id, since nothing else answers an id-less message.
+    func captureMessage(_ message: WKScriptMessage, replying: Bool) -> (DariInterceptor, handlerName: String, requestId: String)? {
         guard let (capture, interceptor) = autoCaptureContext(message.webView) else { return nil }
         switch capture.parseMessage(message.name, message.body) {
         case let .request(handlerName, requestId, data, fireAndForget):
-            let requestId = requestId ?? AutoCaptureIds.next()
+            let requestId = requestId ?? (replying ? AutoCaptureIds.next() : nil)
             interceptor.onWebToAppRequest(handlerName: handlerName, requestId: requestId, requestData: data, fireAndForget: fireAndForget)
-            return (interceptor, handlerName, requestId)
+            return requestId.map { (interceptor, handlerName, $0) }
         case let .response(requestId, data, isSuccess):
             interceptor.onAppToWebResponse(requestId: requestId, isSuccess: isSuccess, responseData: data)
         case .ignore:
@@ -146,7 +147,7 @@ final class RecordingMessageHandler: NSObject, WKScriptMessageHandler {
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-        _ = Dari.shared.captureMessage(message)
+        _ = Dari.shared.captureMessage(message, replying: false)
         wrapped.userContentController(controller, didReceive: message)
     }
 }
@@ -163,7 +164,7 @@ final class RecordingReplyHandler: NSObject, WKScriptMessageHandlerWithReply {
         didReceive message: WKScriptMessage,
         replyHandler: @escaping (Any?, String?) -> Void
     ) {
-        guard let (interceptor, handlerName, requestId) = Dari.shared.captureMessage(message) else {
+        guard let (interceptor, handlerName, requestId) = Dari.shared.captureMessage(message, replying: true) else {
             return wrapped.userContentController(controller, didReceive: message, replyHandler: replyHandler)
         }
         wrapped.userContentController(controller, didReceive: message) { reply, error in

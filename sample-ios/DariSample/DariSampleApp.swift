@@ -8,7 +8,7 @@ struct DariSampleApp: App {
         // device's loopback can read bridge messages. Release never calls start(), so the linker strips Dari.
         #if DEBUG || DARI
         do {
-            try Dari.shared.start()
+            try Dari.shared.start(DariConfiguration(autoCapture: SampleBridge.autoCapture))
             Dari.shared.setEnvironment(["sample": "ios"])
         } catch {
             print("Dari could not start: \(error)")

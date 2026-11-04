@@ -42,11 +42,12 @@ final class AutoCaptureTests: XCTestCase {
         let webView = WKWebView(frame: .zero, configuration: configuration)
 
         handler.expectation = expectation(description: "messages")
-        handler.expectation?.expectedFulfillmentCount = 2
+        handler.expectation?.expectedFulfillmentCount = 3
         webView.loadHTMLString(
             """
             <script>
             webkit.messageHandlers.bridge.postMessage({handler: "toast", requestId: "r1", data: "hello"});
+            webkit.messageHandlers.bridge.postMessage("log");
             webkit.messageHandlers.ask.postMessage({handler: "getUser"});
             </script>
             """,
@@ -59,16 +60,18 @@ final class AutoCaptureTests: XCTestCase {
         wait(for: [evaluated], timeout: 10)
 
         let records = Dari.shared.records
-        XCTAssertEqual(records.map(\.handlerName), ["toast", "getUser", "Math.max"])
-        XCTAssertEqual(records.map(\.direction), [.webToApp, .webToApp, .appToWeb])
-        XCTAssertEqual(records.map(\.tag), ["auto", "auto", "auto"])
+        XCTAssertEqual(records.map(\.handlerName), ["toast", "bridge", "getUser", "Math.max"])
+        XCTAssertEqual(records.map(\.direction), [.webToApp, .webToApp, .webToApp, .appToWeb])
+        XCTAssertEqual(records.map(\.tag), ["auto", "auto", "auto", "auto"])
         XCTAssertEqual(records[0].requestId, "r1")
         XCTAssertEqual(records[0].status, .inProgress)
         XCTAssertEqual(records[0].pageUrl, "https://example.com/page")
-        XCTAssertEqual(records[1].responseData, #"{"name":"dari"}"#)
-        XCTAssertEqual(records[1].status, .success)
-        XCTAssertEqual(records[2].responseData, "2")
+        XCTAssertNil(records[1].requestId)
+        XCTAssertNotNil(records[2].requestId)
+        XCTAssertEqual(records[2].responseData, #"{"name":"dari"}"#)
         XCTAssertEqual(records[2].status, .success)
+        XCTAssertEqual(records[3].responseData, "2")
+        XCTAssertEqual(records[3].status, .success)
     }
 }
 
