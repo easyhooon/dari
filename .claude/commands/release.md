@@ -1,22 +1,26 @@
 You are releasing a new version of dari. Arguments: $ARGUMENTS
 - `<version>` (e.g. `2.3.0`): a full release. The library and the Gradle plugin go to Maven Central and the desktop app ships with the same number.
 - `desktop <version>` (e.g. `desktop 2.2.2`): a desktop-only release. Nothing goes to Maven Central.
-- No version: read it from `gradle/libs.versions.toml`, using `dari` for a full release and `dariDesktop` for `desktop`.
+- `ios <version>` (e.g. `ios 3.1.0`): an iOS-only release. Only the tag ships it, through SPM; no Maven Central, no desktop installers.
+- No version: read it from `gradle/libs.versions.toml`, using `dari` for a full release and `dariDesktop` for `desktop`. For `ios`, ask.
 
-Both releases share one number line, set in `gradle/libs.versions.toml`: `dari` is the library, `dariDesktop` is the desktop app. They differ only after a desktop-only release.
-The desktop updater, `install-desktop.sh` and the download page all read GitHub's `/releases/latest`, so every GitHub release needs the desktop installers, a plain semver tag, and must not be a draft or prerelease. Apps keep working on any library version from 2.0.0 because compatibility is decided by `InspectorProtocol.VERSION`, not by these numbers.
+All releases share one number line: `dari` (library) and `dariDesktop` (desktop app) in `gradle/libs.versions.toml`, and `Dari.version` in `dari-ios/Sources/Dari/Dari.swift` (iOS SDK). SPM versions the root `Package.swift` by git tag, so every tag is also an iOS release.
+The desktop updater, `install-desktop.sh` and the download page all read GitHub's `/releases/latest`, so every release marked Latest needs the desktop installers, a plain semver tag, and must not be a draft or prerelease. An iOS-only release has no installers, so it is never marked Latest. Apps keep working on any library version from 2.0.0 because compatibility is decided by `InspectorProtocol.VERSION`, not by these numbers.
 
 ## Step 1: Pick the mode and verify the version
 - Everything going into the release must already be merged to `main` with CI green. If a feature PR is still open, verify it (and wait for its checks) and merge it first.
-- Run `gh release list --limit 3` and note the latest tag. The new version must be higher, or installed desktop apps never see it.
+- Run `gh release list --limit 3` and note the highest tag, including an iOS-only release that isn't Latest. The new version must be higher, or installed desktop apps never see it and SPM rejects the duplicate.
+- **Every mode**: set `Dari.version` to the version, so iOS apps report the tag SPM resolved.
 - **Full release**: set both `dari` and `dariDesktop` to the version.
 - **Desktop-only release**: set only `dariDesktop`; leave `dari` alone.
   - First run `git diff --stat <latest_tag>..HEAD -- dari dari-core dari-noop dari-runtime dari-inspector-protocol dari-gradle-plugin`. If it lists anything, stop and ask the user: library or protocol changes need a full release, or apps never get them.
-- Make the bump in a PR: branch `chore/bump-desktop-<version>` (or `chore/bump-version-<version>` for a full release) from `origin/main`, commit `chore: bump the desktop app to <version>`, open the PR, wait for CI, then merge it.
+- **iOS-only release**: leave `dari` and `dariDesktop` alone.
+  - First run `git diff --stat <latest_tag>..HEAD -- dari dari-core dari-noop dari-runtime dari-inspector-protocol dari-gradle-plugin dari-desktop-app`. If it lists anything, stop and ask the user: those need a full or desktop release.
+- Make the bump in a PR: branch `chore/bump-desktop-<version>` (`chore/bump-ios-<version>` for iOS-only, `chore/bump-version-<version>` for a full release) from `origin/main`, commit `chore: bump the desktop app to <version>`, open the PR, wait for CI, then merge it.
 - The bump must be on `main` before tagging, because `desktop-release.yml` checks out the tag and fails when `dariDesktop` doesn't match it.
 
 ## Step 2: Publish to Maven Central (full release only)
-- Skip this step for a desktop-only release; publishing would put an unchanged library and plugin on Maven Central under a new number.
+- Skip this step for a desktop-only or iOS-only release; publishing would put an unchanged library and plugin on Maven Central under a new number.
 - Run `./gradlew clean publishAllPublicationsToMavenCentralRepository` for the library modules.
 - Then publish the Gradle plugin in its own run: `./gradlew -p dari-gradle-plugin clean publishAllPublicationsToMavenCentralRepository`
   - Keep the runs separate. `:sample` applies the plugin, so a root run builds the plugin jar while configuring, and a root `clean` would delete it before upload. In 2.6.0 that left Central with "Bundle has no files".
@@ -31,7 +35,7 @@ The desktop updater, `install-desktop.sh` and the download page all read GitHub'
 - Run `gh release view <latest_tag>` to reference the existing release note style.
 - For each PR merged since the previous tag (the `Merge pull request #N` commits), run `gh pr view <N> --json body` and look for a **Behavior change** note. Commit messages don't carry these, so skipping this step drops changed defaults from the notes.
 - Create a release note following the same format:
-  - Title: version number (e.g., "1.3.1"). Desktop-only: `<version> (Desktop only)`
+  - Title: version number (e.g., "1.3.1"). Desktop-only: `<version> (Desktop only)`. iOS-only: `<version> (iOS only)`
   - Tag: version number, with no prefix
   - Body structure:
     ```
@@ -45,11 +49,13 @@ The desktop updater, `install-desktop.sh` and the download page all read GitHub'
     **Full Changelog**: https://github.com/easyhooon/dari/compare/<prev_tag>...<new_tag>
     ```
   - Desktop-only: start the body with `Desktop app only. The library stays at <dari>, so there is no <version> on Maven Central and apps don't need to update.`
+  - iOS-only: start the body with `iOS SDK only. Android stays at <dari> on Maven Central and the desktop app at <dariDesktop>; neither needs to update.`
 - Omit `## Behavior changes` when no PR has one.
 - Push the tag first; a draft release doesn't create it, and the workflow checks it out: `git fetch origin && git tag <version> origin/main && git push origin <version>`
-- Create the release as a **draft**, so `/releases/latest` doesn't point installed apps at a release with no installers yet: `gh release create <version> --draft --verify-tag --title "<title>" --notes "<release notes>"`
+- **iOS-only**: publish right away without installers and without taking Latest, then skip Step 4: `gh release create <version> --verify-tag --latest=false --title "<title>" --notes "<release notes>"`
+- Otherwise create the release as a **draft**, so `/releases/latest` doesn't point installed apps at a release with no installers yet: `gh release create <version> --draft --verify-tag --title "<title>" --notes "<release notes>"`
 
-## Step 4: Attach the desktop installers, then publish
+## Step 4: Attach the desktop installers, then publish (not for iOS-only)
 - Run `gh workflow run desktop-release.yml -f tag=<version>` and wait for it with `gh run watch`.
 - Run `gh release view <version> --json assets` and confirm every installer and its `.sha256` is there: `Dari-<version>-arm64.dmg`, `Dari-<version>-x64.dmg`, `Dari-<version>-x64.exe`, `Dari-<version>-x64.msi`, `dari_<version>_amd64.deb`, `Dari-<version>-linux-x64.tar.gz`.
 - If the workflow fails or a file is missing, stop and leave the release as a draft.

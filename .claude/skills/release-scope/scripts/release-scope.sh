@@ -16,6 +16,9 @@ git rev-parse -q --verify "$ref^{commit}" > /dev/null || { echo "Unknown ref: $r
 classify() {
   case "$1" in
     */src/test/* | */src/*Test/* | */src/androidTest/*) echo test ;;
+    dari-ios/Tests/*) echo test ;;
+    # SPM resolves the root manifest from git tags, so every tag is an iOS release.
+    dari-ios/Sources/* | Package.swift) echo ios ;;
     dari/* | dari-core/* | dari-noop/* | dari-runtime/*) echo library ;;
     # The plugin ships to Maven Central with the library, under the same `dari` version.
     dari-gradle-plugin/src/main/* | dari-gradle-plugin/build.gradle.kts | dari-gradle-plugin/settings.gradle.kts) echo library ;;
@@ -51,12 +54,14 @@ version_of() {
 }
 dari_version="$(version_of dari)"
 desktop_version="$(version_of dariDesktop)"
+ios_version="$(git show "$ref:dari-ios/Sources/Dari/Dari.swift" 2> /dev/null \
+  | sed -n 's/.*static let version = "\(.*\)".*/\1/p' || true)"
 
 echo "Range: $base..$ref ($(git rev-list --count --no-merges "$base..$ref") commits)"
-echo "On $ref: dari=$dari_version dariDesktop=${desktop_version:-<not split yet, follows dari>}"
+echo "On $ref: dari=$dari_version dariDesktop=${desktop_version:-<not split yet, follows dari>} Dari.version=${ios_version:-<no iOS SDK>}"
 echo
 
-for area in library protocol desktop desktop-tooling shared-build test no-release; do
+for area in library protocol desktop ios desktop-tooling shared-build test no-release; do
   list="$(files "$area")"
   [ -n "$list" ] || continue
   count="$(printf '%s\n' "$list" | grep -c .)"
@@ -77,6 +82,9 @@ if [ -n "$(files library)" ] || [ -n "$(files protocol)" ]; then
 elif [ -n "$(files desktop)" ]; then
   verdict=desktop
   reason="only the desktop app changed; no library change to publish"
+elif [ -n "$(files ios)" ]; then
+  verdict=ios
+  reason="only the iOS SDK changed; the tag ships it through SPM, so skip Maven and the desktop installers"
 elif [ -n "$(files shared-build)" ]; then
   verdict=review
   reason="shared build files changed; check whether they alter the published library or the desktop app"
@@ -89,6 +97,9 @@ echo "VERDICT: $verdict"
 echo "Reason: $reason"
 if [ "$verdict" != review ] && [ -n "$(files shared-build)" ]; then
   echo "Check: shared build files changed too; confirm they don't change the published library."
+fi
+if [ "$verdict" != ios ] && [ -n "$(files ios)" ]; then
+  echo "Note: the iOS SDK changed too; it ships with the tag, so mention it in the notes."
 fi
 if [ -n "$protocol_version_change" ]; then
   echo "WARNING: InspectorProtocol.VERSION changed:"

@@ -22,6 +22,7 @@
 - Always run `./gradlew clean` before `publishAllPublicationsToMavenCentralRepository` to ensure freshly compiled artifacts are uploaded (not stale build cache).
 - The Gradle plugin publishes in a separate run after the library: `./gradlew -p dari-gradle-plugin clean publishAllPublicationsToMavenCentralRepository`. The root run doesn't reach it, because a root `clean` deletes the plugin jar the root build compiled while configuring.
 - `dari` (library and Gradle plugin) and `dariDesktop` (desktop app) in `gradle/libs.versions.toml` share one number line. A desktop-only fix bumps only `dariDesktop` and skips Maven; apps don't need a library bump because compatibility is `InspectorProtocol.VERSION`. Use `/release desktop <version>`.
+- The iOS SDK ships through SPM from git tags, so every tag is an iOS release and `Dari.version` in `dari-ios/Sources/Dari/Dari.swift` must match it. An iOS-only change skips Maven and the installers: `/release ios <version>`, published with `--latest=false` so the desktop updater ignores it.
 
 ## Skills
 
