@@ -64,7 +64,11 @@ public struct DariAutoCapture {
     }
 
     static func functionName(_ script: String) -> String? {
-        let trimmed = script.drop { $0.isWhitespace }
+        var trimmed = script.drop { $0.isWhitespace }
+        // callAsyncJavaScript bodies usually start with `return` or `await`.
+        for keyword in ["return", "await"] where trimmed.hasPrefix(keyword + " ") {
+            trimmed = trimmed.dropFirst(keyword.count).drop { $0.isWhitespace }
+        }
         let name = trimmed.prefix { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "$" || $0 == "." }
         guard !name.isEmpty, trimmed.dropFirst(name.count).drop(while: \.isWhitespace).first == "(" else { return nil }
         return String(name)

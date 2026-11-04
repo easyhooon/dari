@@ -34,6 +34,7 @@ final class AutoCaptureTests: XCTestCase {
     func testDefaultScriptNamesTheCalledFunction() {
         XCTAssertEqual(DariAutoCapture.functionName("  window.app.onPush ({})"), "window.app.onPush")
         XCTAssertNil(DariAutoCapture.functionName("document.title"))
+        XCTAssertEqual(DariAutoCapture.functionName("return await app.load(id)"), "app.load")
         guard case let .request(handlerName, _, _, _) = DariAutoCapture.defaultScript("1 + 1") else { return XCTFail() }
         XCTAssertEqual(handlerName, "evaluateJavaScript")
     }

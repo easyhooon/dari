@@ -14,21 +14,23 @@ final class BridgeMacroTests: XCTestCase {
         try Dari.shared.start(DariConfiguration(ports: 38_700...38_707))
         try runPage()
         let records = Dari.shared.records
-        XCTAssertEqual(records.map(\.handlerName), ["toast", "getUser", "getToken", "Math.max"])
-        XCTAssertEqual(records.map(\.tag), ["macro", "macro", "macro", "macro"])
+        XCTAssertEqual(records.map(\.handlerName), ["toast", "getUser", "getToken", "Math.max", "Math.min", "Math.abs"])
+        XCTAssertEqual(Set(records.map(\.tag)), ["macro"])
         XCTAssertEqual(records[1].responseData, #"{"name":"dari"}"#)
         XCTAssertEqual(records[1].status, .success)
         XCTAssertEqual(records[2].responseData, "token expired")
         XCTAssertEqual(records[2].status, .error)
         XCTAssertEqual(records[3].responseData, "2")
+        XCTAssertEqual(records[4].responseData, "1")
+        XCTAssertEqual(records[5].responseData, "3")
     }
 
     @MainActor
     func testAutoCaptureRecordsOnce() throws {
         try Dari.shared.start(DariConfiguration(ports: 38_700...38_707, autoCapture: DariAutoCapture(tag: "auto")))
         try runPage()
-        XCTAssertEqual(Dari.shared.records.map(\.handlerName), ["toast", "getUser", "getToken", "Math.max"])
-        XCTAssertEqual(Dari.shared.records.map(\.tag), ["auto", "auto", "auto", "macro"])
+        XCTAssertEqual(Dari.shared.records.map(\.handlerName), ["toast", "getUser", "getToken", "Math.max", "Math.min", "Math.abs"])
+        XCTAssertEqual(Dari.shared.records.map(\.tag), ["auto", "auto", "auto", "macro", "macro", "macro"])
     }
 
     @MainActor
@@ -56,6 +58,14 @@ final class BridgeMacroTests: XCTestCase {
         let evaluated = expectation(description: "script")
         webView.dariEvaluateJavaScript("Math.max(1, 2)", tag: "macro") { _, _ in evaluated.fulfill() }
         wait(for: [evaluated], timeout: 10)
+
+        let called = expectation(description: "async scripts")
+        Task {
+            _ = try await webView.dariEvaluateJavaScript("Math.min(1, 2)", contentWorld: .page, tag: "macro")
+            _ = try await webView.dariCallAsyncJavaScript("return Math.abs(x)", arguments: ["x": -3], contentWorld: .page, tag: "macro")
+            called.fulfill()
+        }
+        wait(for: [called], timeout: 10)
     }
 }
 
