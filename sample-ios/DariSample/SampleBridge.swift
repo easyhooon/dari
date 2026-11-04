@@ -1,40 +1,13 @@
-import Dari
+import DariMacros
 import Foundation
 import WebKit
 
 /// A typical callback-id bridge: the page posts `{type, handler, requestId, data}` and the app answers
-/// through `onBridgeResponse`. Dari records it through [autoCapture], so the bridge itself has no Dari calls.
+/// through `onBridgeResponse`. `@DariBridge` records the messages and `dariEvaluateJavaScript` the scripts,
+/// so nothing is swizzled. Launch with `-DariAutoCapture YES` to record through [SampleCapture.autoCapture] instead.
+@DariBridge(tag: "sample", parseMessage: SampleCapture.parseMessage)
 final class SampleBridge: NSObject, WKScriptMessageHandler {
     static let name = "bridge"
-
-    /// Maps this bridge's message types and callback scripts to Dari captures.
-    static let autoCapture = DariAutoCapture(
-        tag: "sample",
-        parseMessage: { name, body in
-            guard let body = body as? [String: Any] else { return .ignore }
-            let handler = body["handler"] as? String ?? name
-            let data = body["data"] as? String
-            switch body["type"] as? String {
-            case "request":
-                return .request(handlerName: handler, requestId: body["requestId"] as? String, data: data)
-            case "fireAndForget":
-                return .request(handlerName: handler, requestId: nil, data: data, fireAndForget: true)
-            case "appToWebResponse":
-                return .response(requestId: body["requestId"] as? String ?? "", data: data, isSuccess: body["success"] as? Bool ?? false)
-            default:
-                return .ignore
-            }
-        },
-        parseScript: { script in
-            if let args = arguments(script, of: "onBridgeResponse"), let requestId = args.first as? String {
-                return .response(requestId: requestId, data: args.last as? String, isSuccess: args.dropFirst().first as? Bool ?? false)
-            }
-            if let args = arguments(script, of: "onAppRequest"), let handler = args.first as? String {
-                return .request(handlerName: handler, requestId: args.dropFirst().first as? String, data: args.last as? String)
-            }
-            return DariAutoCapture.defaultScript(script)
-        }
-    )
 
     weak var webView: WKWebView?
     private var appToWebCount = 0
@@ -91,7 +64,7 @@ final class SampleBridge: NSObject, WKScriptMessageHandler {
     }
 
     private func evaluate(_ script: String) {
-        webView?.evaluateJavaScript(script)
+        webView?.dariEvaluateJavaScript(script, tag: "sample", parseScript: SampleCapture.parseScript)
     }
 
     private func json(_ object: [String: Any]) -> String {
@@ -104,6 +77,40 @@ final class SampleBridge: NSObject, WKScriptMessageHandler {
         let data = (try? JSONEncoder().encode(text)) ?? Data("\"\"".utf8)
         return String(decoding: data, as: UTF8.self)
     }
+}
+
+/// Maps the sample bridge's messages and callback scripts to Dari captures. It lives outside SampleBridge
+/// because a macro's arguments can't refer to the type the macro is attached to.
+enum SampleCapture {
+    /// Maps this bridge's message types to Dari captures.
+    static let parseMessage: (String, Any) -> DariCapture = { name, body in
+        guard let body = body as? [String: Any] else { return .ignore }
+        let handler = body["handler"] as? String ?? name
+        let data = body["data"] as? String
+        switch body["type"] as? String {
+        case "request":
+            return .request(handlerName: handler, requestId: body["requestId"] as? String, data: data)
+        case "fireAndForget":
+            return .request(handlerName: handler, requestId: nil, data: data, fireAndForget: true)
+        case "appToWebResponse":
+            return .response(requestId: body["requestId"] as? String ?? "", data: data, isSuccess: body["success"] as? Bool ?? false)
+        default:
+            return .ignore
+        }
+    }
+
+    /// Maps this bridge's callback scripts to Dari captures.
+    static let parseScript: (String) -> DariCapture = { script in
+        if let args = arguments(script, of: "onBridgeResponse"), let requestId = args.first as? String {
+            return .response(requestId: requestId, data: args.last as? String, isSuccess: args.dropFirst().first as? Bool ?? false)
+        }
+        if let args = arguments(script, of: "onAppRequest"), let handler = args.first as? String {
+            return .request(handlerName: handler, requestId: args.dropFirst().first as? String, data: args.last as? String)
+        }
+        return DariAutoCapture.defaultScript(script)
+    }
+
+    static let autoCapture = DariAutoCapture(tag: "sample", parseMessage: parseMessage, parseScript: parseScript)
 
     /// The arguments of a `function(...)` call whose arguments are JSON literals, as this bridge writes them.
     private static func arguments(_ script: String, of function: String) -> [Any]? {

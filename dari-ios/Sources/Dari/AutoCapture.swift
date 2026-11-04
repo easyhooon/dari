@@ -64,7 +64,11 @@ public struct DariAutoCapture {
     }
 
     static func functionName(_ script: String) -> String? {
-        let trimmed = script.drop { $0.isWhitespace }
+        var trimmed = script.drop { $0.isWhitespace }
+        // callAsyncJavaScript bodies usually start with `return` or `await`.
+        for keyword in ["return", "await"] where trimmed.hasPrefix(keyword + " ") {
+            trimmed = trimmed.dropFirst(keyword.count).drop { $0.isWhitespace }
+        }
         let name = trimmed.prefix { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "$" || $0 == "." }
         guard !name.isEmpty, trimmed.dropFirst(name.count).drop(while: \.isWhitespace).first == "(" else { return nil }
         return String(name)
@@ -84,25 +88,43 @@ enum AutoCaptureIds {
     }
 }
 
+/// A web view's interceptors, one per tag so `@DariBridge` handlers with their own tags stay apart.
+final class WebViewInterceptors {
+    var byTag: [String: DariInterceptor] = [:]
+}
+
 extension Dari {
+    /// This web view's interceptor for [tag], or nil when Dari isn't running.
+    func webViewInterceptor(_ webView: WKWebView?, tag: String?) -> DariInterceptor? {
+        guard port != nil else { return nil }
+        guard let webView else { return interceptor(tag: tag) }
+        let interceptors = objc_getAssociatedObject(webView, &WebKitHooks.interceptorKey) as? WebViewInterceptors ?? {
+            let created = WebViewInterceptors()
+            objc_setAssociatedObject(webView, &WebKitHooks.interceptorKey, created, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            return created
+        }()
+        let webViewInterceptor = interceptors.byTag[tag ?? ""] ?? interceptor(tag: tag)
+        interceptors.byTag[tag ?? ""] = webViewInterceptor
+        webViewInterceptor.onPageUrlChanged(webView.url?.absoluteString)
+        return webViewInterceptor
+    }
+
     /// The settings and this web view's interceptor, or nil when auto capture is off.
     func autoCaptureContext(_ webView: WKWebView?) -> (DariAutoCapture, DariInterceptor)? {
-        guard let capture = autoCapture else { return nil }
-        guard let webView else { return (capture, interceptor(tag: capture.tag)) }
-        let existing = objc_getAssociatedObject(webView, &WebKitHooks.interceptorKey) as? DariInterceptor
-        let webViewInterceptor = existing ?? interceptor(tag: capture.tag)
-        if existing == nil {
-            objc_setAssociatedObject(webView, &WebKitHooks.interceptorKey, webViewInterceptor, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        }
-        webViewInterceptor.onPageUrlChanged(webView.url?.absoluteString)
-        return (capture, webViewInterceptor)
+        guard let capture = autoCapture, let interceptor = webViewInterceptor(webView, tag: capture.tag) else { return nil }
+        return (capture, interceptor)
     }
 
     /// Records a Web → App message and returns what a reply needs to pair with it.
     /// Only [replying] handlers get a generated id, since nothing else answers an id-less message.
-    func captureMessage(_ message: WKScriptMessage, replying: Bool) -> (DariInterceptor, handlerName: String, requestId: String)? {
-        guard let (capture, interceptor) = autoCaptureContext(message.webView) else { return nil }
-        switch capture.parseMessage(message.name, message.body) {
+    func captureMessage(
+        _ message: WKScriptMessage,
+        replying: Bool,
+        tag: String?,
+        parse: (_ name: String, _ body: Any) -> DariCapture
+    ) -> (DariInterceptor, handlerName: String, requestId: String)? {
+        guard let interceptor = webViewInterceptor(message.webView, tag: tag) else { return nil }
+        switch parse(message.name, message.body) {
         case let .request(handlerName, requestId, data, fireAndForget):
             let requestId = requestId ?? (replying ? AutoCaptureIds.next() : nil)
             interceptor.onWebToAppRequest(handlerName: handlerName, requestId: requestId, requestData: data, fireAndForget: fireAndForget)
@@ -116,9 +138,14 @@ extension Dari {
     }
 
     /// Records an App → Web script. Returns a completion that records the result when the script itself is the call.
-    func captureScript(_ script: String, webView: WKWebView) -> ((Any?, Error?) -> Void)? {
-        guard let (capture, interceptor) = autoCaptureContext(webView) else { return nil }
-        switch capture.parseScript(script) {
+    func captureScript(
+        _ script: String,
+        webView: WKWebView,
+        tag: String?,
+        parse: (_ script: String) -> DariCapture
+    ) -> ((Any?, Error?) -> Void)? {
+        guard let interceptor = webViewInterceptor(webView, tag: tag) else { return nil }
+        switch parse(script) {
         case let .request(handlerName, requestId?, data, fireAndForget):
             // The page answers this one through a message.
             interceptor.onAppToWebRequest(handlerName: handlerName, requestId: requestId, data: data, fireAndForget: fireAndForget)
@@ -149,7 +176,11 @@ final class RecordingMessageHandler: NSObject, WKScriptMessageHandler {
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-        _ = Dari.shared.captureMessage(message, replying: false)
+        guard let capture = Dari.shared.autoCapture else {
+            return wrapped.userContentController(controller, didReceive: message)
+        }
+        _ = Dari.shared.captureMessage(message, replying: false, tag: capture.tag, parse: capture.parseMessage)
+        WebKitHooks.markRecorded(message)
         wrapped.userContentController(controller, didReceive: message)
     }
 }
@@ -166,18 +197,29 @@ final class RecordingReplyHandler: NSObject, WKScriptMessageHandlerWithReply {
         didReceive message: WKScriptMessage,
         replyHandler: @escaping (Any?, String?) -> Void
     ) {
-        guard let (interceptor, handlerName, requestId) = Dari.shared.captureMessage(message, replying: true) else {
+        guard let capture = Dari.shared.autoCapture else {
             return wrapped.userContentController(controller, didReceive: message, replyHandler: replyHandler)
         }
-        wrapped.userContentController(controller, didReceive: message) { reply, error in
-            interceptor.onWebToAppResponse(
-                handlerName: handlerName,
-                requestId: requestId,
-                responseData: error ?? DariAutoCapture.stringify(reply),
-                isSuccess: error == nil
-            )
-            replyHandler(reply, error)
-        }
+        let captured = Dari.shared.captureMessage(message, replying: true, tag: capture.tag, parse: capture.parseMessage)
+        WebKitHooks.markRecorded(message)
+        wrapped.userContentController(controller, didReceive: message, replyHandler: captured.map { recordingReply($0, replyHandler) } ?? replyHandler)
+    }
+}
+
+/// Records the handler's reply as the response to the captured request, then passes it on.
+func recordingReply(
+    _ captured: (DariInterceptor, handlerName: String, requestId: String),
+    _ replyHandler: @escaping (Any?, String?) -> Void
+) -> (Any?, String?) -> Void {
+    let (interceptor, handlerName, requestId) = captured
+    return { reply, error in
+        interceptor.onWebToAppResponse(
+            handlerName: handlerName,
+            requestId: requestId,
+            responseData: error ?? DariAutoCapture.stringify(reply),
+            isSuccess: error == nil
+        )
+        replyHandler(reply, error)
     }
 }
 
@@ -186,6 +228,7 @@ enum WebKitHooks {
     static var interceptorKey: UInt8 = 0
     /// WebKit may route one evaluate overload through another; record only the outermost call.
     static var evaluating = false
+    static var recordedKey: UInt8 = 0
     private static let installOnce: Void = {
         swizzle(WKUserContentController.self, "addScriptMessageHandler:name:", #selector(WKUserContentController.dari_add(_:name:)))
         swizzle(
@@ -205,6 +248,15 @@ enum WebKitHooks {
             #selector(WKWebView.dari_evaluateJavaScript(_:inFrame:inContentWorld:completionHandler:))
         )
     }()
+
+    /// Marks a message auto capture recorded, so `@DariBridge` doesn't record it again, even after an async hop.
+    static func markRecorded(_ message: WKScriptMessage) {
+        objc_setAssociatedObject(message, &recordedKey, true, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+
+    static func isRecorded(_ message: WKScriptMessage) -> Bool {
+        objc_getAssociatedObject(message, &recordedKey) != nil
+    }
 
     static func install() {
         _ = installOnce
@@ -233,7 +285,8 @@ enum WebKitHooks {
         _ completionHandler: ((Any?, Error?) -> Void)?,
         original: (((Any?, Error?) -> Void)?) -> Void
     ) {
-        guard !evaluating, let record = Dari.shared.captureScript(script, webView: webView) else {
+        guard !evaluating, let capture = Dari.shared.autoCapture,
+              let record = Dari.shared.captureScript(script, webView: webView, tag: capture.tag, parse: capture.parseScript) else {
             let outermost = !evaluating
             evaluating = true
             defer { if outermost { evaluating = false } }

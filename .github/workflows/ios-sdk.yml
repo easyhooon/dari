@@ -1,0 +1,33 @@
+name: iOS SDK
+
+on:
+  pull_request:
+    paths:
+      - "dari-ios/**"
+      - "Package.swift"
+      - ".github/workflows/ios-sdk.yml"
+  push:
+    branches: [main]
+    paths:
+      - "dari-ios/**"
+      - "Package.swift"
+      - ".github/workflows/ios-sdk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Show toolchain
+        run: swift --version
+      # Body macros need Swift 6.0+; macOS tests cover WKWebView capture without a Simulator.
+      - name: Test
+        working-directory: dari-ios
+        run: swift test
+      - name: Build the root package for iOS Simulator
+        run: xcodebuild -scheme DariMacros -destination 'generic/platform=iOS Simulator' -quiet build
