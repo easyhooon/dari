@@ -152,26 +152,67 @@ DariAutoCapture(
 
 ## Compile-time capture with macros
 
-Since 3.2.0, the `DariMacros` product records message handlers with a Swift macro instead of runtime hooks. Use it when swizzling is off-limits, clashes with another SDK, or you want the recording visible in your code. Link `DariMacros` to your app target and mark the handler type:
+Since 3.2.0, Dari offers a third way to record bridge traffic: a Swift macro that adds the recording call to your handler while it compiles. All three ways show the same thing in the desktop app, so pick by how you want the recording to get into your code:
+
+| | Interceptor | `autoCapture` | `DariMacros` |
+|---|---|---|---|
+| How it records | You call `interceptor` in your bridge code | Swaps WebKit methods at runtime (method swizzling) | A macro writes the recording call into your handler at compile time |
+| What you change | Every send and receive | One line in `start()` | One attribute per handler type, and `dari*` instead of `evaluateJavaScript` |
+| Covers third-party SDK handlers | No | Yes | No |
+
+Choose `DariMacros` when your team avoids swizzling, another SDK already swizzles WebKit, or you want to see in code exactly which handlers are recorded. Otherwise `autoCapture` is less work.
+
+<Callout>
+**New to Swift macros?** A macro is code that runs inside the compiler and adds code to yours. The result isn't a separate generated file: it is merged into the declaration you put the attribute on. In Xcode, right-click the attribute and choose **Expand Macro** to see the generated code.
+</Callout>
+
+### 1. Add the DariMacros library
+
+In Xcode, open your target's **General → Frameworks, Libraries, and Embedded Content**, click **+**, and add **DariMacros** from the dari package. It includes `Dari`, so `import DariMacros` is enough. With `Package.swift`:
+
+```swift
+.product(name: "DariMacros", package: "dari")
+```
+
+The first build asks you to trust the macro: choose **Trust & Enable**. On CI, pass `-skipMacroValidation` to `xcodebuild`. Macros need Xcode 16 or later, which every current Xcode is.
+
+### 2. Mark your message handler
+
+Put `@DariBridge` on the class that implements `WKScriptMessageHandler`, the one you register with `add(_:name:)`:
 
 ```swift
 import DariMacros
 
 @DariBridge(tag: "main")
 final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWithReply {
-    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) { … }
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        // your code, unchanged
+    }
 
     func userContentController(
         _ controller: WKUserContentController,
         didReceive message: WKScriptMessage,
         replyHandler: @escaping (Any?, String?) -> Void
-    ) { … }
+    ) {
+        // your code, unchanged
+    }
 }
 ```
 
-`@DariBridge` adds `@DariBridgeHandler` to each message handler method, which records the message, and the reply, before your code runs. It covers `userContentController(_:didReceive:)`, `userContentController(_:didReceive:replyHandler:)` and the `async -> (Any?, String?)` form. Both macros take the same `tag` and `parseMessage` as `DariAutoCapture`.
+That's all for the Web → App side. The macro finds each message handler method and adds one line at the top of it. Conceptually the second method becomes:
 
-Handlers declared in an extension are covered when the extension carries `@DariBridge` too:
+```swift
+func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
+    let replyHandler = _DariBridgeSupport.record(message, tag: "main", replyHandler: replyHandler)
+    // your code, unchanged
+}
+```
+
+The message is recorded as a Web → App request, and the wrapped `replyHandler` records your answer as its response. You never call `_DariBridgeSupport` yourself.
+
+- Covered methods: `userContentController(_:didReceive:)`, `userContentController(_:didReceive:replyHandler:)`, and the `async -> (Any?, String?)` form. Other methods in the type are left alone.
+- `tag` and `parseMessage` work as in `DariAutoCapture`.
+- Handlers in an extension need `@DariBridge` on that extension too, because a macro only sees the declaration it is attached to:
 
 ```swift
 @DariBridge(tag: "main")
@@ -180,19 +221,32 @@ extension Bridge: WKScriptMessageHandlerWithReply {
 }
 ```
 
-A macro can only change code it is attached to, so it can't reach your `evaluateJavaScript` calls. Call the `dari` versions instead to record App → Web scripts without runtime hooks: `dariEvaluateJavaScript` (with or without `in:contentWorld:`) and `dariCallAsyncJavaScript`, each with a completion and an `async` form:
+### 3. Call the dari versions of the WebKit script calls
+
+App → Web calls happen wherever you call them, not inside the handler, and a macro can only change the declaration it's attached to. So for these calls, use the `dari` versions, which run the same WebKit call and record it:
+
+| Instead of | Call |
+|---|---|
+| `evaluateJavaScript(_:completionHandler:)` | `dariEvaluateJavaScript(_:tag:completionHandler:)` |
+| `evaluateJavaScript(_:in:in:completionHandler:)` | `dariEvaluateJavaScript(_:in:in:tag:completionHandler:)` |
+| `callAsyncJavaScript(_:arguments:in:in:completionHandler:)` | `dariCallAsyncJavaScript(_:arguments:in:in:tag:completionHandler:)` |
+
+Each has an `async` form too:
 
 ```swift
 webView.dariEvaluateJavaScript("onPush(\(json))", tag: "main") { result, error in … }
-let value = try await webView.dariEvaluateJavaScript("document.title", tag: "main")
+let title = try await webView.dariEvaluateJavaScript("document.title", tag: "main")
 ```
 
 They take the same `parseScript` as `DariAutoCapture`; `dariCallAsyncJavaScript` passes it the function body.
 
-- The macro runs on your Mac while compiling, so swift-syntax isn't linked into the app. Apps that link only `Dari` don't build swift-syntax at all, though SPM still downloads it when resolving the package.
-- Recording is a no-op until `start()`, so release builds that never start Dari record nothing.
-- Bridge handlers inside third-party SDKs can't carry the macro. `autoCapture` still records those.
-- With `autoCapture` on as well, each message is recorded once, under the `autoCapture` tag.
+### Good to know
+
+- The macro runs on your Mac while compiling, so swift-syntax isn't linked into your app. SPM still downloads it when resolving the package, even for apps that link only `Dari`.
+- Recording does nothing until `start()`, so builds that never start Dari record nothing.
+- Bridge handlers inside third-party SDKs can't carry the macro. Turn on `autoCapture` for those.
+- You can use both: with `autoCapture` on as well, each message is recorded once, under the `autoCapture` tag.
+- Throwing handlers aren't supported, because WebKit's message handler methods don't throw.
 
 ## Connect
 
