@@ -150,6 +150,33 @@ DariAutoCapture(
 - Handlers added before `start()`, and Swift bridge code outside these WebKit calls, aren't captured. Use the interceptor for those.
 - Leave `autoCapture` off if your bridge already calls the interceptor, or messages are recorded twice.
 
+## Compile-time capture with macros
+
+Since 3.2.0, the `DariMacros` product records message handlers with a Swift macro instead of runtime hooks. Use it when swizzling is off-limits, clashes with another SDK, or you want the recording visible in your code. Link `DariMacros` to your app target and mark the handler type:
+
+```swift
+import DariMacros
+
+@DariBridge(tag: "main")
+final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWithReply {
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) { … }
+
+    func userContentController(
+        _ controller: WKUserContentController,
+        didReceive message: WKScriptMessage,
+        replyHandler: @escaping (Any?, String?) -> Void
+    ) { … }
+}
+```
+
+`@DariBridge` adds `@DariBridgeHandler` to each `userContentController(_:didReceive:)` and `userContentController(_:didReceive:replyHandler:)` method, which records the message, and the reply, before your code runs. Both macros take the same `tag` and `parseMessage` as `DariAutoCapture`.
+
+- The macro runs on your Mac while compiling, so swift-syntax isn't linked into the app. Apps that link only `Dari` don't build swift-syntax at all, though SPM still downloads it when resolving the package.
+- Recording is a no-op until `start()`, so release builds that never start Dari record nothing.
+- Methods declared in an extension aren't reached by `@DariBridge`; put `@DariBridgeHandler` on them directly.
+- The `async` handler variant isn't supported yet, and App → Web `evaluateJavaScript` calls aren't recorded. Use `autoCapture` or the interceptor for those.
+- With `autoCapture` on as well, each message is recorded once, under the `autoCapture` tag.
+
 ## Connect
 
 1. Run the app in a Simulator, or on an iPhone or iPad attached over USB.

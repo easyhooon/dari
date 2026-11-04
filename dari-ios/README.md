@@ -8,7 +8,7 @@ The full integration guide, including Staging builds and troubleshooting, is in 
 
 ## Install
 
-Add `https://github.com/easyhooon/dari` as a Swift package (from `3.0.0`) and link the `Dari` product to your app target. The root `Package.swift` exposes only the library; this folder's manifest adds the tests and the loopback demo.
+Add `https://github.com/easyhooon/dari` as a Swift package (from `3.0.0`) and link the `Dari` product to your app target. The root `Package.swift` exposes only the `Dari` and `DariMacros` libraries; this folder's manifest adds the tests and the loopback demo.
 
 ## Integrate
 
@@ -48,6 +48,15 @@ Or let Dari hook WebKit instead (3.1.0+). Start it before creating web views; se
 
 ```swift
 try? Dari.shared.start(DariConfiguration(autoCapture: DariAutoCapture(tag: "main")))
+```
+
+Or record message handlers at compile time with the `DariMacros` product (3.2.0+), with no runtime hooks; see the [iOS guide](https://easyhooon.github.io/dari/docs/ios#compile-time-capture-with-macros):
+
+```swift
+import DariMacros
+
+@DariBridge(tag: "main")
+final class Bridge: NSObject, WKScriptMessageHandler { … }
 ```
 
 Requests and responses are paired by `requestId`, the same way as on Android. A nil `requestId`, or `fireAndForget: true`, records a message that is complete as soon as it's sent.
