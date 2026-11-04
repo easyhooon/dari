@@ -25,6 +25,12 @@ final class AutoCaptureTests: XCTestCase {
         XCTAssertEqual(data, "hi")
     }
 
+    func testStringifyFallsBackForNonJsonValues() {
+        XCTAssertEqual(DariAutoCapture.stringify(2), "2")
+        XCTAssertEqual(DariAutoCapture.stringify(Double.nan), "nan")
+        XCTAssertNotNil(DariAutoCapture.stringify(["at": Date(timeIntervalSince1970: 0)]))
+    }
+
     func testDefaultScriptNamesTheCalledFunction() {
         XCTAssertEqual(DariAutoCapture.functionName("  window.app.onPush ({})"), "window.app.onPush")
         XCTAssertNil(DariAutoCapture.functionName("document.title"))

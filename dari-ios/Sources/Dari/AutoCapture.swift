@@ -54,7 +54,9 @@ public struct DariAutoCapture {
         case nil, is NSNull: return nil
         case let text as String: return text
         case let value?:
-            guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys, .fragmentsAllowed]) else {
+            // data(withJSONObject:) raises an uncatchable ObjC exception on NaN, Date and the like.
+            guard JSONSerialization.isValidJSONObject([value]),
+                  let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys, .fragmentsAllowed]) else {
                 return String(describing: value)
             }
             return String(decoding: data, as: UTF8.self)
