@@ -107,7 +107,48 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
 - Pass `displayName:` when the handler name isn't readable on its own.
 - Calls made before `start()` are ignored.
 
-Automatic capture without these calls, like the Android [Gradle plugin](./gradle-plugin), is not available yet. The options are compared in [this issue comment](https://github.com/easyhooon/dari/issues/255#issuecomment-6491895309).
+## Automatic capture
+
+Since 3.1.0, Dari can record bridge traffic without interceptor calls, like the Android [Gradle plugin](./gradle-plugin). Pass `autoCapture` to `start()`, before your app creates its web views:
+
+```swift
+try Dari.shared.start(DariConfiguration(autoCapture: DariAutoCapture(tag: "main")))
+```
+
+Dari then hooks WebKit at runtime:
+
+| WebKit call | Recorded as |
+|---|---|
+| A handler added with `add(_:name:)` receives a message | Web → App request |
+| A `WKScriptMessageHandlerWithReply` replies | The response to that request |
+| `evaluateJavaScript` | App → Web request, answered by its completion result or error |
+
+Each WKWebView gets its own interceptor, and the page URL is read from the web view on every call.
+
+By default, a dictionary body's `handler`, `requestId` and `data` fields name and pair the call, and a script is named after the function it calls. When your bridge uses other fields, or answers the page through a callback script, map them yourself:
+
+```swift
+DariAutoCapture(
+    tag: "main",
+    parseMessage: { name, body in
+        let fields = body as? [String: Any] ?? [:]
+        if fields["type"] as? String == "appToWebResponse" {
+            return .response(requestId: fields["requestId"] as? String ?? "", data: fields["data"] as? String, isSuccess: fields["success"] as? Bool ?? false)
+        }
+        return DariAutoCapture.defaultMessage(name: name, body: body)
+    },
+    parseScript: { script in
+        // onBridgeResponse("<id>", true, "<json>") answers a Web → App request.
+        guard script.hasPrefix("onBridgeResponse(") else { return DariAutoCapture.defaultScript(script) }
+        return .response(requestId: parseRequestId(script), data: script, isSuccess: !script.contains(", false,"))
+    }
+)
+```
+
+- A `.request` with a `requestId` waits for a response carrying that ID. Without one, Dari generates an ID and pairs the call with its reply or completion.
+- Return `.ignore` for traffic you don't want to see.
+- Handlers added before `start()`, and Swift bridge code outside these WebKit calls, aren't captured. Use the interceptor for those.
+- Leave `autoCapture` off if your bridge already calls the interceptor, or messages are recorded twice.
 
 ## Connect
 
@@ -146,7 +187,7 @@ Swift Package Manager can't link a package to some configurations only. The Dari
 
 ## Sample app
 
-`sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, and masking. Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
+`sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, and masking. Its bridge has no Dari calls: `SampleBridge.autoCapture` maps the messages and callback scripts for [automatic capture](#automatic-capture). Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
 
 ## Troubleshooting
 

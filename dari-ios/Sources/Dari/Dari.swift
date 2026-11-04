@@ -10,17 +10,21 @@ public struct DariConfiguration {
     public var fireAndForget: Bool
     /// Loopback ports tried in order. The desktop probes the same span.
     public var ports: ClosedRange<UInt16>
+    /// When set, WKWebView bridge handlers and `evaluateJavaScript` calls are recorded without a [DariInterceptor].
+    public var autoCapture: DariAutoCapture?
 
     public init(
         maxEntries: Int = 500,
         maxContentLength: Int = 500_000,
         fireAndForget: Bool = false,
-        ports: ClosedRange<UInt16> = Dari.defaultPorts
+        ports: ClosedRange<UInt16> = Dari.defaultPorts,
+        autoCapture: DariAutoCapture? = nil
     ) {
         self.maxEntries = maxEntries
         self.maxContentLength = maxContentLength
         self.fireAndForget = fireAndForget
         self.ports = ports
+        self.autoCapture = autoCapture
     }
 }
 
@@ -58,6 +62,7 @@ public final class Dari {
             self.store = store
             self.listener = listener
         }
+        if configuration.autoCapture != nil { WebKitHooks.install() }
     }
 
     /// Stops listening, drops connected desktops and discards recorded messages.
@@ -74,6 +79,11 @@ public final class Dari {
         lock.withLock { listener?.port }
     }
 
+    /// Auto-capture settings while running, nil otherwise.
+    var autoCapture: DariAutoCapture? {
+        lock.withLock { listener == nil ? nil : configuration.autoCapture }
+    }
+
     /// Labels shown in the desktop's app info, like Android's `Dari.setEnvironment`.
     public func setEnvironment(_ labels: [String: String]) {
         lock.withLock { environment = labels }
@@ -82,6 +92,11 @@ public final class Dari {
     /// Creates an interceptor for one bridge. Use one per WKWebView so page URLs stay separate.
     public func interceptor(tag: String? = nil) -> DariInterceptor {
         DariInterceptor(tag: tag, dari: self)
+    }
+
+    /// Recorded messages, for tests.
+    var records: [MessageRecord] {
+        lock.withLock { store?.snapshot() ?? [] }
     }
 
     func record(_ body: (MessageStore, DariConfiguration) -> Void) {

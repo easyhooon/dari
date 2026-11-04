@@ -3,36 +3,53 @@ import Foundation
 import WebKit
 
 /// A typical callback-id bridge: the page posts `{type, handler, requestId, data}` and the app answers
-/// through `onBridgeResponse`. Each Dari call sits next to the bridge code it records.
-final class SampleBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+/// through `onBridgeResponse`. Dari records it through [autoCapture], so the bridge itself has no Dari calls.
+final class SampleBridge: NSObject, WKScriptMessageHandler {
     static let name = "bridge"
 
+    /// Maps this bridge's message types and callback scripts to Dari captures.
+    static let autoCapture = DariAutoCapture(
+        tag: "sample",
+        parseMessage: { name, body in
+            guard let body = body as? [String: Any] else { return .ignore }
+            let handler = body["handler"] as? String ?? name
+            let data = body["data"] as? String
+            switch body["type"] as? String {
+            case "request":
+                return .request(handlerName: handler, requestId: body["requestId"] as? String, data: data)
+            case "fireAndForget":
+                return .request(handlerName: handler, requestId: nil, data: data, fireAndForget: true)
+            case "appToWebResponse":
+                return .response(requestId: body["requestId"] as? String ?? "", data: data, isSuccess: body["success"] as? Bool ?? false)
+            default:
+                return .ignore
+            }
+        },
+        parseScript: { script in
+            if let args = arguments(script, of: "onBridgeResponse"), let requestId = args.first as? String {
+                return .response(requestId: requestId, data: args.last as? String, isSuccess: args.dropFirst().first as? Bool ?? false)
+            }
+            if let args = arguments(script, of: "onAppRequest"), let handler = args.first as? String {
+                return .request(handlerName: handler, requestId: args.dropFirst().first as? String, data: args.last as? String)
+            }
+            return DariAutoCapture.defaultScript(script)
+        }
+    )
+
     weak var webView: WKWebView?
-    private let dari = Dari.shared.interceptor(tag: "sample")
     private var appToWebCount = 0
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
         let handler = body["handler"] as? String ?? ""
-        let requestId = body["requestId"] as? String
-        let data = body["data"] as? String
         switch type {
         case "request":
-            dari.onWebToAppRequest(handlerName: handler, requestId: requestId, requestData: data)
-            if let requestId { handle(handler, requestId: requestId, data: data) }
-        case "fireAndForget":
-            dari.onWebToAppRequest(handlerName: handler, requestId: nil, requestData: data, fireAndForget: true)
-        case "appToWebResponse":
-            dari.onAppToWebResponse(requestId: requestId, isSuccess: body["success"] as? Bool ?? false, responseData: data)
+            if let requestId = body["requestId"] as? String { handle(handler, requestId: requestId, data: body["data"] as? String) }
         case "askAppToCallWeb":
             callWeb(handler)
         default:
             break
         }
-    }
-
-    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-        dari.onPageUrlChanged(webView.url?.absoluteString)
     }
 
     private func handle(_ handler: String, requestId: String, data: String?) {
@@ -62,7 +79,6 @@ final class SampleBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
     }
 
     private func respond(_ handler: String, _ requestId: String, success: Bool, _ data: String) {
-        dari.onWebToAppResponse(handlerName: handler, requestId: requestId, responseData: data, isSuccess: success)
         evaluate("onBridgeResponse(\(literal(requestId)), \(success), \(literal(data)))")
     }
 
@@ -71,7 +87,6 @@ final class SampleBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
         appToWebCount += 1
         let requestId = "app_\(appToWebCount)"
         let data = json(["source": "ios", "sentAt": Int(Date().timeIntervalSince1970)])
-        dari.onAppToWebRequest(handlerName: handler, requestId: requestId, data: data)
         evaluate("onAppRequest(\(literal(handler)), \(literal(requestId)), \(literal(data)))")
     }
 
@@ -88,5 +103,12 @@ final class SampleBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
     private func literal(_ text: String) -> String {
         let data = (try? JSONEncoder().encode(text)) ?? Data("\"\"".utf8)
         return String(decoding: data, as: UTF8.self)
+    }
+
+    /// The arguments of a `function(...)` call whose arguments are JSON literals, as this bridge writes them.
+    private static func arguments(_ script: String, of function: String) -> [Any]? {
+        guard script.hasPrefix(function + "("), script.hasSuffix(")") else { return nil }
+        let list = "[" + script.dropFirst(function.count + 1).dropLast() + "]"
+        return (try? JSONSerialization.jsonObject(with: Data(list.utf8))) as? [Any]
     }
 }

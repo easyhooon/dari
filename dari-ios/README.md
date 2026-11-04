@@ -44,6 +44,12 @@ webView.evaluateJavaScript(script) { value, error in
 }
 ```
 
+Or let Dari hook WebKit instead (3.1.0+). Start it before creating web views; see the [iOS guide](https://easyhooon.github.io/dari/docs/ios#automatic-capture) for custom field mapping:
+
+```swift
+try? Dari.shared.start(DariConfiguration(autoCapture: DariAutoCapture(tag: "main")))
+```
+
 Requests and responses are paired by `requestId`, the same way as on Android. A nil `requestId`, or `fireAndForget: true`, records a message that is complete as soon as it's sent.
 
 ## Connect

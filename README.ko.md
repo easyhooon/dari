@@ -56,7 +56,7 @@ interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
 
 앱을 실행하고 브릿지 호출을 일으킨 뒤 Dari 알림을 탭하세요. App-to-Web 메시지, 태그, Protocol Buffers는 [설정](#설정)을 참고하세요.
 
-**iOS**: `https://github.com/easyhooon/dari`를 Swift 패키지로 추가하고(`3.0.0`부터), 디버그 빌드에서 `Dari.shared.start()`를 호출한 뒤 `Dari.shared.interceptor(tag:)`로 호출을 기록합니다. 메시지는 [데스크톱 앱](#데스크톱-앱)에 표시됩니다. 자세한 내용은 [iOS 가이드](https://easyhooon.github.io/dari/ko/docs/ios)를 참고하세요.
+**iOS**: `https://github.com/easyhooon/dari`를 Swift 패키지로 추가하고(`3.0.0`부터), 디버그 빌드에서 `Dari.shared.start()`를 호출한 뒤 `Dari.shared.interceptor(tag:)`로 호출을 기록합니다. `autoCapture`(3.1.0+)를 넘기면 이 호출 없이 WebKit 브릿지 트래픽을 기록합니다. 메시지는 [데스크톱 앱](#데스크톱-앱)에 표시됩니다. 자세한 내용은 [iOS 가이드](https://easyhooon.github.io/dari/ko/docs/ios)를 참고하세요.
 
 
 ## 데스크톱 앱

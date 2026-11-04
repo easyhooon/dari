@@ -107,7 +107,48 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
 - 핸들러 이름만으로 알아보기 어려우면 `displayName:`을 넘깁니다.
 - `start()` 전에 한 호출은 무시됩니다.
 
-Android의 [Gradle 플러그인](./gradle-plugin)처럼 이 호출 없이 자동으로 수집하는 기능은 아직 없습니다. 가능한 방식은 [이슈 코멘트](https://github.com/easyhooon/dari/issues/255#issuecomment-6491895309)에 비교해 두었습니다.
+## 자동 수집
+
+3.1.0부터는 Android의 [Gradle 플러그인](./gradle-plugin)처럼 interceptor 호출 없이 브릿지 트래픽을 기록할 수 있습니다. 앱이 web view를 만들기 전에 `start()`에 `autoCapture`를 넘깁니다.
+
+```swift
+try Dari.shared.start(DariConfiguration(autoCapture: DariAutoCapture(tag: "main")))
+```
+
+그러면 Dari가 런타임에 WebKit을 훅합니다.
+
+| WebKit 호출 | 기록 방식 |
+|---|---|
+| `add(_:name:)`로 등록한 handler가 메시지를 받음 | Web → App 요청 |
+| `WKScriptMessageHandlerWithReply`가 응답함 | 그 요청의 응답 |
+| `evaluateJavaScript` | App → Web 요청. completion의 결과나 에러가 응답 |
+
+WKWebView마다 interceptor가 따로 생기고, 페이지 URL은 호출할 때마다 web view에서 읽습니다.
+
+기본적으로 딕셔너리 body의 `handler`, `requestId`, `data` 필드로 호출 이름을 정하고 짝을 맞추며, 스크립트는 호출하는 함수 이름으로 기록합니다. 브릿지가 다른 필드를 쓰거나 콜백 스크립트로 페이지에 응답한다면 직접 매핑합니다.
+
+```swift
+DariAutoCapture(
+    tag: "main",
+    parseMessage: { name, body in
+        let fields = body as? [String: Any] ?? [:]
+        if fields["type"] as? String == "appToWebResponse" {
+            return .response(requestId: fields["requestId"] as? String ?? "", data: fields["data"] as? String, isSuccess: fields["success"] as? Bool ?? false)
+        }
+        return DariAutoCapture.defaultMessage(name: name, body: body)
+    },
+    parseScript: { script in
+        // onBridgeResponse("<id>", true, "<json>")는 Web → App 요청에 대한 응답입니다.
+        guard script.hasPrefix("onBridgeResponse(") else { return DariAutoCapture.defaultScript(script) }
+        return .response(requestId: parseRequestId(script), data: script, isSuccess: !script.contains(", false,"))
+    }
+)
+```
+
+- `requestId`가 있는 `.request`는 같은 ID의 응답을 기다립니다. 없으면 Dari가 ID를 만들어 reply나 completion과 짝을 맞춥니다.
+- 보고 싶지 않은 트래픽은 `.ignore`를 반환합니다.
+- `start()` 전에 등록한 handler나, 이 WebKit 호출을 거치지 않는 Swift 브릿지 코드는 수집되지 않습니다. 이런 경우는 interceptor를 씁니다.
+- 브릿지에서 이미 interceptor를 호출하고 있다면 `autoCapture`를 켜지 마세요. 메시지가 두 번 기록됩니다.
 
 ## 연결
 
@@ -146,7 +187,7 @@ Swift Package Manager는 패키지를 일부 구성에만 링크할 수 없습�
 
 ## 샘플 앱
 
-`sample-ios/DariSample.xcodeproj`는 Web → App과 App → Web 시나리오가 담긴 페이지를 엽니다. 성공, 에러, 느린 응답, 응답 없음, fire-and-forget, 마스킹을 확인할 수 있습니다. Xcode 16 이상에서 열고 Simulator에서 **DariSample** scheme을 실행하세요.
+`sample-ios/DariSample.xcodeproj`는 Web → App과 App → Web 시나리오가 담긴 페이지를 엽니다. 성공, 에러, 느린 응답, 응답 없음, fire-and-forget, 마스킹을 확인할 수 있습니다. 브릿지 코드에는 Dari 호출이 없고, `SampleBridge.autoCapture`가 메시지와 콜백 스크립트를 [자동 수집](#자동-수집)용으로 매핑합니다. Xcode 16 이상에서 열고 Simulator에서 **DariSample** scheme을 실행하세요.
 
 ## 문제 해결
 

@@ -10,7 +10,6 @@ struct BridgeWebView: UIViewRepresentable {
         let configuration = WKWebViewConfiguration()
         configuration.userContentController.add(context.coordinator, name: SampleBridge.name)
         let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.navigationDelegate = context.coordinator
         context.coordinator.webView = webView
         if let page = Bundle.main.url(forResource: "bridge", withExtension: "html"),
            let html = try? String(contentsOf: page, encoding: .utf8) {

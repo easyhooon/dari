@@ -56,7 +56,7 @@ interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
 
 Run the app, trigger a bridge call, and tap the Dari notification. See [Setup](#setup) for App-to-Web messages, tags, and Protocol Buffers.
 
-**iOS**: add `https://github.com/easyhooon/dari` as a Swift package (from `3.0.0`), call `Dari.shared.start()` in debug builds and record calls with `Dari.shared.interceptor(tag:)`. Messages appear in the [Desktop App](#desktop-app). See the [iOS guide](https://easyhooon.github.io/dari/docs/ios).
+**iOS**: add `https://github.com/easyhooon/dari` as a Swift package (from `3.0.0`), call `Dari.shared.start()` in debug builds and record calls with `Dari.shared.interceptor(tag:)`, or pass `autoCapture` (3.1.0+) to record WebKit bridge traffic without them. Messages appear in the [Desktop App](#desktop-app). See the [iOS guide](https://easyhooon.github.io/dari/docs/ios).
 
 ## Desktop App
 
