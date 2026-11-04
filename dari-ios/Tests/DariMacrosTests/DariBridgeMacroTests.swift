@@ -62,6 +62,43 @@ final class DariBridgeMacroTests: XCTestCase {
         )
     }
 
+    func testWrapsAnAsyncHandler() {
+        assertMacroExpansion(
+            """
+            @DariBridgeHandler(tag: "web")
+            func userContentController(_ c: WKUserContentController, didReceive message: WKScriptMessage) async -> (Any?, String?) {
+                return (1, nil)
+            }
+            """,
+            expandedSource: """
+            func userContentController(_ c: WKUserContentController, didReceive message: WKScriptMessage) async -> (Any?, String?) {
+                return await _DariBridgeSupport.record(message, tag: "web") {
+                    return (1, nil)
+                }
+            }
+            """,
+            macros: macros
+        )
+    }
+
+    func testMarksHandlersInAnExtension() {
+        assertMacroExpansion(
+            """
+            @DariBridge
+            extension Bridge {
+                func userContentController(_ c: WKUserContentController, didReceive message: WKScriptMessage) async -> (Any?, String?) {}
+            }
+            """,
+            expandedSource: """
+            extension Bridge {
+                @DariBridgeHandler
+                func userContentController(_ c: WKUserContentController, didReceive message: WKScriptMessage) async -> (Any?, String?) {}
+            }
+            """,
+            macros: ["DariBridge": DariBridgeMacro.self]
+        )
+    }
+
     func testRejectsOtherFunctions() {
         assertMacroExpansion(
             """

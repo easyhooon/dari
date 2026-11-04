@@ -134,9 +134,14 @@ extension Dari {
     }
 
     /// Records an App → Web script. Returns a completion that records the result when the script itself is the call.
-    func captureScript(_ script: String, webView: WKWebView) -> ((Any?, Error?) -> Void)? {
-        guard let (capture, interceptor) = autoCaptureContext(webView) else { return nil }
-        switch capture.parseScript(script) {
+    func captureScript(
+        _ script: String,
+        webView: WKWebView,
+        tag: String?,
+        parse: (_ script: String) -> DariCapture
+    ) -> ((Any?, Error?) -> Void)? {
+        guard let interceptor = webViewInterceptor(webView, tag: tag) else { return nil }
+        switch parse(script) {
         case let .request(handlerName, requestId?, data, fireAndForget):
             // The page answers this one through a message.
             interceptor.onAppToWebRequest(handlerName: handlerName, requestId: requestId, data: data, fireAndForget: fireAndForget)
@@ -171,7 +176,8 @@ final class RecordingMessageHandler: NSObject, WKScriptMessageHandler {
             return wrapped.userContentController(controller, didReceive: message)
         }
         _ = Dari.shared.captureMessage(message, replying: false, tag: capture.tag, parse: capture.parseMessage)
-        WebKitHooks.whileRecorded { wrapped.userContentController(controller, didReceive: message) }
+        WebKitHooks.markRecorded(message)
+        wrapped.userContentController(controller, didReceive: message)
     }
 }
 
@@ -191,9 +197,8 @@ final class RecordingReplyHandler: NSObject, WKScriptMessageHandlerWithReply {
             return wrapped.userContentController(controller, didReceive: message, replyHandler: replyHandler)
         }
         let captured = Dari.shared.captureMessage(message, replying: true, tag: capture.tag, parse: capture.parseMessage)
-        WebKitHooks.whileRecorded {
-            wrapped.userContentController(controller, didReceive: message, replyHandler: captured.map { recordingReply($0, replyHandler) } ?? replyHandler)
-        }
+        WebKitHooks.markRecorded(message)
+        wrapped.userContentController(controller, didReceive: message, replyHandler: captured.map { recordingReply($0, replyHandler) } ?? replyHandler)
     }
 }
 
@@ -219,8 +224,7 @@ enum WebKitHooks {
     static var interceptorKey: UInt8 = 0
     /// WebKit may route one evaluate overload through another; record only the outermost call.
     static var evaluating = false
-    /// True while a runtime wrapper runs a handler it already recorded, so `@DariBridge` doesn't record it again.
-    static var recorded = false
+    static var recordedKey: UInt8 = 0
     private static let installOnce: Void = {
         swizzle(WKUserContentController.self, "addScriptMessageHandler:name:", #selector(WKUserContentController.dari_add(_:name:)))
         swizzle(
@@ -241,11 +245,13 @@ enum WebKitHooks {
         )
     }()
 
-    static func whileRecorded(_ body: () -> Void) {
-        let outer = recorded
-        recorded = true
-        defer { recorded = outer }
-        body()
+    /// Marks a message auto capture recorded, so `@DariBridge` doesn't record it again, even after an async hop.
+    static func markRecorded(_ message: WKScriptMessage) {
+        objc_setAssociatedObject(message, &recordedKey, true, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+
+    static func isRecorded(_ message: WKScriptMessage) -> Bool {
+        objc_getAssociatedObject(message, &recordedKey) != nil
     }
 
     static func install() {
@@ -275,7 +281,8 @@ enum WebKitHooks {
         _ completionHandler: ((Any?, Error?) -> Void)?,
         original: (((Any?, Error?) -> Void)?) -> Void
     ) {
-        guard !evaluating, let record = Dari.shared.captureScript(script, webView: webView) else {
+        guard !evaluating, let capture = Dari.shared.autoCapture,
+              let record = Dari.shared.captureScript(script, webView: webView, tag: capture.tag, parse: capture.parseScript) else {
             let outermost = !evaluating
             evaluating = true
             defer { if outermost { evaluating = false } }

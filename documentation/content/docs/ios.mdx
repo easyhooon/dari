@@ -169,12 +169,28 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWith
 }
 ```
 
-`@DariBridge` adds `@DariBridgeHandler` to each `userContentController(_:didReceive:)` and `userContentController(_:didReceive:replyHandler:)` method, which records the message, and the reply, before your code runs. Both macros take the same `tag` and `parseMessage` as `DariAutoCapture`.
+`@DariBridge` adds `@DariBridgeHandler` to each message handler method, which records the message, and the reply, before your code runs. It covers `userContentController(_:didReceive:)`, `userContentController(_:didReceive:replyHandler:)` and the `async -> (Any?, String?)` form. Both macros take the same `tag` and `parseMessage` as `DariAutoCapture`.
+
+Handlers declared in an extension are covered when the extension carries `@DariBridge` too:
+
+```swift
+@DariBridge(tag: "main")
+extension Bridge: WKScriptMessageHandlerWithReply {
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) async -> (Any?, String?) { … }
+}
+```
+
+A macro can only change code it is attached to, so it can't reach your `evaluateJavaScript` calls. Call `dariEvaluateJavaScript` instead to record App → Web scripts without runtime hooks:
+
+```swift
+webView.dariEvaluateJavaScript("onPush(\(json))", tag: "main") { result, error in … }
+let value = try await webView.dariEvaluateJavaScript("document.title", tag: "main")
+```
+
+It takes the same `parseScript` as `DariAutoCapture`.
 
 - The macro runs on your Mac while compiling, so swift-syntax isn't linked into the app. Apps that link only `Dari` don't build swift-syntax at all, though SPM still downloads it when resolving the package.
 - Recording is a no-op until `start()`, so release builds that never start Dari record nothing.
-- Methods declared in an extension aren't reached by `@DariBridge`; put `@DariBridgeHandler` on them directly.
-- The `async` handler variant isn't supported yet, and App → Web `evaluateJavaScript` calls aren't recorded. Use `autoCapture` or the interceptor for those.
 - With `autoCapture` on as well, each message is recorded once, under the `autoCapture` tag.
 
 ## Connect

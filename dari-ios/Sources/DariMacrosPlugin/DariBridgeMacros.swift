@@ -37,6 +37,9 @@ public struct DariBridgeHandlerMacro: BodyMacro {
         }
         guard let body = function.body else { return [] }
         let arguments = node.arguments?.as(LabeledExprListSyntax.self).map { ", \($0.trimmedDescription)" } ?? ""
+        if handler.isAsync {
+            return ["return await _DariBridgeSupport.record(\(raw: handler.message)\(raw: arguments)) {\(body.statements)}"]
+        }
         let record: CodeBlockItemSyntax = if let reply = handler.reply {
             "let \(raw: reply) = _DariBridgeSupport.record(\(raw: handler.message)\(raw: arguments), replyHandler: \(raw: reply))"
         } else {
@@ -50,6 +53,8 @@ public struct DariBridgeHandlerMacro: BodyMacro {
 struct BridgeHandler {
     let message: String
     let reply: String?
+    /// The `async -> (Any?, String?)` form of the reply handler.
+    let isAsync: Bool
 
     init?(_ function: FunctionDeclSyntax) throws {
         let parameters = Array(function.signature.parameterClause.parameters)
@@ -58,8 +63,10 @@ struct BridgeHandler {
               parameters[1].firstName.text == "didReceive",
               parameters.count == 2 || parameters[2].firstName.text == "replyHandler"
         else { return nil }
-        if function.signature.effectSpecifiers != nil {
-            throw BridgeError("async message handlers aren't supported yet; use the replyHandler variant")
+        let effects = function.signature.effectSpecifiers
+        isAsync = effects?.asyncSpecifier != nil
+        if effects?.throwsClause != nil || (isAsync && parameters.count == 3) {
+            throw BridgeError("@DariBridgeHandler supports the replyHandler and async -> (Any?, String?) forms, not throwing ones")
         }
         message = try Self.name(parameters[1])
         reply = parameters.count == 3 ? try Self.name(parameters[2]) : nil
