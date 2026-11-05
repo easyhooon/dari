@@ -90,8 +90,9 @@ private fun JsonTree(
                     CopyButton(onCopy)
                 }
             }
-            // The first row is always "{" or "[", so the corner Copy button needs no reserved margin.
-            Column(Modifier.padding(start = 4.dp, end = 12.dp, top = if (foldable) 0.dp else 8.dp, bottom = 8.dp)) {
+            // An object or array starts with a short "{" or "[" row; a bare primitive can run under the corner Copy.
+            val end = if (!foldable && element is JsonPrimitive) 72.dp else 12.dp
+            Column(Modifier.padding(start = 4.dp, end = end, top = if (foldable) 0.dp else 8.dp, bottom = 8.dp)) {
                 rows.forEachIndexed { index, row ->
                     val placed = if (index == firstMatch) Modifier.onPlaced(onFirstMatchPlaced) else Modifier
                     JsonRow(row, query, placed) { path ->
