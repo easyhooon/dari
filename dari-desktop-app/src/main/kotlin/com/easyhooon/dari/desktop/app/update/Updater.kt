@@ -79,7 +79,7 @@ class Updater(
         scope.launch {
             while (isActive) {
                 check(quiet = true)
-                delay(6.hours)
+                delay(1.hours)
             }
         }
     }
