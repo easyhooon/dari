@@ -81,6 +81,11 @@ fun DetailPane(
             val emptyModifier = Modifier.fillMaxWidth().weight(1f)
             when (detailLoad) {
                 DetailLoad.Loading -> EmptyState("Loading details…", null, emptyModifier)
+                DetailLoad.Slow -> EmptyState(
+                    "Waiting for the app…",
+                    "The app may be in the background, where the system pauses it. Bring it to the foreground.",
+                    emptyModifier,
+                )
                 // A backgrounded app is frozen by Android and stops answering until it is brought back.
                 DetailLoad.Failed -> EmptyState(
                     "Couldn't load details",
