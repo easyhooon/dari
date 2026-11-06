@@ -443,7 +443,8 @@ fun EmptyState(title: String, hint: String?, modifier: Modifier = Modifier, acti
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, style = Dari.type.body, color = Dari.colors.textSecondary)
             hint?.let { Text(it, style = Dari.type.caption, color = Dari.colors.textTertiary) }
-            action?.invoke()
+            // Extra room so a button doesn't read as part of the hint text.
+            action?.let { Box(Modifier.padding(top = 8.dp)) { it() } }
         }
     }
 }
