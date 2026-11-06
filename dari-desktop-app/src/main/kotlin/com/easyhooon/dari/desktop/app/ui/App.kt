@@ -64,6 +64,7 @@ fun WindowScope.App(
     updater: Updater,
     installUpdate: () -> Unit,
     openStats: () -> Unit,
+    openWifiPairing: () -> Unit,
 ) {
     DariTheme(settings.appearance) {
         Column(Modifier.fillMaxSize().background(Dari.colors.background)) {
@@ -92,7 +93,7 @@ fun WindowScope.App(
                 )
             }
             Divider()
-            Workspace(controller, settings)
+            Workspace(controller, settings, openWifiPairing)
         }
     }
 }
@@ -353,7 +354,7 @@ private fun FilterBar(controller: InspectorController, openStats: () -> Unit) {
 
 /** Table with a resizable detail pane docked on the right. */
 @Composable
-private fun Workspace(controller: InspectorController, settings: DesktopSettings) {
+private fun Workspace(controller: InspectorController, settings: DesktopSettings, openWifiPairing: () -> Unit) {
     val visible = controller.visibleMessages()
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -369,6 +370,11 @@ private fun Workspace(controller: InspectorController, settings: DesktopSettings
                 onMove = { controller.moveSelection(visible, it) },
                 onClose = controller::closeDetail,
                 emptyHint = emptyHint(controller),
+                emptyAction = if (controller.devices.isEmpty() && controller.canPairOverWifi) {
+                    { QuietButton("Pair Device over Wi-Fi…", onClick = openWifiPairing) }
+                } else {
+                    null
+                },
                 showTags = settings.showTags,
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             )

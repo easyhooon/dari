@@ -27,6 +27,7 @@ import com.easyhooon.dari.desktop.app.ui.App
 import com.easyhooon.dari.desktop.app.ui.NoticesWindow
 import com.easyhooon.dari.desktop.app.ui.SettingsWindow
 import com.easyhooon.dari.desktop.app.ui.StatsWindow
+import com.easyhooon.dari.desktop.app.ui.WifiPairingWindow
 import com.easyhooon.dari.desktop.app.ui.WindowChrome
 import com.easyhooon.dari.desktop.app.ui.appearanceLabel
 import com.easyhooon.dari.desktop.app.ui.chooseExportFile
@@ -102,6 +103,7 @@ fun main() {
         var aboutOpen by remember { mutableStateOf(false) }
         var noticesOpen by remember { mutableStateOf(false) }
         var statsOpen by remember { mutableStateOf(false) }
+        var pairingOpen by remember { mutableStateOf(false) }
         val restoredBounds = remember {
             val screens = GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices.map { it.defaultConfiguration.bounds }
             settings.windowBounds?.takeIfRestorable(screens)
@@ -137,6 +139,9 @@ fun main() {
                 appearance = settings.appearance,
                 onClose = { statsOpen = false },
             )
+        }
+        if (pairingOpen) {
+            WifiPairingWindow(controller::newWifiPairing, settings.appearance, onClose = { pairingOpen = false })
         }
         if (aboutOpen) {
             AboutWindow(
@@ -218,6 +223,7 @@ fun main() {
                 Menu("Session") {
                     Item("Reconnect", shortcut = shortcut(Key.R), onClick = controller::connect)
                     Item("Disconnect", shortcut = shortcut(Key.D), onClick = controller::disconnectByUser)
+                    Item("Pair Device over Wi-Fi…", enabled = controller.canPairOverWifi, onClick = { pairingOpen = true })
                     Separator()
                     Item(
                         "Copy Message as Text",
@@ -272,7 +278,7 @@ fun main() {
                 }
             }
             WindowChrome(settings.appearance)
-            App(controller, settings, updater, installUpdate, openStats = { statsOpen = true })
+            App(controller, settings, updater, installUpdate, openStats = { statsOpen = true }, openWifiPairing = { pairingOpen = true })
         }
     }
 }

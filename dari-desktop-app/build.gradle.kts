@@ -20,6 +20,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.swing)
     implementation(libs.sentry)
     implementation(libs.jna)
+    implementation(libs.zxing.core)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)

@@ -12,6 +12,13 @@ data class AdbDevice(val serial: String, val model: String, val name: String? = 
     val title: String get() = name ?: model
 }
 
+/** A service from `adb mdns services`, e.g. a phone waiting to pair (`_adb-tls-pairing._tcp`). */
+data class MdnsService(val name: String, val type: String, val address: String) {
+    val isPairing: Boolean get() = type.startsWith("_adb-tls-pairing")
+    val isConnect: Boolean get() = type.startsWith("_adb-tls-connect")
+    val host: String get() = address.substringBeforeLast(':')
+}
+
 /** Thin wrapper around the `adb` binary; every call blocks, so run it off the UI thread. */
 class Adb internal constructor(private val runner: (List<String>) -> String) {
 
@@ -71,13 +78,34 @@ class Adb internal constructor(private val runner: (List<String>) -> String) {
         }
     }
 
+    /** Serials in the `device` state, without the per-device getprop calls of [devices]. */
+    fun onlineSerials(): Set<String> = run("devices").lineSequence()
+        .drop(1)
+        .map { it.trim().split(Regex("\\s+")) }
+        .filter { it.size >= 2 && it[1] == "device" }
+        .map { it[0] }
+        .toSet()
+
+    fun mdnsServices(): List<MdnsService> = parseMdnsServices(run("mdns", "services"))
+
+    /** Pairs with a phone in wireless debugging. A wrong code makes adb exit non-zero, so it throws with adb's text. */
+    fun pair(address: String, secret: String): String = run("pair", address, secret)
+
+    // adb exits 0 even when the connect fails; callers check the device list instead.
+    fun connect(address: String): String = run("connect", address)
+
     private fun run(vararg args: String): String = runner(args.toList())
 
     companion object {
         private const val TIMEOUT_SECONDS = 10L
+        private val IS_MAC = System.getProperty("os.name").startsWith("Mac")
 
         private fun runProcess(executable: String, args: List<String>): String {
-            val process = ProcessBuilder(listOf(executable) + args).redirectErrorStream(true).start()
+            val builder = ProcessBuilder(listOf(executable) + args).redirectErrorStream(true)
+            // adb's default Openscreen mDNS backend missed phones on some office Wi-Fi where Bonjour found them.
+            // It only applies when this call starts the adb server; a server already running keeps its backend.
+            if (IS_MAC) builder.environment()["ADB_MDNS_OPENSCREEN"] = "0"
+            val process = builder.start()
             // Drain output on another thread: reading it here would block until adb exits, so a hung adb
             // (e.g. an unauthorized device) would never reach the timeout below.
             val output = StringBuilder()
@@ -127,6 +155,13 @@ class Adb internal constructor(private val runner: (List<String>) -> String) {
             .map { it.trim().split(Regex("\\s+")) }
             .filter { it.size == 3 && it[2].startsWith("localabstract:" + InspectorProtocol.SOCKET_NAME_PREFIX) }
             .map { it[0] to it[1] }
+            .toList()
+
+        // `adb mdns services`: a header line, then `<instance>\t<type>\t<host:port>` per service.
+        internal fun parseMdnsServices(output: String): List<MdnsService> = output.lineSequence()
+            .map { it.trim().split(Regex("\\s+")) }
+            .filter { it.size >= 3 && it[1].startsWith("_adb") && ':' in it[2] }
+            .map { MdnsService(name = it[0], type = it[1], address = it[2]) }
             .toList()
 
         // Abstract sockets appear as `@dari_<applicationId>` in the last column.
