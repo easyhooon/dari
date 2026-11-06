@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -34,6 +35,7 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
@@ -260,8 +262,14 @@ private fun UpdateStatus(updater: Updater, installUpdate: () -> Unit) {
         is Updater.Phase.Working -> Text(phase.step, style = Dari.type.caption, color = Dari.colors.textSecondary)
         Updater.Phase.Checking -> Text("Checking for updates…", style = Dari.type.caption, color = Dari.colors.textTertiary)
         Updater.Phase.UpToDate, Updater.Phase.Idle -> Unit
-        is Updater.Phase.Failed -> Hint(phase.message) {
-            Text("Update failed", style = Dari.type.caption, color = Dari.colors.danger)
+        // Clicking checks again, which brings the Update button back for another try.
+        is Updater.Phase.Failed -> Hint("${phase.message}\nClick to try again.") {
+            Text(
+                "Update failed",
+                style = Dari.type.caption,
+                color = Dari.colors.danger,
+                modifier = Modifier.clickable(role = Role.Button, onClick = updater::checkNow).pointerHoverIcon(PointerIcon.Hand),
+            )
         }
     }
 }
