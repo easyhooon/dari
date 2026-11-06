@@ -100,7 +100,7 @@ Copy times are from an Apple M2, mounting the DMG and copying the app out with `
 
 ### Updates
 
-Dari checks the releases page on launch and every six hours. When a newer version exists, an **Update to &lt;version&gt;** button appears in the title bar, and **Help → Install Dari &lt;version&gt;** does the same.
+Dari checks the releases page on launch and every hour. When a newer version exists, an **Update to &lt;version&gt;** button appears in the title bar, and **Help → Install Dari &lt;version&gt;** does the same.
 
 - **macOS**: Dari downloads the new image, checks its `.sha256`, bundle ID, version and code signature, then quits and relaunches as the new version. If anything fails, the installed version is kept. This works when Dari sits in a folder you can write to, such as **Applications**; otherwise Dari tells you to move it to **Applications** and open it from there.
 - **Windows**: Dari downloads the new `.msi`, checks its `.sha256`, upgrade code and version, then quits, installs it silently and relaunches. If the install fails, Windows Installer rolls it back and the installed version opens again. This works for the per-user install from the `.exe` or `.msi`; a copy elsewhere opens the download page. To update by hand, quit Dari and run the new `.exe` or `.msi`. If Dari is still open, the installer stops with Error 1306 on `dari.lock`: quit Dari and click **Retry**.
@@ -140,7 +140,7 @@ Tunnels are removed when the desktop app disconnects or quits. `adb forward --li
 - **Debug builds only, unless you opt in.** The socket opens only in debuggable builds, or in a non-debuggable internal build that sets the manifest flag below. Release builds use `dari-noop`, which contains no capture code.
 - **adb only.** Only adb (shell) or root can connect, so other apps on the device can't read messages.
 - **Masking is opt-in.** By default, the desktop app receives payloads as captured, whatever the in-app setting is. Turn on **Mask sensitive values** in the desktop app's settings, and the device masks values under keys such as `token`, `password`, `secret`, `cookie` or `authorization`, and `Bearer` credentials, before they leave it. This is separate from the in-app setting. Apps on dari older than 2.2.0 always mask. See [Masking](./masking) for the exact rules.
-- **No analytics.** Apart from crash reports, the desktop app's only network requests are for updates: a check against `github.com` on launch and every six hours, which sends nothing but what any browser visit would, and, when you install an update, the download of the release and its checksum. `dari.log` stays local and records the version at startup, crash-report setting changes and failures, never message contents.
+- **No analytics.** Apart from crash reports, the desktop app's only network requests are for updates: a check against `github.com` on launch and every hour, which sends nothing but what any browser visit would, and, when you install an update, the download of the release and its checksum. `dari.log` stays local and records the version at startup, crash-report setting changes and failures, never message contents.
 - **Crash reports are on by default.** When the app crashes, it sends the exception type, stack trace, and OS, architecture and Java versions to Sentry. Exception messages, bridge messages, host names and IP addresses are never sent. Turn it off in Settings → Privacy → **Send crash reports**.
 
 Add your own masking. It runs on every message, after the built-in masking when that is on, and if it throws, the message isn't sent:
