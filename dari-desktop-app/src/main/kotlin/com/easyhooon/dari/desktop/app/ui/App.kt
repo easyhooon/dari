@@ -371,7 +371,7 @@ private fun Workspace(controller: InspectorController, settings: DesktopSettings
                 onClose = controller::closeDetail,
                 emptyHint = emptyHint(controller),
                 emptyAction = if (controller.devices.isEmpty() && controller.canPairOverWifi) {
-                    { QuietButton("Pair Device over Wi-Fi…", onClick = openWifiPairing) }
+                    { QuietButton("Pair Device over Wi-Fi", onClick = openWifiPairing) }
                 } else {
                     null
                 },
