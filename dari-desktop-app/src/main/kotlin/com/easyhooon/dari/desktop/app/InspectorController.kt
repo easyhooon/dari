@@ -515,7 +515,7 @@ class InspectorController(
         val simulator = IosDevices.SIMULATOR.takeIf {
             iosApps[IosDevices.SIMULATOR_SERIAL].orEmpty().isNotEmpty() || selectedSerial == IosDevices.SIMULATOR_SERIAL
         }
-        val found = android.orEmpty() + iosUsb + listOfNotNull(simulator)
+        val found = Adb.collapseTransports(android.orEmpty(), keep = selectedSerial) + iosUsb + listOfNotNull(simulator)
         devices = found
         // Until the user picks a device, prefer one that is actually running a Dari app, and switch
         // to it if it shows up after another device was picked automatically.

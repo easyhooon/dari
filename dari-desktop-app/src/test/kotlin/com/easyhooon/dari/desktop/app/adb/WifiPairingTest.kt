@@ -161,3 +161,26 @@ class WifiPairingTest {
         assertEquals(payload, decoded.text)
     }
 }
+
+class CollapseTransportsTest {
+    private val usb = AdbDevice("R3CY70P3F4H", "SM-S936N", hardwareSerial = "R3CY70P3F4H")
+    private val wifi = AdbDevice("adb-R3CY70P3F4H-yLRm8v._adb-tls-connect._tcp.", "SM-S936N", hardwareSerial = "R3CY70P3F4H")
+    private val other = AdbDevice("192.168.0.9:5555", "Pixel 9", hardwareSerial = "PX9")
+
+    @Test
+    fun `shows one phone attached over USB and Wi-Fi as its USB entry`() {
+        assertEquals(listOf(usb, other), Adb.collapseTransports(listOf(wifi, usb, other), keep = null))
+    }
+
+    @Test
+    fun `keeps the selected transport so an open session stays put`() {
+        assertEquals(listOf(wifi, other), Adb.collapseTransports(listOf(wifi, usb, other), keep = wifi.serial))
+    }
+
+    @Test
+    fun `leaves emulators that share ro serialno alone`() {
+        val a = AdbDevice("emulator-5554", "sdk_gphone64", hardwareSerial = "EMULATOR36X1X11X0")
+        val b = AdbDevice("emulator-5556", "sdk_gphone64", hardwareSerial = "EMULATOR36X1X11X0")
+        assertEquals(listOf(a, b), Adb.collapseTransports(listOf(a, b), keep = null))
+    }
+}

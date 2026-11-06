@@ -7,8 +7,11 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
-/** [name] is the device name set in Android settings (e.g. "Jihun's S25"), when there is one. */
-data class AdbDevice(val serial: String, val model: String, val name: String? = null) {
+/**
+ * [name] is the device name set in Android settings (e.g. "Jihun's S25"), when there is one.
+ * [hardwareSerial] is `ro.serialno`, shared by the USB and Wi-Fi entries of one phone.
+ */
+data class AdbDevice(val serial: String, val model: String, val name: String? = null, val hardwareSerial: String? = null) {
     val title: String get() = name ?: model
 }
 
@@ -38,20 +41,24 @@ class Adb internal constructor(private val runner: (List<String>) -> String) {
                 // Retry next poll when getprop failed, e.g. right after attach.
                 if (it.model != null) details[parts[0]] = it
             }
-            AdbDevice(serial = parts[0], model = info.model ?: model ?: parts[0], name = info.name)
+            AdbDevice(serial = parts[0], model = info.model ?: model ?: parts[0], name = info.name, hardwareSerial = info.hardwareSerial)
         }
     }
 
     // Read once per attach: name and model don't change while the device stays attached.
     private val details = ConcurrentHashMap<String, DeviceDetails>()
 
-    private data class DeviceDetails(val name: String?, val model: String?)
+    private data class DeviceDetails(val name: String?, val model: String?, val hardwareSerial: String?)
 
     private fun readDetails(serial: String): DeviceDetails {
         fun read(command: String) = runCatching { run("-s", serial, "shell", command).trim() }.getOrNull()
             ?.takeIf { it.isNotEmpty() && it != "null" }
         val model = read("getprop ro.product.model")
-        return DeviceDetails(name = read("settings get global device_name")?.takeIf { it != model }, model = model)
+        return DeviceDetails(
+            name = read("settings get global device_name")?.takeIf { it != model },
+            model = model,
+            hardwareSerial = read("getprop ro.serialno"),
+        )
     }
 
     /** Application ids with a listening Dari socket. Empty when the device hides `/proc/net/unix`. */
@@ -156,6 +163,25 @@ class Adb internal constructor(private val runner: (List<String>) -> String) {
             .filter { it.size == 3 && it[2].startsWith("localabstract:" + InspectorProtocol.SOCKET_NAME_PREFIX) }
             .map { it[0] to it[1] }
             .toList()
+
+        /**
+         * One entry per phone when it's attached over USB and Wi-Fi at once. Keeps [keep] (the selected serial)
+         * so an open session isn't switched to the other transport, otherwise USB.
+         */
+        fun collapseTransports(devices: List<AdbDevice>, keep: String?): List<AdbDevice> {
+            val dropped = devices.groupBy { it.hardwareSerial ?: it.serial }.values
+                // Emulators of one image can share ro.serialno; only a Wi-Fi entry marks a second transport.
+                .filter { same -> same.size > 1 && same.any { isWireless(it.serial) } }
+                .flatMap { same ->
+                    val kept = same.firstOrNull { it.serial == keep } ?: same.firstOrNull { !isWireless(it.serial) } ?: same.first()
+                    same - kept
+                }
+                .toSet()
+            return devices - dropped
+        }
+
+        // `ip:port` from `adb connect`, or `<guid>._adb-tls-connect._tcp` from mDNS auto-connect.
+        internal fun isWireless(serial: String): Boolean = ':' in serial || "._adb-tls-connect" in serial
 
         // `adb mdns services`: a header line, then `<instance>\t<type>\t<host:port>` per service.
         internal fun parseMdnsServices(output: String): List<MdnsService> = output.lineSequence()
