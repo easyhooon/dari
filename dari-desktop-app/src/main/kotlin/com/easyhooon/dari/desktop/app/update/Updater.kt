@@ -190,17 +190,19 @@ class Updater(
             mountPoint.toString(),
             dmg.toString(),
         )
-        var mounted = true
         try {
             val candidate = mountPoint.resolve(target.fileName)
             UpdateValidation.verify(candidate, target, version)
 
             phase = Phase.Working("Installing $version…")
             Processes.check("/usr/bin/ditto", candidate.resolve("Contents").toString(), workspace.resolve("Contents").toString())
-            Processes.check("/usr/bin/hdiutil", "detach", mountPoint.toString())
-            mounted = false
         } finally {
-            if (mounted) runCatching { Processes.run("/usr/bin/hdiutil", "detach", "-force", mountPoint.toString()) }
+            // Spotlight or XProtect can keep the fresh volume busy; a stuck detach must not fail a finished copy.
+            runCatching {
+                if (Processes.run("/usr/bin/hdiutil", "detach", mountPoint.toString()).exitCode != 0) {
+                    Processes.run("/usr/bin/hdiutil", "detach", "-force", mountPoint.toString())
+                }
+            }
         }
         Files.delete(dmg)
     }
