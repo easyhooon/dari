@@ -37,7 +37,13 @@ sealed interface ConnectionState {
 }
 
 /** Why the selected message has no [InspectorController.detail] yet. */
-enum class DetailLoad { Loading, Failed }
+enum class DetailLoad {
+    Loading,
+
+    // Unanswered past SLOW_DETAIL_MS: a backgrounded app is often frozen and can't reply.
+    Slow,
+    Failed,
+}
 
 /** UI state and connection lifecycle. All state is read and written on the main thread. */
 class InspectorController(
@@ -493,7 +499,12 @@ class InspectorController(
         val generation = maskingGeneration
         detailLoad = DetailLoad.Loading
         detailJob = scope.launch {
+            val slow = launch {
+                delay(SLOW_DETAIL_MS)
+                if (detailLoad == DetailLoad.Loading) detailLoad = DetailLoad.Slow
+            }
             val result = runCatching { conn.detail(id) }
+            slow.cancel()
             // A request timeout also lands here; only this job's own cancellation stops it.
             ensureActive()
             if (selectedId != id || generation != maskingGeneration) return@launch
@@ -566,6 +577,7 @@ class InspectorController(
         }
 
         const val POLL_INTERVAL_MS = 2_000L
+        const val SLOW_DETAIL_MS = 2_000L
         const val MAX_MESSAGES = 2_000
         const val NOTICE_MILLIS = 2_500L
         const val SEARCH_DEBOUNCE_MS = 250L

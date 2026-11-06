@@ -219,6 +219,20 @@ class InspectorControllerConnectTest {
     }
 
     @Test
+    fun `a detail load left unanswered turns slow until an answer arrives`(): Unit = runBlocking(dispatcher) {
+        app.messages = listOf(MESSAGE)
+        app.holdNextDetail.set(true)
+        val controller = sessionController()
+        controller.connect()
+        awaitUntil { controller.detailLoad == DetailLoad.Slow }
+        assertNull(controller.detail)
+
+        controller.select(MESSAGE.id)
+        awaitUntil { controller.detail?.requestData == SECRET }
+        assertNull(controller.detailLoad)
+    }
+
+    @Test
     fun `an unanswered detail load shows loading and a new selection replaces it`(): Unit = runBlocking(dispatcher) {
         app.messages = listOf(MESSAGE)
         app.holdNextDetail.set(true)
