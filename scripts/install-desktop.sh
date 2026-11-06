@@ -41,7 +41,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "Downloading Dari $version for $arch…"
+echo "Downloading Dari $version for ${arch}…"
 if ! curl -fL --progress-bar -o "$work/$dmg" "$base/$dmg" || ! curl -fsSL -o "$work/$dmg.sha256" "$base/$dmg.sha256"; then
   echo "No $dmg in release $version: https://github.com/$repo/releases" >&2
   exit 1
