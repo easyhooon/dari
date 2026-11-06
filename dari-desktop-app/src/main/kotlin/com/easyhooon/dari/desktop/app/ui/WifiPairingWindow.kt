@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -162,17 +163,18 @@ fun WifiPairingWindow(newPairing: () -> WifiPairing, appearance: Appearance, onC
                         }
                     }
                     is PairingStep.Pairing -> Text("Pairing with ${current.target}…", style = Dari.type.body, color = Dari.colors.text)
-                    is PairingStep.Done -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Buttons at the bottom right, as in other dialogs; the window is sized for the QR step.
+                    is PairingStep.Done -> Column(Modifier.weight(1f).fillMaxWidth()) {
                         val (message, color) = when (val result = current.result) {
-                            is PairResult.Connected ->
-                                "Paired and connected (${result.serial}). It now appears in the device list." to Dari.colors.success
+                            is PairResult.Connected -> "Paired and connected. The phone now appears in the device list." to Dari.colors.success
                             PairResult.NotConnected ->
                                 "Paired, but the device didn't connect. Toggle Wireless debugging off and on, then wait a few seconds." to
                                     Dari.colors.warning
                             is PairResult.Failed -> "Pairing failed: ${result.message}" to Dari.colors.danger
                         }
                         Text(message, style = Dari.type.body, color = color)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Spacer(Modifier.weight(1f))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
                             if (current.result !is PairResult.Connected) {
                                 QuietButton("Try Again", onClick = {
                                     code = ""
@@ -180,7 +182,7 @@ fun WifiPairingWindow(newPairing: () -> WifiPairing, appearance: Appearance, onC
                                     pairing = newPairing()
                                 })
                             }
-                            QuietButton("Close", onClick = onClose)
+                            AccentButton("Done", onClick = onClose)
                         }
                     }
                 }
