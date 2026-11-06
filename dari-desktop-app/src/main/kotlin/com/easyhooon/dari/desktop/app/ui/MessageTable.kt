@@ -68,6 +68,7 @@ fun MessageTable(
     onClose: () -> Unit,
     emptyHint: Pair<String, String?>,
     showTags: Boolean,
+    emptyAction: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val focus = remember { FocusRequester() }
@@ -90,7 +91,7 @@ fun MessageTable(
         ) {
             HeaderRow(compact, narrow, tagColumn)
             if (messages.isEmpty()) {
-                EmptyState(emptyHint.first, emptyHint.second, Modifier.fillMaxSize())
+                EmptyState(emptyHint.first, emptyHint.second, Modifier.fillMaxSize(), emptyAction)
                 return@Column
             }
             val listState = rememberLazyListState()

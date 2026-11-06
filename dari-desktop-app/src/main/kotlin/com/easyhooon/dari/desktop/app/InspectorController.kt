@@ -7,6 +7,7 @@ import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.runtime.setValue
 import com.easyhooon.dari.desktop.app.adb.Adb
 import com.easyhooon.dari.desktop.app.adb.AdbDevice
+import com.easyhooon.dari.desktop.app.adb.WifiPairing
 import com.easyhooon.dari.desktop.app.client.InspectorConnection
 import com.easyhooon.dari.desktop.app.ios.IosDevices
 import com.easyhooon.dari.inspector.protocol.AppInfo
@@ -138,6 +139,10 @@ class InspectorController(
 
     /** adb is missing but iOS targets still work, so Android devices just don't show up. */
     val androidUnavailable: Boolean get() = adb == null && ios != null
+
+    val canPairOverWifi: Boolean get() = adb != null
+
+    fun newWifiPairing(): WifiPairing = WifiPairing(checkNotNull(adb) { "adb not found" })
 
     // Last apps found per iOS target; kept for the connected one so polling doesn't open extra sessions.
     private var iosApps = emptyMap<String, List<String>>()
@@ -521,7 +526,7 @@ class InspectorController(
         val simulator = IosDevices.SIMULATOR.takeIf {
             iosApps[IosDevices.SIMULATOR_SERIAL].orEmpty().isNotEmpty() || selectedSerial == IosDevices.SIMULATOR_SERIAL
         }
-        val found = android.orEmpty() + iosUsb + listOfNotNull(simulator)
+        val found = Adb.collapseTransports(android.orEmpty(), keep = selectedSerial) + iosUsb + listOfNotNull(simulator)
         devices = found
         // Until the user picks a device, prefer one that is actually running a Dari app, and switch
         // to it if it shows up after another device was picked automatically.
