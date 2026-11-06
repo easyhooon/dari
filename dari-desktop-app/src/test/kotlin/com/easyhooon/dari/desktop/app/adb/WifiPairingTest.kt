@@ -80,6 +80,57 @@ class WifiPairingTest {
     }
 
     @Test
+    fun `a wrong code that exits 0 still fails`() = runBlocking {
+        val adb = Adb { args -> if (args.first() == "pair") "Failed: Wrong password or connection was dropped.\n" else "List of devices attached\n" }
+        val result = WifiPairing(adb, { "x".repeat(it) }, {}).pairWithCode("192.168.0.30:40002", "000000")
+        assertEquals(PairResult.Failed("Failed: Wrong password or connection was dropped."), result)
+    }
+
+    @Test
+    fun `ignores devices that are not the paired phone`(): Unit = runBlocking {
+        var polls = 0
+        val adb = Adb { args ->
+            when (args.first()) {
+                // The first lookup fails, so the USB phone already attached looks new; an emulator also appears.
+                "devices" -> if (polls++ == 0) {
+                    throw IOException(
+                        "adb devices timed out",
+                    )
+                } else {
+                    "List of devices attached\nR5CXUSB\tdevice\nemulator-5554\tdevice\n"
+                }
+                "pair" -> "Successfully paired to 192.168.0.30:40002 [guid=adb-R5CX123-AbCdEf]"
+                else -> ""
+            }
+        }
+        val result = WifiPairing(adb, { "x".repeat(it) }, {}).pairWithCode("192.168.0.30:40002", "123456")
+        assertIs<PairResult.NotConnected>(result)
+    }
+
+    @Test
+    fun `QR pairing sends the QR password`() = runBlocking {
+        val calls = mutableListOf<List<String>>()
+        val adb = Adb { args ->
+            calls += args
+            when (args.first()) {
+                "pair" -> "Successfully paired to 192.168.0.12:40001 [guid=adb-R5CX999-XyZ]"
+                "devices" -> "List of devices attached\n" + if (calls.count { it.first() == "devices" } > 1) "192.168.0.12:37000\tdevice\n" else ""
+                else -> ""
+            }
+        }
+        val pairing = WifiPairing(adb, { "p".repeat(it) }, {})
+        val result = pairing.pairWithQr(MdnsService("dari-pppppppp", "_adb-tls-pairing._tcp", "192.168.0.12:40001"))
+        assertEquals(PairResult.Connected("192.168.0.12:37000"), result)
+        assertTrue(listOf("pair", "192.168.0.12:40001", "pppppppppppp") in calls)
+    }
+
+    @Test
+    fun `parses the guid from adb pair`() {
+        assertEquals("adb-R5CX123-AbCdEf", WifiPairing.parseGuid("Successfully paired to 1.2.3.4:5 [guid=adb-R5CX123-AbCdEf]"))
+        assertNull(WifiPairing.parseGuid("Successfully paired to 1.2.3.4:5"))
+    }
+
+    @Test
     fun `connects by hand to the paired host when adb does not`() = runBlocking {
         val calls = mutableListOf<List<String>>()
         val adb = Adb { args ->
@@ -94,7 +145,7 @@ class WifiPairingTest {
         val result = WifiPairing(adb, { "x".repeat(it) }, {}).pairWithCode("192.168.0.12:40001", "123456")
         assertIs<PairResult.NotConnected>(result)
         assertTrue(listOf("connect", "192.168.0.12:37000") in calls)
-        assertTrue(calls.none { it.firstOrNull() == "connect" && it[1] != "192.168.0.12:37000" })
+        assertEquals(1, calls.count { it.firstOrNull() == "connect" })
     }
 
     @Test

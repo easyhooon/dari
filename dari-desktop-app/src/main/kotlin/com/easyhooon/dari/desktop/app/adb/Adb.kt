@@ -88,7 +88,7 @@ class Adb internal constructor(private val runner: (List<String>) -> String) {
 
     fun mdnsServices(): List<MdnsService> = parseMdnsServices(run("mdns", "services"))
 
-    /** Pairs with a phone in wireless debugging. A wrong code makes adb exit non-zero, so it throws with adb's text. */
+    /** Pairs with a phone in wireless debugging. A wrong code can exit 0 with `Failed: …`; an unreachable one throws. */
     fun pair(address: String, secret: String): String = run("pair", address, secret)
 
     // adb exits 0 even when the connect fails; callers check the device list instead.
@@ -98,14 +98,9 @@ class Adb internal constructor(private val runner: (List<String>) -> String) {
 
     companion object {
         private const val TIMEOUT_SECONDS = 10L
-        private val IS_MAC = System.getProperty("os.name").startsWith("Mac")
 
         private fun runProcess(executable: String, args: List<String>): String {
-            val builder = ProcessBuilder(listOf(executable) + args).redirectErrorStream(true)
-            // adb's default Openscreen mDNS backend missed phones on some office Wi-Fi where Bonjour found them.
-            // It only applies when this call starts the adb server; a server already running keeps its backend.
-            if (IS_MAC) builder.environment()["ADB_MDNS_OPENSCREEN"] = "0"
-            val process = builder.start()
+            val process = ProcessBuilder(listOf(executable) + args).redirectErrorStream(true).start()
             // Drain output on another thread: reading it here would block until adb exits, so a hung adb
             // (e.g. an unauthorized device) would never reach the timeout below.
             val output = StringBuilder()

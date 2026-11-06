@@ -62,6 +62,8 @@ fun WifiPairingWindow(newPairing: () -> WifiPairing, appearance: Appearance, onC
     val scope = rememberCoroutineScope()
 
     fun run(target: String, block: suspend () -> PairResult) {
+        // A double click or the scan loop finding the QR at the same time must not pair twice.
+        if (step != PairingStep.Waiting) return
         step = PairingStep.Pairing(target)
         scope.launch { step = PairingStep.Done(withContext(Dispatchers.IO) { block() }) }
     }
@@ -151,7 +153,8 @@ fun WifiPairingWindow(newPairing: () -> WifiPairing, appearance: Appearance, onC
                             if (waitedSeconds >= MDNS_HINT_SECONDS && codeRequests.isEmpty()) {
                                 Text(
                                     "Nothing found yet. Some networks block device discovery (mDNS); type the address " +
-                                        "and code from the phone's pairing-code screen instead.",
+                                        "and code from the phone's pairing-code screen instead. On macOS, restarting adb with " +
+                                        "ADB_MDNS_OPENSCREEN=0 (Bonjour) can help.",
                                     style = Dari.type.caption,
                                     color = Dari.colors.warning,
                                 )
