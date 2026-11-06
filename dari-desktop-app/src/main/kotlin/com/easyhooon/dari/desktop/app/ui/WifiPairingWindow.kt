@@ -154,8 +154,8 @@ fun WifiPairingWindow(newPairing: () -> WifiPairing, appearance: Appearance, onC
                             if (waitedSeconds >= MDNS_HINT_SECONDS && codeRequests.isEmpty()) {
                                 Text(
                                     "Nothing found yet. Some networks block device discovery (mDNS); type the address " +
-                                        "and code from the phone's pairing-code screen instead. On macOS, restarting adb with " +
-                                        "ADB_MDNS_OPENSCREEN=0 (Bonjour) can help.",
+                                        "and code from the phone's pairing-code screen instead. If Android Studio started adb, restarting it " +
+                                        "with ADB_MDNS_OPENSCREEN=0 can help on macOS.",
                                     style = Dari.type.caption,
                                     color = Dari.colors.warning,
                                 )

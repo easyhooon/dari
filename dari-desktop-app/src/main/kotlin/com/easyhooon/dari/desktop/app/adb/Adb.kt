@@ -98,9 +98,14 @@ class Adb internal constructor(private val runner: (List<String>) -> String) {
 
     companion object {
         private const val TIMEOUT_SECONDS = 10L
+        private val IS_MAC = System.getProperty("os.name").startsWith("Mac")
 
         private fun runProcess(executable: String, args: List<String>): String {
-            val process = ProcessBuilder(listOf(executable) + args).redirectErrorStream(true).start()
+            val builder = ProcessBuilder(listOf(executable) + args).redirectErrorStream(true)
+            // adb's default Openscreen mDNS backend missed phones on office Wi-Fi where Bonjour found them, which
+            // breaks Wi-Fi pairing. Only applies when this call starts the adb server; a running one keeps its backend.
+            if (IS_MAC) builder.environment()["ADB_MDNS_OPENSCREEN"] = "0"
+            val process = builder.start()
             // Drain output on another thread: reading it here would block until adb exits, so a hung adb
             // (e.g. an unauthorized device) would never reach the timeout below.
             val output = StringBuilder()
