@@ -68,39 +68,80 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
 
 ## 왜 Dari인가요?
 
-하이브리드 앱을 디버깅하다 보면 `@JavascriptInterface` 메서드마다 `Log.d`를 심고, Logcat을 스크롤하며 요청과 응답을 직접 짝지어야 합니다. Dari를 쓰면:
+하이브리드 앱을 디버깅하다 보면 브릿지 핸들러마다 로그를 심고, Logcat이나 Xcode 콘솔을 스크롤하며 요청과 응답을 직접 짝지어야 합니다. Dari를 쓰면:
 
 - 모든 Web ↔ App 브릿지 호출을 한 목록에서 보고, 요청과 응답이 `requestId`로 짝지어 표시됩니다
 - JSON 페이로드 정렬 표시, 상태(`IN_PROGRESS` / `SUCCESS` / `ERROR`), 소요 시간을 확인할 수 있습니다
-- macOS, Windows, Linux에서 Android와 iOS 앱을 검사하는 데스크톱 앱
+- macOS, Windows, Linux에서 Android와 iOS를 하나의 데스크톱 앱으로 검사합니다
 - Android에서는 실시간 알림과 흔들어 열기로, 테스트 중에도 탭 한 번이면 앱 내 인스펙터를 열 수 있습니다
-- 릴리스 빌드에는 no-op 아티팩트를 쓰므로 프로덕션에는 아무것도 포함되지 않습니다
+- 프로덕션에는 아무것도 포함되지 않습니다: Android는 `dari-noop`, iOS는 `#if DEBUG`
 
 ## 빠른 시작
 
+### Android
+
 ```kotlin
-// build.gradle.kts
+// app/build.gradle.kts
 debugImplementation("io.github.easyhooon:dari:<latest-version>")
 releaseImplementation("io.github.easyhooon:dari-noop:<latest-version>")
 ```
 
-```kotlin
-// 브릿지 레이어에서
-val interceptor = Dari.createInterceptor()
+Dari는 `androidx.startup`으로 스스로 초기화됩니다. 인터셉터는 핸들러마다가 아니라, 요청이 브릿지로 들어오는 곳과 응답이 나가는 곳에서 호출하세요:
 
-// 모든 요청이 들어오는 진입점에서
-interceptor?.onWebToAppRequest(handlerName, requestId, data)
-// 웹으로 응답을 보내는 함수 한 곳에서
-interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
+```kotlin
+val interceptor = Dari.createInterceptor(tag = "main")
+
+@JavascriptInterface
+fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
+    interceptor?.onWebToAppRequest(handlerName, requestId, data)
+    // … 핸들러로 분기, 응답은 sendResponseToWeb으로
+}
+
+private fun sendResponseToWeb(handlerName: String, requestId: String, isSuccess: Boolean, data: String) {
+    interceptor?.onWebToAppResponse(handlerName, requestId, data, isSuccess)
+    // … evaluateJavascript
+}
 ```
 
-앱을 실행하고 브릿지 호출을 일으킨 뒤 Dari 알림을 탭하세요. App-to-Web 메시지, 태그, Protocol Buffers는 [설정](#설정)을 참고하세요.
+앱을 실행해 브릿지 호출을 일으킨 뒤 Dari 알림을 탭하거나 데스크톱 앱을 여세요. 브릿지 코드에 Dari 호출을 넣고 싶지 않다면, 선택 사항인 [Gradle 플러그인](https://easyhooon.github.io/dari/ko/docs/gradle-plugin)(2.6.0+)이 빌드 시점에 이 호출을 넣어 줍니다.
 
-**iOS**: `https://github.com/easyhooon/dari`를 Swift 패키지로 추가하고(`3.0.0`부터), 디버그 빌드에서 `Dari.shared.start()`를 호출한 뒤 `Dari.shared.interceptor(tag:)`로 호출을 기록합니다. `autoCapture`(3.1.0+)를 넘기면 이 호출 없이 WebKit 브릿지 트래픽을 기록합니다. `DariMacros`의 `@DariBridge`(3.2.0+)로 핸들러를 표시하면 컴파일 시점에 기록합니다. 메시지는 [데스크톱 앱](#데스크톱-앱)에 표시됩니다. 자세한 내용은 [iOS 가이드](https://easyhooon.github.io/dari/ko/docs/ios)를 참고하세요.
+### iOS
+
+`https://github.com/easyhooon/dari`를 Swift 패키지로 추가하고(`3.0.0`부터) `Dari` 라이브러리를 연결합니다:
+
+```swift
+import Dari
+
+#if DEBUG
+try? Dari.shared.start()
+#endif
+
+let dari = Dari.shared.interceptor(tag: "main")
+
+// WKScriptMessageHandler
+func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+    dari.onWebToAppRequest(handlerName: message.name, requestId: callbackId, requestData: json)
+    // … 처리 후 응답
+    dari.onWebToAppResponse(handlerName: message.name, requestId: callbackId, responseData: result, isSuccess: true)
+}
+```
+
+Simulator나 USB로 연결한 기기에서 앱을 실행하고, 같은 Mac에서 데스크톱 앱을 여세요. 직접 호출 없이 기록하려면 `start()`에 `autoCapture`(3.1.0+)를 넘기거나, `DariMacros`의 `@DariBridge`(3.2.0+)로 핸들러를 표시하세요.
+
+## 가이드
+
+| | Android | iOS |
+| --- | --- | --- |
+| 설정 | [설정](https://easyhooon.github.io/dari/ko/docs/setup) | [iOS 가이드](https://easyhooon.github.io/dari/ko/docs/ios) |
+| 직접 호출 없이 캡처 | [Gradle 플러그인](https://easyhooon.github.io/dari/ko/docs/gradle-plugin) | [자동 수집](https://easyhooon.github.io/dari/ko/docs/ios#자동-수집), [매크로](https://easyhooon.github.io/dari/ko/docs/ios#매크로로-컴파일-시점-수집) |
+| API | [인터셉터](https://easyhooon.github.io/dari/ko/docs/interceptor), [구성과 런타임 API](https://easyhooon.github.io/dari/ko/docs/configuration) | [iOS 가이드](https://easyhooon.github.io/dari/ko/docs/ios#브릿지-호출-기록) |
+| 더 보기 | [Protocol Buffers](https://easyhooon.github.io/dari/ko/docs/protobuf), [앱 내 인스펙터](https://easyhooon.github.io/dari/ko/docs/inspector), [모듈](https://easyhooon.github.io/dari/ko/docs/modules) | [Staging 빌드](https://easyhooon.github.io/dari/ko/docs/ios#staging-빌드), [문제 해결](https://easyhooon.github.io/dari/ko/docs/ios#문제-해결) |
+
+두 플랫폼 공통: [데스크톱 앱](https://easyhooon.github.io/dari/ko/docs/desktop) · [마스킹](https://easyhooon.github.io/dari/ko/docs/masking)
 
 ## 앱 내 인스펙터 (Android)
 
-**브릿지 호출 → 알림 → 메시지 상세**
+Android 앱은 Chucker처럼 기기 안에서도 인스펙터를 쓸 수 있습니다: 최근 브릿지 활동을 보여 주는 실시간 알림, 상태·핸들러·태그 필터와 검색을 지원하는 목록, 개요 / 요청 / 응답 탭, 핸들러별 응답 시간, 텍스트·JSON 내보내기, 흔들어 열기, 런처 바로가기, 다크 모드.
 
 <p align="center">
   <img src="screenshots/demo.gif" width="300" alt="Dari 데모: 브릿지 호출, 알림, 메시지 상세" />
@@ -139,270 +180,10 @@ interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
   </tr>
 </table>
 
-## 기능
-
-아래 앱 내 인스펙터는 Android 전용입니다. iOS 앱은 [데스크톱 앱](#데스크톱-앱)에서 메시지를 확인합니다. [플랫폼 지원](#플랫폼-지원)을 참고하세요.
-
-- Web-to-App, App-to-Web 브릿지 메시지 가로채기
-- 여러 WebView/Activity 환경에서 메시지 출처를 구분하는 **태그 지원**
-- **메시지 상태 추적** — `IN_PROGRESS`, `SUCCESS`, `ERROR`를 색상으로 구분
-- **상태 필터링** — 칩으로 상태별 메시지 필터링
-- **응답 시간 통계** — 핸들러별 호출 수, 평균·최소·최대 응답 시간, 느린 핸들러 강조
-- 최근 브릿지 활동을 보여 주는 Chucker 스타일 상시 알림
-- 검색, 핸들러 이름 필터, **태그 기반 필터링**을 지원하는 메시지 목록 UI
-- 개요 / 요청 / 응답 탭으로 구성된 상세 화면
-- 요청·응답 페이로드 JSON 정렬 출력
-- 앱이 제공하는 디코더를 통한 Protocol Buffers 검사(선택)
-- 메시지를 텍스트 또는 JSON으로 내보내기
-- **흔들어서 열기** — 기기를 흔들면 Dari UI 실행(햅틱 피드백 포함)
-- **다크 모드** — 시스템 / 라이트 / 다크 테마 전환
-- **설정 바텀 시트** — 흔들기 토글, 테마 선택, 데이터 삭제, 버전 정보
-- 빠르게 접근할 수 있는 동적 런처 바로가기
-- no-op 모듈로 릴리스 빌드 오버헤드 없음
-- `androidx.startup`을 통한 자동 초기화
-
-## 설정
-
-### 캡처하는 두 가지 방법
-
-| | 직접 호출(기본) | Gradle 플러그인(2.6.0 신규, 선택) |
-| --- | --- | --- |
-| 의존성 | `dari` + `dari-noop` | 같은 `dari` + `dari-noop` |
-| 추가 설정 | 없음 | `settings.gradle.kts`의 `pluginManagement`에 `mavenCentral()`, 앱 모듈 `build.gradle.kts`에 `plugins { id("io.github.easyhooon.dari") }`와 `dari { }` 매핑 |
-| 브릿지 코드 | 요청이 들어오고 응답이 나가는 곳에서 인터셉터 호출 | Dari 호출 없음 |
-| 성능 | 기준 | 직접 호출과 같음. 큰 JSON 문자열을 넘기는 브릿지만 예외([성능](https://easyhooon.github.io/dari/ko/docs/gradle-plugin/performance)) |
-
-- **의존성만으로는 플러그인 방식이 켜지지 않습니다.** `dari`를 추가하거나 버전을 올려도 플러그인을 적용하고 `dari { }`를 작성하기 전에는 아무것도 바뀌지 않습니다. 그 전까지는 직접 호출한 인터셉터만 기록됩니다.
-- **직접 호출 방식으로 쓰던 앱의 업그레이드:** 버전만 올리면 됩니다. 코드 변경은 없습니다.
-- **브릿지마다 한 가지 방식만 쓰세요.** 매핑한 메서드가 이미 `DariInterceptor`를 호출하면 플러그인은 그 메서드를 건너뛰고 빌드 경고를 출력합니다. 매핑한 메서드 본문만 확인하므로, 같은 경로의 다른 곳(예: 핸들러 안)에 있는 직접 호출은 한 번 더 기록됩니다.
-
-아래 단계는 직접 호출 방식 설정입니다. 플러그인을 쓰려면 [선택: Gradle 플러그인](#선택-gradle-플러그인)도 따라 하세요.
-
-### Gradle
-
-앱의 `build.gradle.kts`에 `dari`(debug)와 `dari-noop`(release) 의존성을 추가합니다:
-
-```kotlin
-dependencies {
-    debugImplementation("io.github.easyhooon:dari:<latest-version>")
-    releaseImplementation("io.github.easyhooon:dari-noop:<latest-version>")
-}
-```
-
-초기화는 이것으로 끝입니다. 앱이 시작될 때 Dari가 `androidx.startup`으로 자동 초기화됩니다.
-
-### 인터셉터 연동
-
-Dari는 WebView 브릿지 레이어에 인터셉터를 **직접 주입**해야 합니다. 핸들러마다 호출하지 말고 메시지가 브릿지로 들어오고 나가는 지점에서 호출하세요. 대부분의 브릿지에는 요청이 들어오는 진입점과 응답을 보내는 함수가 하나씩 있으므로, 몇 번의 호출로 모든 핸들러를 기록할 수 있습니다.
-
-#### 1. 인터셉터 생성
-
-```kotlin
-import com.easyhooon.dari.Dari
-import com.easyhooon.dari.interceptor.DariInterceptor
-
-// Basic usage (no tag)
-val interceptor: DariInterceptor? = Dari.createInterceptor()
-
-// With tag — identifies the source in multi-WebView/Activity environments
-val paymentInterceptor: DariInterceptor? = Dari.createInterceptor(tag = "PaymentWebView")
-val mainInterceptor: DariInterceptor? = Dari.createInterceptor(tag = "MainWebView")
-```
-
-`tag`를 지정하면 해당 인터셉터가 캡처한 모든 메시지에 태그가 자동으로 붙습니다. 태그는 메시지 목록에 칩으로 표시되며, 출처별로 메시지를 필터링하는 데 쓸 수 있습니다.
-
-#### 2. Web-to-App 메시지 가로채기
-
-요청은 모든 요청이 들어오는 `@JavascriptInterface` 메서드에서, 응답은 웹으로 응답을 보내는 함수 한 곳에서 기록합니다. 그러면 핸들러에는 Dari 코드가 필요 없습니다:
-
-```kotlin
-inner class Bridge {
-    @JavascriptInterface
-    fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
-        // Every request enters here
-        interceptor?.onWebToAppRequest(handlerName, requestId, data)
-        when (handlerName) {
-            "getAppInfo" -> sendResponseToWeb(handlerName, requestId, true, appInfoJson())
-            // ...other handlers reply through sendResponseToWeb too
-        }
-    }
-}
-
-// Every reply leaves through here
-private fun sendResponseToWeb(handlerName: String, requestId: String, isSuccess: Boolean, data: String) {
-    interceptor?.onWebToAppResponse(handlerName, requestId, data, isSuccess)
-    val script = "onBridgeResponse(${JSONObject.quote(requestId)}, $isSuccess, ${JSONObject.quote(data)})"
-    webView.post { webView.evaluateJavascript(script, null) }
-}
-```
-
-권한 콜백처럼 나중에 보내는 응답도 같은 함수를 거치면 `requestId`로 요청과 짝지어집니다.
-
-#### 3. App-to-Web 메시지 가로채기
-
-반대 방향도 같습니다. JavaScript로 메시지를 보내는 함수와 웹의 응답을 받는 메서드에서 기록합니다:
-
-```kotlin
-// In the function that sends messages to JavaScript
-interceptor?.onAppToWebRequest(handlerName, requestId, data)
-
-// In the @JavascriptInterface method that receives the web's reply
-interceptor?.onAppToWebResponse(requestId, isSuccess, responseData)
-```
-
-#### 4. Fire-and-Forget 메시지 (requestId 선택)
-
-응답이 필요 없는 메시지(예: 분석 이벤트, 화면 추적)는 `requestId`로 `null`을 넘길 수 있습니다:
-
-```kotlin
-// Fire-and-forget: no response expected
-interceptor?.onWebToAppRequest(handlerName, null, data)
-// No need to call onWebToAppResponse
-```
-
-`requestId`가 `null`이면 메시지는 단독 메시지로 처리되고 응답과 매칭되지 않습니다.
-
-#### 5. Protocol Buffers (선택)
-
-기존 `String`/JSON 메서드는 그대로입니다. protobuf 페이로드를 검사하려면 앱이 제공하는 디코더로 인터셉터를 생성하세요:
-
-protobuf 기능 플래그나 `DariConfig` 토글은 없습니다. 이 인터셉터 오버로드와 protobuf 캡처 메서드를 사용하면 해당 브릿지에서 protobuf 검사가 활성화됩니다. 자세한 내용은 [한국어 가이드](https://easyhooon.github.io/dari/ko/docs/protobuf) 또는 [영어 가이드](https://easyhooon.github.io/dari/docs/protobuf)를 참고하세요.
-
-```kotlin
-import com.easyhooon.dari.interceptor.protobufDecoder
-
-val protobufInterceptor = Dari.createInterceptor(
-    tag = "OrderBridge",
-    protobufDecoder = protobufDecoder {
-        webToApp("createOrder") {
-            request { JsonFormat.printer().print(CreateOrderRequest.parseFrom(it)) }
-            response { JsonFormat.printer().print(CreateOrderResponse.parseFrom(it)) }
-        }
-    },
-)
-
-protobufInterceptor?.onWebToAppProtobufRequest(
-    handlerName = "createOrder",
-    requestId = requestId,
-    requestData = protobufBytes,
-)
-```
-
-Dari는 protobuf 런타임에 의존하지 않습니다. 생성된 메시지 타입과 디코딩은 사용하는 앱이 담당합니다. 디코딩은 인터셉터를 호출한 스레드에서 동기적으로 실행되므로 디코더 작업은 짧게 유지해야 합니다. Base64는 앱의 브릿지가 문자열만 지원할 때만 필요하며, `ArrayBuffer` 브릿지는 바이트를 그대로 넘길 수 있습니다.
-
-REQUEST와 RESPONSE 탭은 `Decoded`와 `Raw` 보기를 제공합니다. Raw 보기는 각 protobuf 페이로드의 처음 4KB만 보관하고 그 미리보기를 Hex와 Base64로 표시하며, 원본 바이트 크기와 잘림 여부는 계속 확인할 수 있습니다. 이 보기의 Base64는 Dari가 표시용으로 만든 인코딩일 뿐, 브릿지가 페이로드를 Base64로 전송했다는 뜻이 아닙니다.
-
-<table>
-  <tr>
-    <td align="center"><b>Protobuf 디코딩</b></td>
-    <td align="center"><b>Protobuf 원시 바이트</b></td>
-  </tr>
-  <tr>
-    <td><img src="screenshots/protobuf_decoded.png" width="320" /></td>
-    <td><img src="screenshots/protobuf_raw.png" width="320" /></td>
-  </tr>
-</table>
-
-### 선택: Gradle 플러그인
-
-위의 인터셉터 호출 방식이 기본이며 그대로 동작합니다. 브릿지 코드에 Dari 호출을 넣고 싶지 않다면, 선택 사항인 `io.github.easyhooon.dari` Gradle 플러그인이 한 번의 매핑으로 디버그 빌드에 같은 호출을 넣어 줍니다.
-
-`plugins { }`와 `dari { }`는 `dari` / `dari-noop`을 추가한 앱 모듈의 `build.gradle.kts`에 넣습니다. 루트 `build.gradle.kts`나 `settings.gradle.kts`에 넣지 않습니다.
-
-```kotlin
-// settings.gradle.kts: 플러그인은 Maven Central에서 받습니다
-pluginManagement {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
-```
-
-```kotlin
-// app/build.gradle.kts
-plugins {
-    id("io.github.easyhooon.dari") version "<version>"
-}
-
-dari {
-    webToAppRequest("com.example.MainActivity.Bridge", "onBridgeRequest") {
-        handlerName = arg(0); requestId = arg(1); data = arg(2)
-    }
-    webToAppResponse("com.example.MainActivity", "sendResponseToWeb") {
-        handlerName = arg(0); requestId = arg(1); success = arg(2); data = arg(3)
-    }
-}
-```
-
-protobuf 페이로드를 쓸 때만 `Application.onCreate()`에서 `Dari.setProtobufDecoder(...)`로 디코더를 한 번 등록하세요. 매핑 레퍼런스는 [매핑 레퍼런스 문서](https://easyhooon.github.io/dari/ko/docs/gradle-plugin/mappings)를 참고하세요.
-
-### 사용자 정의 구성
-
-자동 초기화가 일어나기 전이나 `Application.onCreate()`에서 config와 함께 `init`을 호출해 Dari를 사용자 정의할 수 있습니다:
-
-```kotlin
-class MyApp : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        Dari.init(
-            context = this,
-            config = DariConfig(
-                maxEntries = 1000,              // Default: 500
-                showNotification = true,        // Default: true
-                maxContentLength = 500_000,     // Default: 500,000 (truncate large payloads)
-                shakeToOpen = true,             // Default: false
-                retentionPeriod = 1.days,       // Default: null (disabled)
-                fireAndForget = false,          // Default: false
-            )
-        )
-    }
-}
-```
-
-| 파라미터 | 타입 | 기본값 | 설명 |
-|-----------|------|---------|-------------|
-| `maxEntries` | `Int` | `500` | 저장할 최대 메시지 수 |
-| `showNotification` | `Boolean` | `true` | 상시 알림 표시 |
-| `maxContentLength` | `Int` | `500,000` | 이 길이를 넘는 요청/응답 페이로드를 자름 |
-| `shakeToOpen` | `Boolean` | `false` | 흔들어서 Dari UI 열기 활성화 |
-| `retentionPeriod` | `Duration?` | `null` | TTL 기반 메시지 정리(예: `1.hours`, `3.days`). `null`이면 비활성화 |
-| `fireAndForget` | `Boolean` | `false` | 기본적으로 브릿지 호출을 응답을 기다리지 않는 단방향으로 처리 |
-
-## 모듈 구조
-
-```
-dari/
-├── dari-core/     ← KMP contracts for Android, JVM, and iOS
-├── dari/          ← Debug library (interceptor, UI, notifications)
-├── dari-noop/     ← Release no-op (same API surface, zero overhead)
-├── dari-ios/      ← iOS Swift package (capture and transport to the desktop app)
-├── sample/        ← Sample app with WebView bridge demo
-└── sample-ios/    ← iOS sample app with WKWebView bridge demo
-```
-
-Kotlin Multiplatform 프로젝트에서는 `dari-core`를 `commonMain`에 추가할 수 있습니다:
-
-```kotlin
-commonMain.dependencies {
-    implementation("io.github.easyhooon:dari-core:<version>")
-}
-```
-
-이렇게 하면 메시지 모델과 인터셉터 계약을 Android, JVM, iOS 타깃에서 공유합니다. `dari`의 인스펙터 런타임, UI, 저장소, 알림, WebView 연동은 Android 전용입니다. iOS 앱은 `dari-ios` Swift 패키지를 사용합니다.
-
 ## 샘플 앱
 
-`sample/` 모듈에는 실제와 비슷한 브릿지 시나리오를 담은 WebView 데모가 있습니다: 앱/기기 정보 조회, 토스트 메시지, 햅틱 피드백, 네이티브 공유 시트, 클립보드 접근, 앱 설정 열기, 카메라 권한 요청. 샘플 앱을 실행해 버튼을 눌러 보고 다음을 확인하세요:
-
-1. 최근 브릿지 메시지를 보여 주는 알림이 나타납니다
-2. 알림을 탭하면 메시지 목록이 열립니다
-3. 메시지를 탭하면 상세 내용(개요, 요청 페이로드, 응답 페이로드)을 볼 수 있습니다
-
-샘플은 Gradle 플러그인으로 브릿지를 캡처합니다(`sample/build.gradle.kts`의 `dari { }`). 같은 캡처를 직접 하는 코드는 위의 [인터셉터 연동](#인터셉터-연동)에 있습니다.
-
-`sample-ios/`는 iOS용 샘플입니다. `@DariBridge`로 스스로를 기록하는 WKWebView 브릿지가 들어 있습니다. Simulator에서 실행하고 같은 Mac에서 데스크톱 앱을 열어 두세요.
+- `sample/`(Android): 앱/기기 정보, 토스트, 햅틱, 공유 시트, 클립보드, 앱 설정, 카메라 권한 시나리오를 담은 WebView 데모. Gradle 플러그인으로 브릿지를 캡처합니다.
+- `sample-ios/`(iOS): 성공, 에러, 느린 응답, 무응답, fire-and-forget, 마스킹 시나리오를 담은 WKWebView 데모. `@DariBridge`로 브릿지를 캡처합니다. Xcode 16 이상에서 열고 Simulator에서 **DariSample** 스킴을 실행하세요.
 
 <p align="center">
   <img src="screenshots/ios_sample.jpeg" width="270" alt="Dari iOS 샘플 앱" />
@@ -413,98 +194,12 @@ commonMain.dependencies {
 Dari는 디버그 빌드와 내부 빌드용입니다. 브릿지 페이로드에는 토큰, 개인정보 등 민감한 값이
 들어 있을 수 있으므로, 내보낸 메시지는 먼저 검토한 뒤 공유하세요. 릴리스 빌드에서는
 `dari-noop`을 사용하면 같은 API를 유지하면서 브릿지 메시지를 저장하거나 표시하지 않습니다.
+iOS에서는 검사하는 빌드에서만 `Dari.shared.start()`를 호출하세요. 실행 중에는 기기의 루프백에
+접근할 수 있는 모든 프로세스가 기록된 메시지를 읽을 수 있습니다.
 
 데스크톱 앱은 기본으로 Sentry에 크래시 리포트를 보냅니다: 예외 타입, 스택 트레이스, OS·아키텍처·Java
 버전. 예외 메시지, 브릿지 메시지, 호스트 이름, IP 주소는 보내지 않습니다. 설정 → Privacy →
 **Send crash reports**에서 끌 수 있습니다.
-
-## API 레퍼런스
-
-### Dari
-
-| 메서드 | 설명 |
-|--------|-------------|
-| `init(context, config)` | 사용자 정의 구성으로 초기화 |
-| `createInterceptor(tag?)` | 태그(선택)를 지정해 `DariInterceptor` 생성(noop에서는 `null` 반환) |
-| `createInterceptor(tag?, protobufDecoder)` | 문자열/JSON 메서드를 모두 유지하면서 protobuf를 지원하는 인터셉터 생성 |
-| `setProtobufDecoder(decoder)` | Gradle 플러그인이 만드는 인터셉터가 쓸 protobuf 디코더. 앱 시작 시 한 번 호출 |
-| `setShakeToOpenEnabled(enabled)` | 런타임에 흔들어서 열기 켜기/끄기(저장됨) |
-| `setDarkMode(value)` | 다크 모드 재정의: `true` / `false` / `null`(시스템 기본값). 저장됨 |
-| `setShowTagChip(show)` | 메시지 목록의 브릿지 태그 칩 표시/숨김. 저장됨 |
-| `setEnvironment(vararg labels)` | 캡처 환경 라벨(리전, 웹 빌드, flavor 등). 두 인스펙터와 export에 표시되고, 다시 호출하면 교체됨. 저장되지 않음 |
-| `showNotification()` | 알림 표시(예: 권한 허용 후) |
-| `clear()` | 저장된 모든 메시지를 지우고 알림 닫기 |
-
-### DariInterceptor
-
-| 메서드 | 설명 |
-|--------|-------------|
-| `onWebToAppRequest()` | Web-to-App 요청 기록. 별도의 `displayName`(선택)을 받는 오버로드가 있습니다. |
-| `onWebToAppResponse()` | Web-to-App 요청에 대한 응답 기록. `requestId`가 null이면 건너뜁니다. |
-| `onAppToWebRequest()` | App-to-Web 메시지 기록. 별도의 `displayName`(선택)을 받는 오버로드가 있습니다. |
-| `onAppToWebResponse()` | App-to-Web 메시지에 대한 응답 기록. `requestId`가 null이면 건너뜁니다. |
-| `onPageUrlChanged(url)` | WebView의 현재 페이지 전달(예: `doUpdateVisitedHistory`). 이후 요청에 기록되어 origin 필터에 쓰입니다. user info, query, fragment는 저장하지 않습니다. |
-
-`ProtobufDariInterceptor`는 이 인터페이스를 확장해 `ByteArray` 페이로드를 받는 `on*ProtobufRequest()`, `on*ProtobufResponse()` 메서드를 제공합니다.
-
-```kotlin
-/**
- * Interface for intercepting WebView bridge communication.
- * Injected into WebViewBridge to capture all bridge messages.
- */
-interface DariInterceptor {
-    /** Tag identifying the source of messages captured by this interceptor */
-    val tag: String?
-        get() = null
-
-    /** Called when a Web -> App request is received */
-    fun onWebToAppRequest(
-        handlerName: String,
-        requestId: String?,
-        requestData: String?,
-        fireAndForget: Boolean? = null,
-    )
-
-    fun onWebToAppRequest(
-        handlerName: String,
-        displayName: String?,
-        requestId: String?,
-        requestData: String?,
-        fireAndForget: Boolean? = null,
-    )
-
-    /** Called when a response is sent for a Web -> App request */
-    fun onWebToAppResponse(
-        handlerName: String,
-        requestId: String?,
-        responseData: String?,
-        isSuccess: Boolean,
-    )
-
-    /** Called when an App -> Web request is sent */
-    fun onAppToWebRequest(
-        handlerName: String,
-        requestId: String?,
-        data: String?,
-        fireAndForget: Boolean? = null,
-    )
-
-    fun onAppToWebRequest(
-        handlerName: String,
-        displayName: String?,
-        requestId: String?,
-        data: String?,
-        fireAndForget: Boolean? = null,
-    )
-
-    /** Called when a web response is received for an App -> Web request */
-    fun onAppToWebResponse(
-        requestId: String?,
-        isSuccess: Boolean,
-        responseData: String?,
-    )
-}
-```
 
 ## 프로젝트 통계
 

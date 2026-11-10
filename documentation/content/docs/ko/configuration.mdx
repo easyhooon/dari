@@ -1,6 +1,6 @@
 ---
 title: 설정 옵션
-description: DariConfig 옵션 레퍼런스
+description: DariConfig 옵션과 Dari 런타임 API
 ---
 
 `Dari.init()`에 `DariConfig` 인스턴스를 전달하여 앱 시작 전후의 동작을 커스터마이징합니다.
@@ -58,3 +58,24 @@ DariConfig(retentionPeriod = 6.hours)
 `true`로 설정하면 모든 브릿지 호출이 응답을 기다리지 않고 즉시 `SUCCESS`로 처리됩니다. 전체 브릿지가 단방향인 경우 유용합니다.
 
 개별 호출에 적용하려면 인터셉터 메서드의 `fireAndForget` 파라미터를 사용하세요.
+
+## 런타임 API
+
+초기화 이후 언제든 `Dari`에서 호출할 수 있습니다. `dari-noop`에서는 아무 동작도 하지 않습니다.
+
+| 메서드 | 설명 |
+|--------|------|
+| `init(context, config)` | 사용자 정의 `DariConfig`로 초기화 |
+| `createInterceptor(tag?)` | 선택적 태그를 가진 `DariInterceptor` 생성. noop에서는 `null` 반환 |
+| `createInterceptor(tag?, protobufDecoder)` | protobuf를 지원하는 인터셉터 생성. [Protocol Buffers](./protobuf) 참고 |
+| `setProtobufDecoder(decoder)` | [Gradle 플러그인](./gradle-plugin)이 만드는 인터셉터용 protobuf 디코더. 앱 시작 시 한 번 호출 |
+| `setShakeToOpenEnabled(enabled)` | 흔들어서 열기 켜기·끄기. 저장됨 |
+| `setDarkMode(value)` | `true` / `false`, 또는 시스템 테마를 따르는 `null`. 저장됨 |
+| `setShowTagChip(show)` | 메시지 목록의 태그 칩 표시 여부. 저장됨 |
+| `setJsonFoldingEnabled(enabled)` | 중첩 JSON 접기 컨트롤 표시 여부. 저장됨 |
+| `setMaskingEnabled(enabled)` | 앱 화면과 내보내기에서 민감 정보 마스킹. [마스킹](./masking) 참고. 저장됨 |
+| `setPayloadRedactor(redactor)` | 데스크톱 앱으로 보내기 전에 메시지를 고치거나 숨김 |
+| `setDesktopInspectorEnabled(enabled)` | [데스크톱 앱](./desktop)이 adb로 연결하도록 허용. 디버그 빌드에서는 기본으로 켜짐 |
+| `setEnvironment(labels)` | 캡처에 라벨(리전, 웹 빌드, flavor 등) 지정. 두 인스펙터와 내보내기에 표시되며 이전 라벨을 대체. 저장되지 않음 |
+| `showNotification()` | 알림 표시(예: 권한 허용 후) |
+| `clear()` | 저장된 메시지를 모두 지우고 알림 닫기 |

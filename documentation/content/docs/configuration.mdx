@@ -1,6 +1,6 @@
 ---
 title: Configuration
-description: DariConfig options reference
+description: DariConfig options and the runtime Dari API
 ---
 
 Pass a `DariConfig` instance to `Dari.init()` to customize behavior before or during app startup.
@@ -61,3 +61,24 @@ DariConfig(retentionPeriod = 6.hours)
 When `true`, all bridge calls are resolved to `SUCCESS` immediately without waiting for a response. Useful when your entire bridge is one-way.
 
 For per-call control, pass `fireAndForget` directly to the interceptor methods.
+
+## Runtime API
+
+Call these on `Dari` at any time after initialization. In `dari-noop` they do nothing.
+
+| Method | Description |
+|--------|-------------|
+| `init(context, config)` | Initialize with a custom `DariConfig` |
+| `createInterceptor(tag?)` | Create a `DariInterceptor` with an optional tag. Returns `null` in noop |
+| `createInterceptor(tag?, protobufDecoder)` | Create a protobuf-capable interceptor; see [Protocol Buffers](./protobuf) |
+| `setProtobufDecoder(decoder)` | Protobuf decoder for interceptors the [Gradle plugin](./gradle-plugin) creates. Call once at app start |
+| `setShakeToOpenEnabled(enabled)` | Turn shake-to-open on or off. Persisted |
+| `setDarkMode(value)` | `true` / `false`, or `null` for the system theme. Persisted |
+| `setShowTagChip(show)` | Show or hide tag chips in the message list. Persisted |
+| `setJsonFoldingEnabled(enabled)` | Show or hide fold controls for nested JSON. Persisted |
+| `setMaskingEnabled(enabled)` | Mask sensitive values in the in-app screens and exports; see [Masking](./masking). Persisted |
+| `setPayloadRedactor(redactor)` | Rewrite or hide messages before they reach the desktop app |
+| `setDesktopInspectorEnabled(enabled)` | Allow the [desktop app](./desktop) to connect over adb. On by default in debuggable builds |
+| `setEnvironment(labels)` | Label the capture (region, web build, flavor, …). Shown in both inspectors and exports; replaces earlier labels. Not persisted |
+| `showNotification()` | Show the notification, e.g. after the permission is granted |
+| `clear()` | Clear all stored messages and dismiss the notification |
