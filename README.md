@@ -68,39 +68,80 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
 
 ## Why Dari?
 
-Debugging a hybrid app usually means sprinkling `Log.d` across `@JavascriptInterface` methods and scrolling Logcat to match requests with responses. Dari gives you:
+Debugging a hybrid app usually means sprinkling logs across bridge handlers and scrolling Logcat or the Xcode console to match requests with responses. Dari gives you:
 
 - Every Web ↔ App bridge call in one list, with request/response paired by `requestId`
 - Pretty-printed JSON payloads, status (`IN_PROGRESS` / `SUCCESS` / `ERROR`), and timing
-- A desktop app that inspects Android and iOS apps from macOS, Windows or Linux
+- One desktop app for Android and iOS, on macOS, Windows or Linux
 - On Android, a live notification and shake-to-open, so the in-app inspector is one tap away while testing
-- A no-op artifact for release builds, so nothing ships to production
+- Nothing in production: `dari-noop` on Android, `#if DEBUG` on iOS
 
 ## Quick Start
 
+### Android
+
 ```kotlin
-// build.gradle.kts
+// app/build.gradle.kts
 debugImplementation("io.github.easyhooon:dari:<latest-version>")
 releaseImplementation("io.github.easyhooon:dari-noop:<latest-version>")
 ```
 
-```kotlin
-// In your bridge layer
-val interceptor = Dari.createInterceptor()
+Dari initializes itself through `androidx.startup`. Call the interceptor where requests enter your bridge and where responses leave it, not in each handler:
 
-// Where every request enters the bridge
-interceptor?.onWebToAppRequest(handlerName, requestId, data)
-// In the one function that sends responses to the web
-interceptor?.onWebToAppResponse(handlerName, requestId, responseData, isSuccess)
+```kotlin
+val interceptor = Dari.createInterceptor(tag = "main")
+
+@JavascriptInterface
+fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
+    interceptor?.onWebToAppRequest(handlerName, requestId, data)
+    // … dispatch to handlers, which reply through sendResponseToWeb
+}
+
+private fun sendResponseToWeb(handlerName: String, requestId: String, isSuccess: Boolean, data: String) {
+    interceptor?.onWebToAppResponse(handlerName, requestId, data, isSuccess)
+    // … evaluateJavascript
+}
 ```
 
-Run the app, trigger a bridge call, and tap the Dari notification. See [Setup](#setup) for App-to-Web messages, tags, and Protocol Buffers.
+Run the app, trigger a bridge call, and tap the Dari notification or open the Desktop App. To keep Dari out of your bridge code, the optional [Gradle plugin](https://easyhooon.github.io/dari/docs/gradle-plugin) (2.6.0+) inserts these calls at build time.
 
-**iOS**: add `https://github.com/easyhooon/dari` as a Swift package (from `3.0.0`), call `Dari.shared.start()` in debug builds and record calls with `Dari.shared.interceptor(tag:)`, pass `autoCapture` (3.1.0+) to record WebKit bridge traffic without them, or mark handlers with `@DariBridge` from `DariMacros` (3.2.0+) to record them at compile time. Messages appear in the [Desktop App](#desktop-app). See the [iOS guide](https://easyhooon.github.io/dari/docs/ios).
+### iOS
+
+Add `https://github.com/easyhooon/dari` as a Swift package (from `3.0.0`) and link the `Dari` library:
+
+```swift
+import Dari
+
+#if DEBUG
+try? Dari.shared.start()
+#endif
+
+let dari = Dari.shared.interceptor(tag: "main")
+
+// WKScriptMessageHandler
+func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+    dari.onWebToAppRequest(handlerName: message.name, requestId: callbackId, requestData: json)
+    // … handle, then reply
+    dari.onWebToAppResponse(handlerName: message.name, requestId: callbackId, responseData: result, isSuccess: true)
+}
+```
+
+Run the app in a Simulator or on a USB-attached device and open the Desktop App on the same Mac. To skip the manual calls, pass `autoCapture` (3.1.0+) to `start()` or mark the handler with `@DariBridge` from `DariMacros` (3.2.0+).
+
+## Guides
+
+| | Android | iOS |
+| --- | --- | --- |
+| Setup | [Setup](https://easyhooon.github.io/dari/docs/setup) | [iOS guide](https://easyhooon.github.io/dari/docs/ios) |
+| Capture without manual calls | [Gradle plugin](https://easyhooon.github.io/dari/docs/gradle-plugin) | [Automatic capture](https://easyhooon.github.io/dari/docs/ios#automatic-capture), [Macros](https://easyhooon.github.io/dari/docs/ios#compile-time-capture-with-macros) |
+| API | [Interceptor](https://easyhooon.github.io/dari/docs/interceptor), [Configuration and runtime API](https://easyhooon.github.io/dari/docs/configuration) | [iOS guide](https://easyhooon.github.io/dari/docs/ios#record-bridge-calls) |
+| More | [Protocol Buffers](https://easyhooon.github.io/dari/docs/protobuf), [In-app inspector](https://easyhooon.github.io/dari/docs/inspector), [Modules](https://easyhooon.github.io/dari/docs/modules) | [Staging builds](https://easyhooon.github.io/dari/docs/ios#staging-builds), [Troubleshooting](https://easyhooon.github.io/dari/docs/ios#troubleshooting) |
+
+Both platforms: [Desktop App](https://easyhooon.github.io/dari/docs/desktop) · [Masking](https://easyhooon.github.io/dari/docs/masking)
 
 ## In-app Inspector (Android)
 
-**Bridge calls → notification → message detail**
+Android apps also get an inspector on the device, Chucker-style: a live notification of recent bridge activity, a searchable list with status, handler and tag filters, Overview / Request / Response tabs, per-handler response times, text or JSON export, shake-to-open, a launcher shortcut, and dark mode.
 
 <p align="center">
   <img src="screenshots/demo.gif" width="300" alt="Dari demo: bridge calls, notification, message detail" />
@@ -139,270 +180,10 @@ Run the app, trigger a bridge call, and tap the Dari notification. See [Setup](#
   </tr>
 </table>
 
-## Features
+## Sample Apps
 
-The in-app inspector below is Android-only. iOS apps show their messages in the [Desktop App](#desktop-app); see [Platform Support](#platform-support).
-
-- Intercepts Web-to-App and App-to-Web bridge messages
-- **Tag support** for identifying message sources in multi-WebView/Activity environments
-- **Message status tracking** — `IN_PROGRESS`, `SUCCESS`, `ERROR` with color-coded indicators
-- **Status filtering** — filter messages by status via chips
-- **Response time stats** — call count, average, min, and max duration per handler, with slow handlers highlighted
-- Chucker-style persistent notification showing recent bridge activity
-- Message list UI with search, filter by handler name, and **tag-based filtering**
-- Detail view with Overview / Request / Response tabs
-- JSON pretty-printing for request and response payloads
-- Optional Protocol Buffers inspection through an app-provided decoder
-- Export messages as text or JSON
-- **Shake-to-open** — shake device to launch Dari UI (with haptic feedback)
-- **Dark mode** — System / Light / Dark theme toggle
-- **Settings bottom sheet** — shake toggle, theme selector, clear data, and version info
-- Dynamic launcher shortcut for quick access
-- Zero overhead in release builds via no-op module
-- Auto-initialization via `androidx.startup`
-
-## Setup
-
-### Two Ways to Capture
-
-| | Manual (default) | Gradle plugin (new in 2.6.0, optional) |
-| --- | --- | --- |
-| Dependencies | `dari` + `dari-noop` | The same `dari` + `dari-noop` |
-| Extra setup | None | `mavenCentral()` in `pluginManagement` of `settings.gradle.kts`, and `plugins { id("io.github.easyhooon.dari") }` plus a `dari { }` mapping in the app module's `build.gradle.kts` |
-| Bridge code | Interceptor calls where requests enter and responses leave | No Dari calls |
-| Performance | Baseline | Same as manual, except bridges that pass large JSON strings ([Performance](https://easyhooon.github.io/dari/docs/gradle-plugin/performance)) |
-
-- **The dependency alone doesn't turn on the plugin way.** Adding or upgrading `dari` changes nothing until you also apply the plugin and write `dari { }`. Without them, only your own interceptor calls are recorded.
-- **Upgrading with manual calls:** bump the version. No code changes.
-- **Pick one way per bridge.** If a mapped method already calls `DariInterceptor`, the plugin skips that method and prints a build warning. It only checks the mapped method's own body, so a manual call elsewhere on the same path, such as in a handler, is recorded a second time.
-
-The steps below set up the manual way. For the plugin, also follow [Optional: Gradle Plugin](#optional-gradle-plugin).
-
-### Gradle
-
-Add the `dari` (debug) and `dari-noop` (release) dependencies to your app's `build.gradle.kts`:
-
-```kotlin
-dependencies {
-    debugImplementation("io.github.easyhooon:dari:<latest-version>")
-    releaseImplementation("io.github.easyhooon:dari-noop:<latest-version>")
-}
-```
-
-That's it for initialization. Dari auto-initializes via `androidx.startup` when your app starts.
-
-### Interceptor Integration
-
-Dari requires **manual injection** of the interceptor into your WebView bridge layer. Call it where messages enter and leave the bridge, not in each handler: most bridges have one entry point for incoming requests and one function that sends replies, so a few calls cover every handler.
-
-#### 1. Create the interceptor
-
-```kotlin
-import com.easyhooon.dari.Dari
-import com.easyhooon.dari.interceptor.DariInterceptor
-
-// Basic usage (no tag)
-val interceptor: DariInterceptor? = Dari.createInterceptor()
-
-// With tag — identifies the source in multi-WebView/Activity environments
-val paymentInterceptor: DariInterceptor? = Dari.createInterceptor(tag = "PaymentWebView")
-val mainInterceptor: DariInterceptor? = Dari.createInterceptor(tag = "MainWebView")
-```
-
-When a `tag` is provided, all messages captured by that interceptor are automatically tagged. Tags appear as chips in the message list and can be used to filter messages by source.
-
-#### 2. Intercept Web-to-App messages
-
-Log the request in the `@JavascriptInterface` method every request enters, and the response in the one function that sends replies back. Handlers then need no Dari code:
-
-```kotlin
-inner class Bridge {
-    @JavascriptInterface
-    fun onBridgeRequest(handlerName: String, requestId: String, data: String?) {
-        // Every request enters here
-        interceptor?.onWebToAppRequest(handlerName, requestId, data)
-        when (handlerName) {
-            "getAppInfo" -> sendResponseToWeb(handlerName, requestId, true, appInfoJson())
-            // ...other handlers reply through sendResponseToWeb too
-        }
-    }
-}
-
-// Every reply leaves through here
-private fun sendResponseToWeb(handlerName: String, requestId: String, isSuccess: Boolean, data: String) {
-    interceptor?.onWebToAppResponse(handlerName, requestId, data, isSuccess)
-    val script = "onBridgeResponse(${JSONObject.quote(requestId)}, $isSuccess, ${JSONObject.quote(data)})"
-    webView.post { webView.evaluateJavascript(script, null) }
-}
-```
-
-Replies sent later, e.g. from a permission callback, are still paired by `requestId` as long as they go through the same function.
-
-#### 3. Intercept App-to-Web messages
-
-Same idea in the other direction: log in the function that sends messages to JavaScript and in the method that receives the web's reply:
-
-```kotlin
-// In the function that sends messages to JavaScript
-interceptor?.onAppToWebRequest(handlerName, requestId, data)
-
-// In the @JavascriptInterface method that receives the web's reply
-interceptor?.onAppToWebResponse(requestId, isSuccess, responseData)
-```
-
-#### 4. Fire-and-Forget messages (optional requestId)
-
-For messages that don't require a response (e.g., analytics events, screen tracking), you can pass `null` as the `requestId`:
-
-```kotlin
-// Fire-and-forget: no response expected
-interceptor?.onWebToAppRequest(handlerName, null, data)
-// No need to call onWebToAppResponse
-```
-
-When `requestId` is `null`, the message is treated as standalone and won't be matched with a response.
-
-#### 5. Protocol Buffers (optional)
-
-The existing `String`/JSON methods remain unchanged. To inspect protobuf payloads, create an interceptor with a decoder supplied by your app:
-
-There is no protobuf feature flag or `DariConfig` toggle. Using this interceptor overload and the protobuf capture methods opts the bridge into protobuf inspection. See the [full guide](https://easyhooon.github.io/dari/docs/protobuf) or [Korean guide](https://easyhooon.github.io/dari/ko/docs/protobuf).
-
-```kotlin
-import com.easyhooon.dari.interceptor.protobufDecoder
-
-val protobufInterceptor = Dari.createInterceptor(
-    tag = "OrderBridge",
-    protobufDecoder = protobufDecoder {
-        webToApp("createOrder") {
-            request { JsonFormat.printer().print(CreateOrderRequest.parseFrom(it)) }
-            response { JsonFormat.printer().print(CreateOrderResponse.parseFrom(it)) }
-        }
-    },
-)
-
-protobufInterceptor?.onWebToAppProtobufRequest(
-    handlerName = "createOrder",
-    requestId = requestId,
-    requestData = protobufBytes,
-)
-```
-
-Dari does not depend on a protobuf runtime. The consuming app owns generated message types and decoding. Decoding runs synchronously on the interceptor caller's thread, so decoder work should stay bounded. Base64 is only needed when the app's bridge is string-only; an `ArrayBuffer` bridge can pass the bytes directly.
-
-The REQUEST and RESPONSE tabs provide `Decoded` and `Raw` views. The raw view retains only the first 4 KB of each protobuf payload and displays that preview as Hex and Base64; the original byte size and truncation state remain available. Base64 in this view is a display encoding generated by Dari, not evidence that the bridge transported the payload as Base64.
-
-<table>
-  <tr>
-    <td align="center"><b>Protobuf Decoded</b></td>
-    <td align="center"><b>Protobuf Raw Bytes</b></td>
-  </tr>
-  <tr>
-    <td><img src="screenshots/protobuf_decoded.png" width="320" /></td>
-    <td><img src="screenshots/protobuf_raw.png" width="320" /></td>
-  </tr>
-</table>
-
-### Optional: Gradle Plugin
-
-The interceptor calls above stay the default and keep working. If you'd rather keep Dari out of your bridge code, the optional `io.github.easyhooon.dari` Gradle plugin inserts the same calls into debug builds from a one-time mapping.
-
-`plugins { }` and `dari { }` go in the app module's `build.gradle.kts`, the module that adds `dari` / `dari-noop`. They don't go in the root `build.gradle.kts` or in `settings.gradle.kts`.
-
-```kotlin
-// settings.gradle.kts: the plugin resolves from Maven Central
-pluginManagement {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
-```
-
-```kotlin
-// app/build.gradle.kts
-plugins {
-    id("io.github.easyhooon.dari") version "<version>"
-}
-
-dari {
-    webToAppRequest("com.example.MainActivity.Bridge", "onBridgeRequest") {
-        handlerName = arg(0); requestId = arg(1); data = arg(2)
-    }
-    webToAppResponse("com.example.MainActivity", "sendResponseToWeb") {
-        handlerName = arg(0); requestId = arg(1); success = arg(2); data = arg(3)
-    }
-}
-```
-
-Only for protobuf payloads: register the decoder once in `Application.onCreate()` with `Dari.setProtobufDecoder(...)`. See the [mapping reference](https://easyhooon.github.io/dari/docs/gradle-plugin/mappings).
-
-### Custom Configuration
-
-You can customize Dari by calling `init` with a config before auto-initialization occurs, or in your `Application.onCreate()`:
-
-```kotlin
-class MyApp : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        Dari.init(
-            context = this,
-            config = DariConfig(
-                maxEntries = 1000,              // Default: 500
-                showNotification = true,        // Default: true
-                maxContentLength = 500_000,     // Default: 500,000 (truncate large payloads)
-                shakeToOpen = true,             // Default: false
-                retentionPeriod = 1.days,       // Default: null (disabled)
-                fireAndForget = false,          // Default: false
-            )
-        )
-    }
-}
-```
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `maxEntries` | `Int` | `500` | Maximum number of stored messages |
-| `showNotification` | `Boolean` | `true` | Show persistent notification |
-| `maxContentLength` | `Int` | `500,000` | Truncate request/response payloads exceeding this length |
-| `shakeToOpen` | `Boolean` | `false` | Enable shake gesture to open Dari UI |
-| `retentionPeriod` | `Duration?` | `null` | TTL-based message cleanup (e.g., `1.hours`, `3.days`). `null` disables it |
-| `fireAndForget` | `Boolean` | `false` | Treat bridge calls as one-way by default without waiting for responses |
-
-## Module Structure
-
-```
-dari/
-├── dari-core/     ← KMP contracts for Android, JVM, and iOS
-├── dari/          ← Debug library (interceptor, UI, notifications)
-├── dari-noop/     ← Release no-op (same API surface, zero overhead)
-├── dari-ios/      ← iOS Swift package (capture and transport to the desktop app)
-├── sample/        ← Sample app with WebView bridge demo
-└── sample-ios/    ← iOS sample app with WKWebView bridge demo
-```
-
-`dari-core` can be added to `commonMain` in a Kotlin Multiplatform project:
-
-```kotlin
-commonMain.dependencies {
-    implementation("io.github.easyhooon:dari-core:<version>")
-}
-```
-
-This shares message models and interceptor contracts across Android, JVM, and iOS targets. The inspector runtime, UI, persistence, notifications, and WebView integration in `dari` remain Android-only. iOS apps use the `dari-ios` Swift package instead.
-
-## Sample App
-
-The `sample/` module contains a working WebView demo with realistic bridge scenarios: fetching app/device info, showing toast messages, haptic feedback, sharing via native share sheet, clipboard access, opening app settings, and requesting camera permission. Run the sample app, tap the buttons, and observe:
-
-1. A notification appears showing recent bridge messages
-2. Tap the notification to open the message list
-3. Tap any message to see its details (overview, request payload, response payload)
-
-The sample captures its bridge with the Gradle plugin (`dari { }` in `sample/build.gradle.kts`). The [Interceptor Integration](#interceptor-integration) code above shows the same capture done by hand.
-
-`sample-ios/` is the iOS counterpart: a WKWebView bridge that records itself with `@DariBridge`. Run it in a Simulator with the Desktop App open on the same Mac.
+- `sample/` (Android): a WebView demo with app/device info, toast, haptics, share sheet, clipboard, app settings and camera permission scenarios. It captures its bridge with the Gradle plugin.
+- `sample-ios/` (iOS): a WKWebView demo with success, error, slow, no-response, fire-and-forget and masking scenarios. It captures its bridge with `@DariBridge`. Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
 
 <p align="center">
   <img src="screenshots/ios_sample.jpeg" width="270" alt="Dari iOS sample app" />
@@ -414,98 +195,12 @@ Dari is intended for debug and internal builds. Bridge payloads may contain
 tokens, personal data, or other sensitive values, so avoid sharing exported
 messages without reviewing them first. Use `dari-noop` in release builds to
 keep the same API surface without storing or displaying bridge messages.
+On iOS, call `Dari.shared.start()` only in builds you inspect: while it runs,
+any process that can reach the device's loopback can read the recorded messages.
 
 The desktop app sends crash reports to Sentry by default: the exception type, stack trace, and OS,
 architecture and Java versions. Exception messages, bridge messages, host names and IP addresses
 are never sent. Turn it off in Settings → Privacy → **Send crash reports**.
-
-## API Reference
-
-### Dari
-
-| Method | Description |
-|--------|-------------|
-| `init(context, config)` | Initialize with custom configuration |
-| `createInterceptor(tag?)` | Create a `DariInterceptor` with an optional tag (returns `null` in noop) |
-| `createInterceptor(tag?, protobufDecoder)` | Create a protobuf-capable interceptor while retaining all string/JSON methods |
-| `setProtobufDecoder(decoder)` | Protobuf decoder for interceptors the Gradle plugin creates. Call once at app start |
-| `setShakeToOpenEnabled(enabled)` | Enable/disable shake-to-open at runtime (persisted) |
-| `setDarkMode(value)` | Override dark mode: `true` / `false` / `null` (system default). Persisted |
-| `setShowTagChip(show)` | Show/hide bridge tag chips in the message list. Persisted |
-| `setEnvironment(vararg labels)` | Label the capture (region, web build, flavor, …). Shown in both inspectors and exports; replaces earlier labels. Not persisted |
-| `showNotification()` | Show the notification (e.g., after permission grant) |
-| `clear()` | Clear all stored messages and dismiss notification |
-
-### DariInterceptor
-
-| Method | Description |
-|--------|-------------|
-| `onWebToAppRequest()` | Log a Web-to-App request. An overload accepts a separate optional `displayName`. |
-| `onWebToAppResponse()` | Log the response to a Web-to-App request. Skipped if `requestId` is null. |
-| `onAppToWebRequest()` | Log an App-to-Web message. An overload accepts a separate optional `displayName`. |
-| `onAppToWebResponse()` | Log the response to an App-to-Web message. Skipped if `requestId` is null. |
-| `onPageUrlChanged(url)` | Report the WebView's current page, e.g. from `doUpdateVisitedHistory`. Later requests record it (user info, query and fragment dropped) for the origin filter. |
-
-`ProtobufDariInterceptor` extends this interface with matching `on*ProtobufRequest()` and `on*ProtobufResponse()` methods that accept `ByteArray` payloads.
-
-```kotlin
-/**
- * Interface for intercepting WebView bridge communication.
- * Injected into WebViewBridge to capture all bridge messages.
- */
-interface DariInterceptor {
-    /** Tag identifying the source of messages captured by this interceptor */
-    val tag: String?
-        get() = null
-
-    /** Called when a Web -> App request is received */
-    fun onWebToAppRequest(
-        handlerName: String,
-        requestId: String?,
-        requestData: String?,
-        fireAndForget: Boolean? = null,
-    )
-
-    fun onWebToAppRequest(
-        handlerName: String,
-        displayName: String?,
-        requestId: String?,
-        requestData: String?,
-        fireAndForget: Boolean? = null,
-    )
-
-    /** Called when a response is sent for a Web -> App request */
-    fun onWebToAppResponse(
-        handlerName: String,
-        requestId: String?,
-        responseData: String?,
-        isSuccess: Boolean,
-    )
-
-    /** Called when an App -> Web request is sent */
-    fun onAppToWebRequest(
-        handlerName: String,
-        requestId: String?,
-        data: String?,
-        fireAndForget: Boolean? = null,
-    )
-
-    fun onAppToWebRequest(
-        handlerName: String,
-        displayName: String?,
-        requestId: String?,
-        data: String?,
-        fireAndForget: Boolean? = null,
-    )
-
-    /** Called when a web response is received for an App -> Web request */
-    fun onAppToWebResponse(
-        requestId: String?,
-        isSuccess: Boolean,
-        responseData: String?,
-    )
-}
-```
 
 ## Project Stats
 
