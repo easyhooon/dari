@@ -5,7 +5,7 @@ import Foundation
 /// Feeds the inspector screens from the running [Dari] store.
 @MainActor
 final class InspectorModel: ObservableObject {
-    /// Newest first, like the Android list.
+    /// Newest first, like the Android list. Always as recorded; pass through [display] before showing payloads.
     @Published private(set) var records: [MessageRecord] = []
     @Published private(set) var isRunning = false
     @Published var query = ""
@@ -15,13 +15,12 @@ final class InspectorModel: ObservableObject {
         didSet {
             guard maskingEnabled != oldValue else { return }
             defaults.set(maskingEnabled, forKey: Self.maskingKey)
-            reload()
+            if !maskingEnabled { maskedCache = [:] }
         }
     }
 
     static let maskingKey = "dari.inspector.maskingEnabled"
     private let defaults: UserDefaults
-    private var reloadGeneration = 0
     private var maskedCache: [Int64: (raw: MessageRecord, masked: MessageRecord)] = [:]
 
     private let source: () -> MessageStore?
@@ -56,7 +55,8 @@ final class InspectorModel: ObservableObject {
 
     var visible: [MessageRecord] {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        return query.isEmpty ? records : records.filter { $0.matches(query) }
+        // Searches what's shown, so masked values aren't found while masking is on.
+        return query.isEmpty ? records : records.filter { display($0).matches(query) }
     }
 
     func record(id: Int64) -> MessageRecord? {
@@ -85,27 +85,19 @@ final class InspectorModel: ObservableObject {
     }
 
     func reload() {
-        let snapshot = Array((store?.snapshot() ?? []).reversed())
-        reloadGeneration += 1
-        guard maskingEnabled else {
-            maskedCache = [:]
-            records = snapshot
-            return
-        }
-        // Masking can be slow for large payloads: do it off the main thread, reusing records that haven't changed.
-        let generation = reloadGeneration
-        let cache = maskedCache
-        Task {
-            let masked = await Task.detached(priority: .userInitiated) {
-                snapshot.map { record in
-                    if let hit = cache[record.id], hit.raw == record { return (record, hit.masked) }
-                    return (record, PayloadMasker.mask(record))
-                }
-            }.value
-            guard generation == reloadGeneration else { return }
-            maskedCache = Dictionary(masked.map { ($0.0.id, (raw: $0.0, masked: $0.1)) }, uniquingKeysWith: { first, _ in first })
-            records = masked.map(\.1)
-        }
+        records = Array((store?.snapshot() ?? []).reversed())
+        let ids = Set(records.map(\.id))
+        maskedCache = maskedCache.filter { ids.contains($0.key) }
+    }
+
+    /// [record] as the screens should show it: masked on the spot when the switch is on, like Android's `maskedIf`.
+    /// Synchronous, so nothing raw is shown while masking would still be pending.
+    func display(_ record: MessageRecord) -> MessageRecord {
+        guard maskingEnabled else { return record }
+        if let hit = maskedCache[record.id], hit.raw == record { return hit.masked }
+        let masked = PayloadMasker.mask(record)
+        maskedCache[record.id] = (record, masked)
+        return masked
     }
 
     func clear() {

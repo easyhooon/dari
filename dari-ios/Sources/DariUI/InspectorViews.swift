@@ -41,8 +41,8 @@ public struct DariInspectorView: View {
                         }
                         ForEach(InspectorFormat.ExportFormat.allCases) { format in
                             Button(format == .text ? "Export as Text" : "Export as JSON") {
-                                let records = model.records
-                                Task { export = await ExportFile.make(format, newestFirst: records) }
+                                let (records, masked) = (model.records, model.maskingEnabled)
+                                Task { export = await ExportFile.make(format, newestFirst: records, masked: masked) }
                             }
                             .disabled(model.records.isEmpty)
                         }
@@ -147,7 +147,8 @@ struct MessageDetailView: View {
 
     var body: some View {
         Group {
-            if let record = model.record(id: id) {
+            if let raw = model.record(id: id) {
+                let record = model.display(raw)
                 VStack(spacing: 0) {
                     Picker("Section", selection: $tab) {
                         ForEach(Tab.allCases, id: \.self) { Text($0.rawValue) }
@@ -155,9 +156,10 @@ struct MessageDetailView: View {
                     .pickerStyle(.segmented)
                     .padding([.horizontal, .bottom])
                     switch tab {
-                    case .overview: OverviewList(record: record)
-                    case .request: PayloadView(data: record.requestData, truncated: record.requestDataTruncated, metadata: record.requestPayloadMetadata)
-                    case .response: PayloadView(data: record.responseData, truncated: record.responseDataTruncated, metadata: record.responsePayloadMetadata)
+                    // Sizes come from the recorded payloads; masking only changes what's shown.
+                    case .overview: OverviewList(record: record, recorded: raw)
+                    case .request: PayloadView(data: record.requestData, truncated: record.requestDataTruncated, metadata: record.requestPayloadMetadata, masked: model.maskingEnabled)
+                    case .response: PayloadView(data: record.responseData, truncated: record.responseDataTruncated, metadata: record.responsePayloadMetadata, masked: model.maskingEnabled)
                     }
                 }
                 .navigationTitle(record.displayName ?? record.handlerName)
@@ -181,6 +183,7 @@ struct MessageDetailView: View {
 
 struct OverviewList: View {
     let record: MessageRecord
+    let recorded: MessageRecord
 
     var body: some View {
         let formatter = InspectorFormat.defaultDateFormatter()
@@ -203,8 +206,8 @@ struct OverviewList: View {
                 if let duration = InspectorFormat.duration(record) { row("Duration", "\(duration) ms") }
             }
             Section("Size") {
-                row("Request", InspectorFormat.size(InspectorFormat.requestSize(record)) + (record.requestDataTruncated ? " (truncated)" : ""))
-                row("Response", InspectorFormat.size(InspectorFormat.responseSize(record)) + (record.responseDataTruncated ? " (truncated)" : ""))
+                row("Request", InspectorFormat.size(InspectorFormat.requestSize(recorded)) + (record.requestDataTruncated ? " (truncated)" : ""))
+                row("Response", InspectorFormat.size(InspectorFormat.responseSize(recorded)) + (record.responseDataTruncated ? " (truncated)" : ""))
             }
             ForEach([("Request", record.requestPayloadMetadata), ("Response", record.responsePayloadMetadata)], id: \.0) { label, metadata in
                 if let metadata {
@@ -231,6 +234,7 @@ struct PayloadView: View {
     let data: String?
     let truncated: Bool
     let metadata: PayloadMetadata?
+    let masked: Bool
     @State private var mode = Mode.decoded
     @State private var rendered: String?
 
@@ -253,7 +257,7 @@ struct PayloadView: View {
             .background(Color(uiColor: .secondarySystemBackground))
         }
         // Re-renders only when the payload or the view mode changes, off the main thread.
-        .task(id: "\(mode.rawValue)|\(data?.utf8.count ?? -1)|\(metadata?.rawPreview?.sizeBytes ?? -1)") {
+        .task(id: "\(mode.rawValue)|\(masked)|\(data?.utf8.count ?? -1)|\(metadata?.rawPreview?.sizeBytes ?? -1)") {
             let (data, truncated, metadata, mode) = (data, truncated, metadata, mode)
             rendered = await Task.detached(priority: .userInitiated) {
                 Self.content(data: data, truncated: truncated, metadata: metadata, mode: mode)
@@ -282,7 +286,7 @@ struct ExportFile: Identifiable {
     }
 
     /// Writes every message to a fresh folder, removing earlier exports first. Nil when writing fails.
-    static func make(_ format: InspectorFormat.ExportFormat, newestFirst: [MessageRecord]) async -> ExportFile? {
+    static func make(_ format: InspectorFormat.ExportFormat, newestFirst: [MessageRecord], masked: Bool) async -> ExportFile? {
         let app = Dari.shared.inspectorAppInfo
         return await Task.detached(priority: .userInitiated) { () -> ExportFile? in
             let root = FileManager.default.temporaryDirectory.appendingPathComponent("dari_export", isDirectory: true)
@@ -291,7 +295,7 @@ struct ExportFile: Identifiable {
             let url = folder.appendingPathComponent(InspectorFormat.fileName(format))
             do {
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                try InspectorFormat.export(newestFirst.reversed(), app: app, format: format).write(to: url, atomically: true, encoding: .utf8)
+                try InspectorFormat.export(newestFirst.reversed(), app: app, format: format, masked: masked).write(to: url, atomically: true, encoding: .utf8)
                 return ExportFile(item: url)
             } catch {
                 return nil

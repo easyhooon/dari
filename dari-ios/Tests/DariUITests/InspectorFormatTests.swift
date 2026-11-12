@@ -86,6 +86,16 @@ final class InspectorFormatTests: XCTestCase {
         XCTAssertTrue(text.hasPrefix("App: Example 1.0 (com.example)\nDevice: iPhone17,1, iOS 18.2.0\nDari: 3.5.0\nEnvironment: server=dev\nExported: 00:00:02\n"))
     }
 
+    func testExportMasksWhenAsked() {
+        var signIn = record()
+        signIn.requestData = #"{"password":"hunter2"}"#
+        let app = AppInfo(applicationId: "a", appName: "A", appVersion: "1", dariVersion: "3", deviceModel: "m", sdkInt: 0)
+        XCTAssertTrue(InspectorFormat.export([signIn], app: app, format: .json).contains("hunter2"))
+        let masked = InspectorFormat.export([signIn], app: app, format: .json, masked: true)
+        XCTAssertFalse(masked.contains("hunter2"))
+        XCTAssertFalse(masked.contains("CgJoaQ=="), "raw previews are dropped too")
+    }
+
     private func record() -> MessageRecord {
         MessageRecord(
             id: 1, requestId: "r", handlerName: "getUser", displayName: "Get user", direction: .webToApp, tag: "main",

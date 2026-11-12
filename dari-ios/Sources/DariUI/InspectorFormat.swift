@@ -158,9 +158,12 @@ enum InspectorFormat {
         _ records: [MessageRecord],
         app: AppInfo,
         format: ExportFormat,
+        masked: Bool = false,
         exportedAt: Date = Date(),
         dateFormatter: DateFormatter = defaultDateFormatter()
     ) -> String {
+        // Masks here, inside the export itself, so the file never depends on what the screen has published.
+        let records = masked ? records.map(PayloadMasker.mask) : records
         switch format {
         case .text:
             let separator = "\n" + String(repeating: "=", count: 60) + "\n\n"

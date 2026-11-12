@@ -1,6 +1,6 @@
 import Foundation
 
-/// Port of Android's `PayloadMasker`, applied per desktop connection when masking is on.
+/// Port of Android's `PayloadMasker`, applied per desktop connection and in the in-app inspector when masking is on.
 /// Fails closed: a payload that can't be processed is replaced, not shown raw.
 package enum PayloadMasker {
     static let mask = "***"
