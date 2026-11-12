@@ -3,7 +3,7 @@ title: Gradle Plugin
 description: Capture bridge messages from a one-time mapping, without Dari calls in your bridge code
 ---
 
-The Dari Gradle plugin records bridge traffic without per-call code. You tell it once where your bridge receives requests and where it sends responses. In debug builds it then inserts the same `DariInterceptor` calls you would otherwise write by hand.
+The Dari Gradle plugin records bridge traffic without per-call code. You tell it once where your bridge receives requests and where it sends responses. In debug builds, and in build types you opt in, it then inserts the same `DariInterceptor` calls you would otherwise write by hand.
 
 Everything after capture stays the same: storage, the in-app inspector, the desktop app, export and masking.
 

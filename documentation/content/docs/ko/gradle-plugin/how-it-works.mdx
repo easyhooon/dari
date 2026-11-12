@@ -71,7 +71,7 @@ Kotlin 컴파일러 플러그인을 쓰지 않은 이유: 컴파일러 플러그
 | --- | --- |
 | 컴파일된 클래스 수정 | AGP [`Instrumentation.transformClassesWith`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/variant/Instrumentation)와 [`AsmClassVisitorFactory`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/instrumentation/AsmClassVisitorFactory) ([Android Gradle 플러그인 확장](https://developer.android.com/build/extend-agp)) |
 | 변환할 클래스 범위 | AGP [`InstrumentationScope`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/instrumentation/InstrumentationScope) |
-| debug 빌드만 | AGP [`Component.debuggable`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/variant/Component) |
+| debug 빌드와 opt-in한 build type | AGP [`Component.debuggable`](https://developer.android.com/reference/tools/gradle-api/com/android/build/api/variant/Component) |
 | 바이트코드 읽기·쓰기 | [ASM](https://asm.ow2.io/), AGP에 이미 포함된 버전 |
 | 브릿지 메서드 | [`@JavascriptInterface`](https://developer.android.com/reference/android/webkit/JavascriptInterface) |
 | 브릿지 → WebView | [`WebView.addJavascriptInterface`](https://developer.android.com/reference/android/webkit/WebView#addJavascriptInterface(java.lang.Object,java.lang.String)) |

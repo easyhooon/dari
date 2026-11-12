@@ -79,7 +79,7 @@ Called when JavaScript sends a message to the native side. Call it once where ev
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `handlerName` | `String` | Bridge handler name |
-| `requestId` | `String?` | Unique ID for pairing with a response. `null` = standalone |
+| `requestId` | `String?` | Unique ID for pairing with a response. `null` = no response is matched; the entry stays `IN_PROGRESS` unless `fireAndForget` resolves it |
 | `requestData` | `String?` | Request payload |
 | `fireAndForget` | `Boolean?` | `null` = use global config, `true` = resolve immediately, `false` = wait for response |
 

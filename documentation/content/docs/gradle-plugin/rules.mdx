@@ -3,7 +3,7 @@ title: Rules and limits
 description: What gets transformed, the mapping check and what is not covered
 ---
 
-- **Debug only.** Only debuggable variants are instrumented. Release builds contain no hooks.
+- **Debug builds by default.** Debuggable variants are instrumented. A non-debuggable build type, such as staging, is instrumented only when listed in `nonDebuggableBuildTypes` ([Options](./mappings#options)). Release builds that aren't listed contain no hooks.
 - **`dari-noop` is safe.** It ships pass-through hooks, so a debuggable variant built against `dari-noop` runs normally and records nothing.
 - **Scope.** By default only the module's own classes are rewritten.
   - A bridge inside a third-party AAR needs `scope = InstrumentationScope.ALL`. That re-dexes every AAR in the app; a cold build took about 5 minutes longer in testing.
@@ -22,16 +22,16 @@ A mapping whose class or method name doesn't match the code still builds, and th
 
 ### When it runs
 
-Each debuggable variant gets a `dariCheck<Variant>Mappings` task, such as `dariCheckDebugMappings`. Release variants and modules without mappings get none.
+Each instrumented variant gets a `dariCheck<Variant>Mappings` task, such as `dariCheckDebugMappings`: every debuggable variant, plus the build types in `nonDebuggableBuildTypes`. Other release variants and modules without mappings get none.
 
 | Task | Runs the check |
 | --- | --- |
 | `assembleDebug`, including Android Studio's Run | Yes |
 | `installDebug`, `bundleDebug` | Yes |
 | `bundleDebugAar` in a library module | Yes |
-| `check` | Yes, for every debuggable variant |
+| `check` | Yes, for every instrumented variant |
 | `testDebugUnitTest` and other test tasks | No |
-| `assembleRelease` | No |
+| `assembleRelease` | No, unless `release` is in `nonDebuggableBuildTypes` |
 
 To run it alone:
 
@@ -68,5 +68,5 @@ The same messages are printed as warnings and the build goes on. Those mappings 
 
 ### Limits
 
-- Each variant is checked against its own classes. A bridge that exists only in one flavor's or build type's source set fails the check in the other debuggable variants. For now, the only way around this is `failOnUnmatchedMapping = false`.
+- Each variant is checked against its own classes. A bridge that exists only in one flavor's or build type's source set fails the check in the other instrumented variants. For now, the only way around this is `failOnUnmatchedMapping = false`.
 - The check confirms that the class and method exist, not what was rewritten. To list the rewritten methods, build with `--info` and look for `Dari: instrumented`.

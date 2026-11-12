@@ -1,9 +1,17 @@
 ---
 title: 모듈 구조
-description: 프로덕션 오버헤드 제로를 위한 세 모듈 아키텍처
+description: 직접 추가하는 Android 아티팩트, 함께 따라오는 모듈, Gradle 플러그인
 ---
 
-Dari는 릴리즈 빌드에 디버그 구현이 포함되지 않도록 세 모듈로 분리되어 있습니다.
+직접 추가하는 Android 아티팩트는 최대 세 개입니다. 디버그 빌드용 `dari`, 릴리즈용 `dari-noop`, 공유 코드용 `dari-core`입니다. `dari`는 `dari-runtime`과 `dari-inspector-protocol`을 함께 가져오므로 따로 선언하지 않습니다. 선택 사항인 [Gradle 플러그인](./gradle-plugin)은 `io.github.easyhooon.dari`로 따로 배포됩니다. iOS는 [Swift 패키지](./ios)를 사용합니다.
+
+| 모듈 | 직접 추가 | 역할 |
+| --- | --- | --- |
+| `dari-core` | 선택, KMP `commonMain`용 | 공통 모델과 `DariInterceptor` 계약 |
+| `dari` | `debugImplementation` | 인스펙터 UI, 알림, 데스크톱 연결 |
+| `dari-noop` | `releaseImplementation` | 같은 API, 아무것도 기록하지 않음 |
+| `dari-runtime` | 아니요, `dari`가 가져옴 | 캡처와 저장: `DefaultDariInterceptor`, Room |
+| `dari-inspector-protocol` | 아니요, `dari`가 가져옴 | 데스크톱 앱과 공유하는 통신 프로토콜 |
 
 ## `dari-core`
 
@@ -11,7 +19,7 @@ Android, JVM, iOS를 지원하는 Kotlin Multiplatform 계약 모듈입니다. U
 
 ```kotlin
 commonMain.dependencies {
-  implementation("io.github.easyhooon:dari-core:<version>")
+  implementation("io.github.easyhooon:dari-core:{{DARI_VERSION}}")
 }
 ```
 
@@ -22,20 +30,29 @@ commonMain.dependencies {
 - `MessageStatus`: 열거형: `IN_PROGRESS`, `SUCCESS`, `ERROR`
 - `MessageDirection`: 열거형: `WEB_TO_APP`, `APP_TO_WEB`
 
-현재 KMP 지원 범위는 공통 모델과 인터셉터 계약입니다. 인스펙터 런타임, WebView 연동, 저장소, UI는 `dari` 모듈의 Android 전용 기능으로 유지됩니다.
+현재 KMP 지원 범위는 공통 모델과 인터셉터 계약입니다. 인스펙터 런타임, WebView 연동, 저장소, UI는 `dari`와 `dari-runtime`의 Android 전용 기능으로 유지됩니다.
 
 ## `dari`
 
-`dari-core`에 의존하는 전체 디버그 구현체입니다.
+전체 디버그 구현체입니다. `dari-runtime`에 의존하고, `dari-runtime`은 `dari-core`에 의존합니다.
 
 포함 내용:
-- `DefaultDariInterceptor`: Room에 메시지 저장, 알림 표시
-- `Dari`: 싱글톤 진입점 (`init`, `createInterceptor`, `clear`)
-- 인스펙터 UI (Jetpack Compose)
-- Room 데이터베이스 + DAO
-- 흔들기 감지 센서
+- `Dari`: 싱글톤 진입점 (`init`, `createInterceptor`, 마스킹·데스크톱 연결 같은 설정)
+- 인스펙터 UI (Jetpack Compose), 알림, 흔들어 열기
+- 데스크톱 인스펙터 연결
+- Gradle 플러그인이 호출하는 훅
 
 `debugImplementation`에만 추가하세요.
+
+## `dari-runtime`
+
+`dari`가 가져오는 캡처·저장 모듈입니다.
+- `DefaultDariInterceptor`: 호출마다 저장하고 응답을 요청과 짝지음
+- Room 데이터베이스 + DAO, `maxEntries`·`retentionPeriod` 제한 적용
+
+## `dari-inspector-protocol`
+
+`dari`와 데스크톱 앱이 주고받는 메시지 정의입니다. 둘은 따로 배포되므로 연결할 때 `InspectorProtocol.VERSION`을 확인하고, 다르면 연결을 거부합니다.
 
 ## `dari-noop`
 

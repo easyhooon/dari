@@ -74,7 +74,7 @@ const STEPS: Record<'en' | 'ko', Step[]> = {
     },
     {
       title: '7. Disconnect',
-      body: '`Cancel #1` stops the stream. Disconnecting closes the socket and removes the tunnel with `adb forward --remove`. If the cable is pulled, pending requests fail at once.',
+      body: '`Cancel #1` stops the stream. Disconnecting closes the socket and removes the tunnel with `adb forward --remove`. If the device drops off (cable pulled, Wi-Fi lost), pending requests fail at once.',
       status: ['Closed', 'Tunnel removed', 'Listening'],
       frames: [
         ['D', 'P', 'Cancel #1', 'request'],
@@ -142,7 +142,7 @@ const STEPS: Record<'en' | 'ko', Step[]> = {
     },
     {
       title: '7. 연결 종료',
-      body: '`Cancel #1`이 스트림을 멈춥니다. 연결을 끊으면 소켓을 닫고 `adb forward --remove`로 터널을 지웁니다. 케이블이 빠지면 대기 중인 요청은 바로 실패합니다.',
+      body: '`Cancel #1`이 스트림을 멈춥니다. 연결을 끊으면 소켓을 닫고 `adb forward --remove`로 터널을 지웁니다. 기기 연결이 끊기면(케이블 분리, Wi-Fi 끊김) 대기 중인 요청은 바로 실패합니다.',
       status: ['닫힘', '터널 제거', '대기 중'],
       frames: [
         ['D', 'P', 'Cancel #1', 'request'],
@@ -227,7 +227,7 @@ export function ConnectionFlow({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
               {NODE_LABELS[lang][i]}
             </text>
             <text x={X[node]} y={96} textAnchor="middle" dominantBaseline="central" fontSize={12} className="fill-fd-muted-foreground">
-              {['java.net.Socket', 'USB', 'LocalServerSocket'][i]}
+              {['java.net.Socket', 'USB · Wi-Fi', 'LocalServerSocket'][i]}
             </text>
             <text x={X[node]} y={124} textAnchor="middle" dominantBaseline="central" fontSize={12} className="fill-fd-muted-foreground">
               {current.status[i]}
