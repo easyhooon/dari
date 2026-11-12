@@ -1,0 +1,76 @@
+---
+title: iOS
+description: Record WKWebView bridge traffic in an iOS app and inspect it in the desktop app
+---
+
+The `Dari` Swift package records your WKWebView bridge traffic and sends it to the same [desktop app](./desktop) you use for Android. The list, details, filters, masking, search, and export work the same way. There is no in-app inspector screen on iOS.
+
+<Callout>
+iOS connections are macOS-only: apps connect from an iOS Simulator, or from an iPhone or iPad attached to the Mac over USB. Building and installing an iOS debug build already needs a Mac, so the desktop app on Windows and Linux shows Android devices only. Connections over Wi-Fi are not offered.
+</Callout>
+
+## Requirements
+
+- iOS 15 or later
+- The Dari desktop app on a Mac. iOS connections need macOS: Simulators run only there, and USB devices are reached through macOS's usbmuxd.
+- For a physical device: a USB cable, the device unlocked once with **Trust This Computer** accepted, and the app installed from Xcode
+- adb is optional. Without it, the desktop app shows only iOS apps.
+
+## Install
+
+1. In Xcode, choose **File → Add Package Dependencies…** and enter `https://github.com/easyhooon/dari`.
+2. Choose **Up to Next Major Version** from `3.0.0`.
+3. Add the **Dari** library to your app target.
+
+With `Package.swift`:
+
+```swift
+.package(url: "https://github.com/easyhooon/dari", from: "3.0.0")
+// target dependencies
+.product(name: "Dari", package: "dari")
+```
+
+## Compatibility
+
+- The iOS SDK and the Android library share the version line from 3.0.0. iOS needs Dari desktop 3.0.0 or later.
+- The wire protocol stays at version 1, so desktop 3.x still connects to Android apps on Dari 2.x, and desktop 2.x keeps working with Android apps on 3.x.
+- Android apps need no migration for 3.0.0. The handshake gains optional `platform` and `osVersion` fields, which older peers ignore.
+
+## Start Dari
+
+Call `start()` once, early in app launch, and only in builds you inspect.
+
+```swift
+import Dari
+
+@main
+struct MyApp: App {
+    init() {
+        #if DEBUG
+        try? Dari.shared.start()
+        Dari.shared.setEnvironment(["server": "dev"]) // optional labels shown in the desktop app
+        #endif
+    }
+    // ...
+}
+```
+
+While Dari is running, any process that can reach the device's loopback can read the recorded messages. Never call `start()` in an App Store build.
+
+`start()` takes a `DariConfiguration`:
+
+| Option | Default | Meaning |
+|---|---|---|
+| `maxEntries` | 500 | Messages kept in memory; the oldest are dropped first |
+| `maxContentLength` | 500,000 | Longer payloads are truncated, as on Android |
+| `fireAndForget` | `false` | Record requests as finished when they are sent |
+| `ports` | `38670...38677` | Loopback ports to try; the desktop app probes the same range |
+
+## Sample app
+
+`sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, and masking. Its bridge records itself with `@DariBridge` and sends callbacks through `dariEvaluateJavaScript`, as in [Compile-time capture with macros](./ios/capture#compile-time-capture-with-macros). The parsers live in `SampleCapture`. To try [automatic capture](./ios/capture#automatic-capture) instead, add `-DariAutoCapture YES` to the scheme's launch arguments. Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
+
+## Next steps
+
+- [Capture bridge calls](./ios/capture): the interceptor, `autoCapture` or `DariMacros`.
+- [Connection and troubleshooting](./ios/connection): how the desktop app finds the app, staging builds and common problems.

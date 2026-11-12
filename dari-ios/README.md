@@ -4,7 +4,7 @@ Records WKWebView bridge traffic and shows it in the Dari desktop app. There is 
 
 Status: Simulator and USB connections work. iOS connections are macOS-only by design: building and installing an iOS debug build already needs a Mac. Wi-Fi connections are not offered.
 
-The full integration guide, including Staging builds and troubleshooting, is in [`documentation/content/docs/ios.mdx`](../documentation/content/docs/ios.mdx). `sample-ios/` has a runnable sample app.
+The full integration guide, including Staging builds and troubleshooting, is in [`documentation/content/docs/ios/`](../documentation/content/docs/ios/): setup in `index.mdx`, the capture methods in `capture.mdx`, and connection and troubleshooting in `connection.mdx`. `sample-ios/` has a runnable sample app.
 
 ## Install
 
@@ -44,13 +44,13 @@ webView.evaluateJavaScript(script) { value, error in
 }
 ```
 
-Or let Dari hook WebKit instead (3.1.0+). Start it before creating web views; see the [iOS guide](https://easyhooon.github.io/dari/docs/ios#automatic-capture) for custom field mapping:
+Or let Dari hook WebKit instead (3.1.0+). Start it before creating web views; see the [iOS guide](https://easyhooon.github.io/dari/docs/ios/capture#automatic-capture) for custom field mapping:
 
 ```swift
 try? Dari.shared.start(DariConfiguration(autoCapture: DariAutoCapture(tag: "main")))
 ```
 
-Or record message handlers at compile time with the `DariMacros` product (3.2.0+), with no runtime hooks; see the [iOS guide](https://easyhooon.github.io/dari/docs/ios#compile-time-capture-with-macros):
+Or record message handlers at compile time with the `DariMacros` product (3.2.0+), with no runtime hooks; see the [iOS guide](https://easyhooon.github.io/dari/docs/ios/capture#compile-time-capture-with-macros):
 
 ```swift
 import DariMacros

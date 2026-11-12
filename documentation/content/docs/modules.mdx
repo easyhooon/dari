@@ -1,9 +1,17 @@
 ---
 title: Module Structure
-description: Dari's three-module architecture for zero production overhead
+description: The Android artifacts you add, the ones they pull in, and the Gradle plugin
 ---
 
-Dari is split into three modules to keep release builds free of debug code.
+You add up to three Android artifacts: `dari` for debug builds, `dari-noop` for release, and `dari-core` for shared code. `dari` pulls in two more, `dari-runtime` and `dari-inspector-protocol`; you don't declare them. The optional [Gradle plugin](./gradle-plugin) is published separately as `io.github.easyhooon.dari`. iOS uses the [Swift package](./ios) instead.
+
+| Module | You add it | Purpose |
+| --- | --- | --- |
+| `dari-core` | Optional, for KMP `commonMain` | Shared models and the `DariInterceptor` contract |
+| `dari` | `debugImplementation` | Inspector UI, notifications, desktop connection |
+| `dari-noop` | `releaseImplementation` | Same API, records nothing |
+| `dari-runtime` | No, via `dari` | Capture and storage: `DefaultDariInterceptor`, Room |
+| `dari-inspector-protocol` | No, via `dari` | Wire protocol shared with the desktop app |
 
 ## `dari-core`
 
@@ -11,7 +19,7 @@ Kotlin Multiplatform contracts module for Android, JVM, and iOS. It has no UI, R
 
 ```kotlin
 commonMain.dependencies {
-  implementation("io.github.easyhooon:dari-core:<version>")
+  implementation("io.github.easyhooon:dari-core:{{DARI_VERSION}}")
 }
 ```
 
@@ -22,20 +30,29 @@ Contains:
 - `MessageStatus`: enum: `IN_PROGRESS`, `SUCCESS`, `ERROR`
 - `MessageDirection`: enum: `WEB_TO_APP`, `APP_TO_WEB`
 
-KMP support currently covers these shared models and interception contracts. The inspector runtime, WebView integration, persistence, and UI remain Android-only in `dari`.
+KMP support currently covers these shared models and interception contracts. The inspector runtime, WebView integration, persistence, and UI remain Android-only, in `dari` and `dari-runtime`.
 
 ## `dari`
 
-Full debug implementation. Depends on `dari-core`.
+Full debug implementation. Depends on `dari-runtime`, which depends on `dari-core`.
 
 Contains:
-- `DefaultDariInterceptor`: stores messages in Room, posts notifications
-- `Dari`: singleton entry point (`init`, `createInterceptor`, `clear`)
-- Inspector UI (Jetpack Compose)
-- Room database + DAO
-- Shake-to-open sensor
+- `Dari`: singleton entry point (`init`, `createInterceptor`, settings such as masking and the desktop connection)
+- Inspector UI (Jetpack Compose), notifications and shake-to-open
+- Desktop inspector connection
+- Hooks that the Gradle plugin calls
 
 Add to `debugImplementation` only.
+
+## `dari-runtime`
+
+Capture and storage, pulled in by `dari`:
+- `DefaultDariInterceptor`: saves each call and pairs responses with requests
+- Room database + DAO, with the `maxEntries` and `retentionPeriod` limits
+
+## `dari-inspector-protocol`
+
+The messages `dari` and the desktop app exchange. The two ship separately, so each side checks `InspectorProtocol.VERSION` when it connects and refuses a mismatch.
 
 ## `dari-noop`
 

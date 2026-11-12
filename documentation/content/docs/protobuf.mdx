@@ -106,7 +106,7 @@ interceptor?.onWebToAppProtobufResponse(
 )
 ```
 
-Use a stable `requestId` to pair a request and response. Pass `null` only for standalone or fire-and-forget messages. `displayName` is optional and is stored separately from the stable `handlerName`.
+Use a stable `requestId` to pair a request and response. Pass `null` only for messages that get no response, together with `fireAndForget = true` so they don't stay `IN_PROGRESS`. `displayName` is optional and is stored separately from the stable `handlerName`.
 
 ## Direction and method mapping
 

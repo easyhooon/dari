@@ -100,7 +100,7 @@ Copy times are from an Apple M2, mounting the DMG and copying the app out with `
 
 ### Updates
 
-Dari checks the releases page on launch and every hour. When a newer version exists, an **Update to &lt;version&gt;** button appears in the title bar, and **Help → Install Dari &lt;version&gt;** does the same.
+Dari checks the releases page on launch and every hour. When a newer version exists, an **Update** button appears in the title bar, with the new version in its tooltip, and the Help menu offers **Install Dari &lt;version&gt;** (or **Download Dari &lt;version&gt;…** where Dari can't update itself, as below).
 
 - **macOS**: Dari downloads the new image, checks its `.sha256`, bundle ID, version and code signature, then quits and relaunches as the new version. If anything fails, the installed version is kept. This works when Dari sits in a folder you can write to, such as **Applications**; otherwise Dari tells you to move it to **Applications** and open it from there.
 - **Windows**: Dari downloads the new `.msi`, checks its `.sha256`, upgrade code and version, then quits, installs it silently and relaunches. If the install fails, Windows Installer rolls it back and the installed version opens again. This works for the per-user install from the `.exe` or `.msi`; a copy elsewhere opens the download page. To update by hand, quit Dari and run the new `.exe` or `.msi`. If Dari is still open, the installer stops with Error 1306 on `dari.lock`: quit Dari and click **Retry**.
@@ -116,19 +116,31 @@ A Desktop only release never requires updating `dari` in your app.
 ## Connect
 
 1. Keep `adb` available. Android Studio in its default location already includes it, and Dari also checks `ANDROID_HOME`. Without Android Studio, install [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools): `brew install android-platform-tools` on macOS, `sudo apt install adb` on Debian or Ubuntu, or on Windows unzip it and add the `platform-tools` folder to `PATH`.
-2. Connect a device with USB debugging on, or start an emulator.
+2. Connect a device with USB debugging on, pair one over Wi-Fi (below), or start an emulator.
 3. Run a debuggable build of your app that uses `dari` and bring it to the foreground.
 
 Dari finds the device and the app on its own and connects. With several devices, pick one from the title bar, or start Dari with `ANDROID_SERIAL` set. If the device hides its app list, type the applicationId instead.
 
 While the desktop app is connected, the in-app notification and shake-to-open pause; they come back when it disconnects.
 
+### Over Wi-Fi
+
+A device on Android 11 or later can connect without a cable through wireless debugging. The computer and the phone must be on the same network.
+
+1. On the phone, open **Developer options → Wireless debugging** and turn it on.
+2. In Dari, choose **Session → Pair Device over Wi-Fi…**, or **Pair Device over Wi-Fi** on the empty screen. It is available once Dari finds `adb`.
+3. Pair one of two ways:
+   - **QR code**: on the phone, tap **Pair device with QR code** and scan the code Dari shows.
+   - **Pairing code**: on the phone, tap **Pair device with pairing code**. The phone shows up in Dari's list; pick it, or type the IP address and port the phone shows, then enter the 6-digit code.
+
+Dari waits up to about 30 seconds for the phone to connect after pairing. Once it does, the phone joins the device list like a USB device. A phone connected over both USB and Wi-Fi is listed once.
+
 ## How it connects
 
-There is nothing to configure: no proxy, certificate, Wi-Fi or port.
+There is nothing to configure: no proxy, certificate or port. Over USB, nothing to pair either; over Wi-Fi, pair once as above.
 
 1. Your app opens a named socket, `dari_<applicationId>`, that only exists inside the device.
-2. The desktop app runs `adb forward tcp:0 localabstract:dari_<applicationId>`. This opens a free port on your computer, chosen by adb, and tunnels it over USB to that socket.
+2. The desktop app runs `adb forward tcp:0 localabstract:dari_<applicationId>`. This opens a free port on your computer, chosen by adb, and tunnels it to that socket over the device's adb connection: USB, Wi-Fi or the emulator's.
 3. The desktop app talks to `127.0.0.1:<port>`, and adb carries the data to your app.
 
 Tunnels are removed when the desktop app disconnects or quits. `adb forward --list` shows any open ones.
@@ -192,6 +204,8 @@ A non-debuggable build needs `ALLOW_NON_DEBUGGABLE` above as well; otherwise not
 | adb not found | Set `ANDROID_HOME`, or add `platform-tools` to `PATH`, then reopen Dari. |
 | No device | Check `adb devices`. Accept the USB debugging prompt on the device. |
 | No Dari app found | Apps on `dari` 1.x have no desktop connection; upgrade to 2.0.0 or later. If the device hides the app list, type the applicationId. |
+| Wi-Fi pairing finds nothing | Some networks block device discovery (mDNS). Type the address and code from the phone's pairing-code screen instead. On macOS, if Android Studio started adb, restarting adb with `ADB_MDNS_OPENSCREEN=0` can help; Dari sets it when it starts adb itself. |
+| "Paired, but the device didn't connect" | Turn Wireless debugging off and on, wait a few seconds, then try again. |
 | App is in the background | Android pauses background apps. Bring the app to the foreground and Dari reconnects. |
 | Not running Dari | Check that the app is a debuggable build using `dari` 2.0.0 or later. |
 

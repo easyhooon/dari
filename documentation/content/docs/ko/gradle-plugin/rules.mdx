@@ -3,7 +3,7 @@ title: 규칙과 제한
 description: 변환 범위, 매핑 검사, 지원하지 않는 것
 ---
 
-- **디버그 전용.** debuggable variant만 변환합니다. 릴리스 빌드에는 훅이 없습니다.
+- **기본은 디버그 빌드.** debuggable variant를 변환합니다. staging처럼 debuggable이 아닌 build type은 `nonDebuggableBuildTypes`에 넣었을 때만 변환합니다([옵션](./mappings#옵션)). 넣지 않은 릴리스 빌드에는 훅이 없습니다.
 - **`dari-noop` 사용 시에도 안전.** `dari-noop`에 그대로 통과시키는 훅이 들어 있어서, `dari-noop`으로 빌드한 debuggable variant도 정상 동작하고 아무것도 기록하지 않습니다.
 - **범위.** 기본적으로 해당 모듈의 클래스만 변환합니다.
   - 서드파티 AAR 안의 브릿지는 `scope = InstrumentationScope.ALL`이 필요합니다. 이 경우 앱의 모든 AAR을 다시 dex 변환하므로, 테스트에서는 콜드 빌드가 약 5분 더 걸렸습니다.
@@ -22,16 +22,16 @@ description: 변환 범위, 매핑 검사, 지원하지 않는 것
 
 ### 언제 실행되나
 
-debuggable variant마다 `dariCheckDebugMappings` 같은 `dariCheck<Variant>Mappings` task가 생깁니다. release variant와 매핑이 없는 모듈에는 생기지 않습니다.
+변환되는 variant마다 `dariCheckDebugMappings` 같은 `dariCheck<Variant>Mappings` task가 생깁니다. 모든 debuggable variant와 `nonDebuggableBuildTypes`에 넣은 build type이 해당합니다. 그 밖의 release variant와 매핑이 없는 모듈에는 생기지 않습니다.
 
 | Task | 검사 실행 |
 | --- | --- |
 | `assembleDebug` (Android Studio의 Run 포함) | 실행 |
 | `installDebug`, `bundleDebug` | 실행 |
 | 라이브러리 모듈의 `bundleDebugAar` | 실행 |
-| `check` | 모든 debuggable variant에서 실행 |
+| `check` | 변환되는 모든 variant에서 실행 |
 | `testDebugUnitTest` 등 테스트 task | 실행 안 함 |
-| `assembleRelease` | 실행 안 함 |
+| `assembleRelease` | 실행 안 함. `release`를 `nonDebuggableBuildTypes`에 넣었다면 실행 |
 
 검사만 따로 실행하려면:
 
@@ -68,5 +68,5 @@ dari {
 
 ### 제한
 
-- variant마다 그 variant의 클래스로 검사합니다. 특정 flavor나 build type의 source set에만 있는 브릿지는 다른 debuggable variant의 검사에서 실패합니다. 지금은 `failOnUnmatchedMapping = false`로만 피할 수 있습니다.
+- variant마다 그 variant의 클래스로 검사합니다. 특정 flavor나 build type의 source set에만 있는 브릿지는 다른 변환 대상 variant의 검사에서 실패합니다. 지금은 `failOnUnmatchedMapping = false`로만 피할 수 있습니다.
 - 검사는 클래스와 메서드가 있는지만 확인하고, 실제로 무엇이 변환됐는지는 보지 않습니다. 변환된 메서드 목록은 `--info`로 빌드하고 `Dari: instrumented`를 찾으면 됩니다.

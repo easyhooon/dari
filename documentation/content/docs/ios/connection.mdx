@@ -1,0 +1,47 @@
+---
+title: Connection and troubleshooting
+description: How iOS apps reach the desktop app, staging builds and common problems
+---
+
+## Connect
+
+1. Run the app in a Simulator, or on an iPhone or iPad attached over USB.
+2. Open the Dari desktop app on the same Mac. Simulator apps appear under the **iOS Simulator** device; a USB device appears under its own name. Dari connects on its own when it finds exactly one Dari app there.
+
+Each app listens on the first free port in `38670...38677` on `127.0.0.1`, so up to eight Dari apps can run on one target at the same time. When an app relaunches, the desktop app finds it again, even if it landed on a different port.
+
+## How the connection works
+
+The app never opens a port to the network. It listens only on its own loopback address, `127.0.0.1`. The desktop app reaches that address in one of two ways.
+
+**Simulator.** A Simulator app runs as a process on your Mac and shares the Mac's loopback. The desktop app connects to `127.0.0.1:38670` and the next ports directly.
+
+**USB device.** An iPhone's loopback is inside the iPhone, so the Mac can't reach it over the network. macOS runs **usbmuxd**, the daemon Finder and Xcode use to talk to devices over the cable. A program on the Mac asks usbmuxd to connect to a port on the device, and usbmuxd turns the USB link into a byte stream to that port. This is called *port tunnelling*. It does on iOS what `adb forward` does on [Android](../desktop):
+
+1. The desktop app asks usbmuxd (`/var/run/usbmuxd`) for the attached devices, and reads each one's name from lockdownd, the service every iOS device runs on port 62078.
+2. For each port in `38670...38677`, it asks usbmuxd to connect to that port on the device. usbmuxd answers right away when nothing listens there.
+3. On ports that accept, the desktop app sends the Dari handshake. A Dari app answers with its bundle ID, and the app is listed.
+4. The connection you pick keeps using the same tunnel. Unplugging the cable closes it, and the desktop app reconnects when the device comes back.
+
+No Wi-Fi, IP address, or extra tool is involved. A device on the same Wi-Fi but not on the cable doesn't appear.
+
+## Staging builds
+
+Android inspects a minified, non-debuggable build (`staging`) by opting in through manifest metadata. iOS has no code renaming like R8. Release builds are optimized (`-O`, whole-module) and dead-code stripped, which doesn't affect Dari: it uses no reflection or runtime class lookups.
+
+To inspect a release-like build, add a build configuration (for example **Staging**). Give it its own compilation condition and start Dari under that condition:
+
+1. In the **Staging** configuration, add `DARI` to **Active Compilation Conditions** (`SWIFT_ACTIVE_COMPILATION_CONDITIONS`).
+2. Start Dari with `#if DEBUG || DARI`.
+
+The [sample app](https://github.com/easyhooon/dari/tree/main/sample-ios) has Debug, Staging, and Release configurations set up this way.
+
+Swift Package Manager can't link a package to some configurations only. The Dari code (about 170 KB, arm64) stays in a Release binary even when the app never calls `start()`. It stays inert there: no socket opens and nothing is recorded. If that size matters, keep Dari out of the App Store target altogether, for example with a separate debug target.
+
+## Troubleshooting
+
+- **The app isn't listed.** The app must be in the foreground. Suspended Simulator apps don't answer. Check that `start()` ran and that something is listening: `lsof -nP -iTCP:38670-38677 -sTCP:LISTEN`.
+- **Two Simulators run the same app.** The desktop app connects to the first one it finds. Quit one of them.
+- **The iPhone isn't listed.** Unlock it and accept **Trust This Computer**, then check that Finder shows it. A device shows up only over the cable.
+- **The iPhone is listed but the app isn't.** Bring the app to the foreground. iOS suspends apps in the background, and a suspended app can't answer.
+- **`start()` throws `noFreePort`.** Eight Dari apps already hold the ports. Quit some, or pass a different range in `DariConfiguration(ports:)`. The desktop app only probes the default range.

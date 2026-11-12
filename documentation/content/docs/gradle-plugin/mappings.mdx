@@ -25,7 +25,7 @@ description: Where, fields, expressions and options of the dari { } block
 | `requestId` | all; required for responses | Pairs a response with its request. |
 | `data` | all | Text is stored as is. Bytes (from `base64(...)` or a `ByteArray` parameter) go through the protobuf API. |
 | `displayName` | requests | Same as the manual `displayName` overload. |
-| `success` | responses | Leave it out for "always SUCCESS". `false`, `"false"` or `0` record ERROR. |
+| `success` | responses | Leave it out for "always SUCCESS". Only `true`, the text `"true"` (any case) or a nonzero integer records SUCCESS. Anything else records ERROR, including `null`, a missing JSON field, `"1"` and `"ok"`. For a status string, map `expr.equalsTo("ok")`. |
 | `fireAndForget` | requests | `true` resolves the entry at once. `false` defers to `DariConfig.fireAndForget`, like passing `null` by hand. |
 | `onlyIf` | all | Picks which calls a mapping applies to ([example](./recipes#requests-and-responses-through-one-method)). Optional. Leave it out to record every call. When set, the call is recorded only when it evaluates to `true`; `null` counts as `false`. For one method that carries several kinds of message. |
 | `tag` | all | Overrides `dari { tag }` for this mapping. |
@@ -51,6 +51,7 @@ dari {
     tag = "Checkout"                         // default: the name passed to addJavascriptInterface
     scope = InstrumentationScope.ALL         // default: InstrumentationScope.PROJECT
     failOnUnmatchedMapping = false           // default: true; see Rules and limits > Mapping check
+    nonDebuggableBuildTypes.add("staging")   // default: none; debuggable variants are always instrumented
 }
 ```
 
@@ -58,3 +59,5 @@ dari {
 
 - `PROJECT`: only the module's own classes.
 - `ALL`: also the classes of its dependencies, including third-party AARs.
+
+`nonDebuggableBuildTypes` names build types to instrument even though they aren't debuggable, such as a minified staging build. That build must depend on `dari`, not `dari-noop`, and needs the `ALLOW_NON_DEBUGGABLE` manifest entry for the desktop app to connect ([Desktop app](../desktop#privacy)). Leave release out.

@@ -79,7 +79,7 @@ JavaScript가 네이티브 앱으로 메시지를 보낼 때 호출합니다. �
 | 파라미터 | 타입 | 설명 |
 |---------|------|------|
 | `handlerName` | `String` | 브릿지 핸들러 이름 |
-| `requestId` | `String?` | 요청-응답 쌍을 식별하는 고유 ID. `null` = 단독 메시지 |
+| `requestId` | `String?` | 요청-응답 쌍을 식별하는 고유 ID. `null` = 응답과 매칭하지 않음. `fireAndForget`으로 완료하지 않으면 `IN_PROGRESS`로 남음 |
 | `requestData` | `String?` | 요청 페이로드 |
 | `fireAndForget` | `Boolean?` | `null` = 전역 설정 사용, `true` = 즉시 완료, `false` = 응답 대기 |
 
