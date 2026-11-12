@@ -83,6 +83,7 @@ Dari.shared.setPayloadRedactor { message in
 
 - It runs on every message sent to the desktop app, after the built-in masking when that is on. Recorded messages stay as they are.
 - You can change `requestData`, `responseData` and `pageUrl`. Unlike Android, handler names and the other fields are read-only.
+- Raw protobuf previews aren't sent while it's set, because it can't edit raw bytes.
 - If it throws, both payloads are replaced with `[dari: payload hidden, redactor failed]` and the page URL is dropped, instead of being sent as they are.
 - It runs on background threads, possibly several at once, so the closure must be `@Sendable`. Pass `nil` to remove it.
 

@@ -195,5 +195,5 @@ dari.onAppToWebProtobufResponse(requestId: pushId, isSuccess: true, responseData
 
 - A closure that returns `nil` shows the payload as decoder unavailable; one that throws shows it as failed. Registering the same handler, direction and part twice stops the app, as on Android.
 - Decoders run on the calling thread before Dari records the message, so they may call Dari themselves. They must be `@Sendable`.
-- The desktop app shows the same Decoded and Raw views as for Android. With masking on, the Raw view is hidden.
+- The desktop app shows the same Decoded and Raw views as for Android. With masking on or a [payload redactor](./ios#add-your-own-masking) set, the Raw view is hidden.
 - `autoCapture` and `@DariBridge` record strings only. Call the protobuf methods yourself for protobuf handlers.

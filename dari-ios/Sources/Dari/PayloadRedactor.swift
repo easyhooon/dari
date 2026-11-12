@@ -58,8 +58,11 @@ extension MessageRecord {
     }
 
     /// Fails closed like [PayloadMasker]: a throwing redactor hides every field it could edit.
+    /// Raw protobuf previews are always dropped, since the redactor can't see or edit those bytes.
     func redacted(by redactor: @Sendable (DariMessage) throws -> DariMessage) -> MessageRecord {
         var record = self
+        record.requestPayloadMetadata?.rawPreview = nil
+        record.responsePayloadMetadata?.rawPreview = nil
         do {
             let message = try redactor(message)
             record.requestData = message.requestData

@@ -77,4 +77,12 @@ final class ProtobufTests: XCTestCase {
         XCTAssertNil(masked.requestPayloadMetadata?.rawPreview)
         XCTAssertNil(masked.detail.requestPayloadMetadata?.rawPreviewBase64)
     }
+
+    func testRedactorDropsRawPreview() throws {
+        dari.interceptor().onWebToAppProtobufRequest(handlerName: "greet", requestId: nil, requestData: hi)
+        let record = try XCTUnwrap(dari.records.first)
+        XCTAssertNotNil(record.requestPayloadMetadata?.rawPreview)
+        XCTAssertNil(record.redacted { $0 }.requestPayloadMetadata?.rawPreview)
+        XCTAssertNil(record.redacted { _ in throw Failure() }.requestPayloadMetadata?.rawPreview)
+    }
 }
