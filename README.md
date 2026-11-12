@@ -11,7 +11,7 @@
 
 **Dari** (다리) means **"bridge"** in Korean. Dari is a tool for inspecting WebView bridge communication in Android and iOS apps in real time, inspired by [Chucker](https://github.com/ChuckerTeam/chucker).
 
-Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualizes **WebView JavaScript bridge messages** between your web content and native code. The **Dari Desktop App** shows them from Android and iOS apps alike, on macOS, Windows and Linux. Android apps also get an in-app inspector on the device.
+Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualizes **WebView JavaScript bridge messages** between your web content and native code. The **Dari Desktop App** shows them from Android and iOS apps alike, on macOS, Windows and Linux. Android and iOS apps also get an in-app inspector on the device.
 
 📥 **[Download the Desktop App](https://easyhooon.github.io/dari/download)** · 📖 **[Documentation](https://easyhooon.github.io/dari)** — Setup guide, configuration reference, and API docs.
 
@@ -54,14 +54,14 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
 | | Android | iOS |
 | --- | --- | --- |
 | Package | `dari` + `dari-noop` (Maven Central) | `Dari` Swift package (SPM, 3.0.0+) |
-| Minimum OS | Android 8.0 (API 26) | iOS 15 |
+| Minimum OS | Android 8.0 (API 26) | iOS 16 |
 | Web → App / App → Web capture | ✅ | ✅ |
 | Tags, `displayName`, fire-and-forget, page URL, environment labels | ✅ | ✅ |
 | Capture without manual calls | Gradle plugin (2.6.0+) | `autoCapture` (3.1.0+) or `@DariBridge` macro (3.2.0+) |
-| In-app inspector (list, detail, notification, shake-to-open, launcher shortcut) | ✅ | ❌ |
+| In-app inspector (list, detail, notification, shake-to-open, launcher shortcut) | ✅ | △ List, detail, search and export, opened from your debug menu |
 | Desktop App | ✅ Device or emulator over adb, on macOS, Windows and Linux | ✅ Simulator or USB device, macOS only |
 | Masking of sensitive values | ✅ In-app and desktop | ✅ Desktop, including your own rules (`setPayloadRedactor`) |
-| Text / JSON export | ✅ In-app and desktop | ✅ Desktop |
+| Text / JSON export | ✅ In-app and desktop | ✅ In-app and desktop |
 | Protocol Buffers inspection | ✅ | ✅ Manual interceptor calls |
 | `retentionPeriod` cleanup | ✅ | ✅ (in memory) |
 | Release builds | `dari-noop` (same API, no capture code) | Call `start()` only under `#if DEBUG` |

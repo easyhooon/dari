@@ -3,7 +3,7 @@ title: 시작하기
 description: iOS 앱의 WKWebView 브릿지 메시지를 기록해 데스크톱 앱에서 확인합니다
 ---
 
-`Dari` Swift 패키지는 WKWebView 브릿지 메시지를 기록해, Android에서 쓰는 [데스크톱 앱](./desktop)으로 보냅니다. 목록, 상세, 필터, 마스킹, 검색, 내보내기가 Android와 똑같이 동작합니다. iOS에는 앱 안의 인스펙터 화면이 없습니다.
+`Dari` Swift 패키지는 WKWebView 브릿지 메시지를 기록해, Android에서 쓰는 [데스크톱 앱](./desktop)으로 보냅니다. 목록, 상세, 필터, 마스킹, 검색, 내보내기가 Android와 똑같이 동작합니다. 기기 안에서 바로 보는 간단한 [앱 내 인스펙터](#앱-내-인스펙터)도 있습니다.
 
 <Callout>
 iOS 연결은 macOS 전용입니다. iOS Simulator 앱과, Mac에 USB로 연결한 iPhone·iPad 앱이 연결됩니다. iOS 디버그 빌드를 만들고 설치하는 데 이미 Mac이 필요하므로, Windows·Linux의 데스크톱 앱에는 Android 기기만 나타납니다. Wi-Fi 연결은 제공하지 않습니다.
@@ -11,7 +11,7 @@ iOS 연결은 macOS 전용입니다. iOS Simulator 앱과, Mac에 USB로 연결�
 
 ## 요구 사항
 
-- iOS 15 이상
+- iOS 16 이상 (Dari 3.4.0 이하는 iOS 15 지원)
 - Mac에 설치한 Dari 데스크톱 앱. iOS 연결은 macOS에서만 됩니다. Simulator는 Mac에서만 돌고, USB 기기는 macOS의 usbmuxd를 거쳐 연결하기 때문입니다.
 - 실기기라면: USB 케이블, 기기 잠금을 한 번 풀고 **이 컴퓨터를 신뢰** 수락, Xcode로 설치한 앱
 - adb는 없어도 됩니다. adb가 없으면 데스크톱 앱에 iOS 앱만 표시됩니다.
@@ -87,9 +87,29 @@ Dari.shared.setPayloadRedactor { message in
 - 오류를 던지면 두 payload를 그대로 보내지 않고 `[dari: payload hidden, redactor failed]`로 바꾸며, 페이지 URL은 빼고 보냅니다.
 - 메인 스레드가 아니라 백그라운드 스레드에서, 여러 개가 동시에 실행될 수 있으므로 클로저는 `@Sendable`이어야 합니다. 지우려면 `nil`을 넘기세요.
 
+## 앱 내 인스펙터
+
+**DariUI** 라이브러리를 추가하면 Mac 없이 기기에서 바로 메시지를 볼 수 있습니다.
+
+```swift
+import DariUI
+
+// 앱의 디버그 메뉴에서
+Dari.shared.presentInspector()
+
+// 또는 직접 띄우는 SwiftUI sheet 안에서
+.sheet(isPresented: $showingDari) { DariInspectorView() }
+```
+
+- 기록된 메시지를 최신순으로 보여 주고, 핸들러·tag·payload로 검색할 수 있습니다.
+- 메시지마다 Overview, Request, Response를 보여 줍니다. JSON은 보기 좋게 정리하고, protobuf는 Decoded / Raw로 볼 수 있습니다.
+- 메시지 하나를 텍스트로 공유하거나, **⋯** 메뉴에서 전체를 텍스트나 JSON으로 내보냅니다. 같은 메뉴의 Clear는 연결된 데스크톱 앱의 목록도 지웁니다.
+- 기록된 그대로 보여 줍니다. 데스크톱 앱의 마스킹 설정과 `setPayloadRedactor`는 적용되지 않으므로, 공유하는 내용도 가려지지 않습니다.
+- 알림이나 흔들어 열기는 아직 없습니다. 앱의 디버그 메뉴에서 여세요. 다른 Dari 기능처럼 디버그 빌드에서만 쓰세요.
+
 ## 샘플 앱
 
-`sample-ios/DariSample.xcodeproj`는 Web → App과 App → Web 시나리오가 담긴 페이지를 엽니다. 성공, 에러, 느린 응답, 응답 없음, fire-and-forget, 마스킹, protobuf를 확인할 수 있습니다. 브릿지는 [매크로로 컴파일 시점 수집](./ios/capture#매크로로-컴파일-시점-수집)처럼 `@DariBridge`로 메시지를 기록하고 `dariEvaluateJavaScript`로 콜백을 보냅니다. 파서는 `SampleCapture`에 있습니다. [자동 수집](./ios/capture#자동-수집)으로 바꿔 보려면 scheme의 launch argument에 `-DariAutoCapture YES`를 추가하세요. Xcode 16 이상에서 열고 Simulator에서 **DariSample** scheme을 실행하세요.
+`sample-ios/DariSample.xcodeproj`는 Web → App과 App → Web 시나리오가 담긴 페이지를 엽니다. 성공, 에러, 느린 응답, 응답 없음, fire-and-forget, 마스킹, protobuf와 앱 내 인스펙터를 여는 **Inspector** 버튼을 확인할 수 있습니다. 브릿지는 [매크로로 컴파일 시점 수집](./ios/capture#매크로로-컴파일-시점-수집)처럼 `@DariBridge`로 메시지를 기록하고 `dariEvaluateJavaScript`로 콜백을 보냅니다. 파서는 `SampleCapture`에 있습니다. [자동 수집](./ios/capture#자동-수집)으로 바꿔 보려면 scheme의 launch argument에 `-DariAutoCapture YES`를 추가하세요. Xcode 16 이상에서 열고 Simulator에서 **DariSample** scheme을 실행하세요.
 
 ## 다음 단계
 

@@ -117,6 +117,16 @@ public final class Dari {
         DariInterceptor(tag: tag, protobufDecoder: protobufDecoder, dari: self)
     }
 
+    /// The running store for the in-app inspector, nil when not started.
+    package var inspectorStore: MessageStore? {
+        lock.withLock { store }
+    }
+
+    /// App details for the in-app inspector's export header.
+    package var inspectorAppInfo: AppInfo {
+        appInfo()
+    }
+
     /// Recorded messages, for tests.
     var records: [MessageRecord] {
         lock.withLock { store?.snapshot() ?? [] }

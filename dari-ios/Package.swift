@@ -4,10 +4,12 @@ import PackageDescription
 
 let package = Package(
     name: "Dari",
-    platforms: [.iOS(.v15), .macOS(.v13)],
+    platforms: [.iOS(.v16), .macOS(.v13)],
     products: [
         .library(name: "Dari", targets: ["Dari"]),
         .library(name: "DariMacros", targets: ["DariMacros"]),
+        // In-app inspector screens; apps that only use the desktop app don't link it.
+        .library(name: "DariUI", targets: ["DariUI"]),
     ],
     dependencies: [
         // Only DariMacros builds it, on the host; apps that use just Dari never compile it.
@@ -23,9 +25,11 @@ let package = Package(
             ]
         ),
         .target(name: "DariMacros", dependencies: ["Dari", "DariMacrosPlugin"]),
+        .target(name: "DariUI", dependencies: ["Dari"]),
         // Serves a few canned messages on the Mac's loopback, the same path a simulator app uses.
         .executableTarget(name: "DariLoopbackDemo", dependencies: ["Dari"]),
         .testTarget(name: "DariTests", dependencies: ["Dari", "DariMacros"], resources: [.copy("Fixtures")]),
+        .testTarget(name: "DariUITests", dependencies: ["Dari", "DariUI"]),
         .testTarget(
             name: "DariMacrosTests",
             dependencies: [

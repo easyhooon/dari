@@ -3,7 +3,7 @@ title: Getting started
 description: Record WKWebView bridge traffic in an iOS app and inspect it in the desktop app
 ---
 
-The `Dari` Swift package records your WKWebView bridge traffic and sends it to the same [desktop app](./desktop) you use for Android. The list, details, filters, masking, search, and export work the same way. There is no in-app inspector screen on iOS.
+The `Dari` Swift package records your WKWebView bridge traffic and sends it to the same [desktop app](./desktop) you use for Android. The list, details, filters, masking, search, and export work the same way. A smaller [in-app inspector](#in-app-inspector) shows the messages on the device too.
 
 <Callout>
 iOS connections are macOS-only: apps connect from an iOS Simulator, or from an iPhone or iPad attached to the Mac over USB. Building and installing an iOS debug build already needs a Mac, so the desktop app on Windows and Linux shows Android devices only. Connections over Wi-Fi are not offered.
@@ -11,7 +11,7 @@ iOS connections are macOS-only: apps connect from an iOS Simulator, or from an i
 
 ## Requirements
 
-- iOS 15 or later
+- iOS 16 or later (Dari 3.4.0 and earlier support iOS 15)
 - The Dari desktop app on a Mac. iOS connections need macOS: Simulators run only there, and USB devices are reached through macOS's usbmuxd.
 - For a physical device: a USB cable, the device unlocked once with **Trust This Computer** accepted, and the app installed from Xcode
 - adb is optional. Without it, the desktop app shows only iOS apps.
@@ -87,9 +87,29 @@ Dari.shared.setPayloadRedactor { message in
 - If it throws, both payloads are replaced with `[dari: payload hidden, redactor failed]` and the page URL is dropped, instead of being sent as they are.
 - It runs on background threads, possibly several at once, so the closure must be `@Sendable`. Pass `nil` to remove it.
 
+## In-app inspector
+
+Add the **DariUI** library to check messages on the device, without a Mac:
+
+```swift
+import DariUI
+
+// From your app's debug menu
+Dari.shared.presentInspector()
+
+// Or in your own SwiftUI sheet
+.sheet(isPresented: $showingDari) { DariInspectorView() }
+```
+
+- A list of recorded messages, newest first, with search over handler, tag and payloads.
+- Overview, Request and Response for each message, with pretty JSON and the protobuf Decoded / Raw views.
+- Share one message as text, or export all of them as text or JSON from the **⋯** menu. Clear is there too, and also clears a connected desktop app.
+- It shows messages as recorded: the desktop app's masking setting and `setPayloadRedactor` don't apply here, so anything you share is unmasked.
+- There's no notification or shake-to-open yet; open it from your own debug menu. Like the rest of Dari, use it only in debug builds.
+
 ## Sample app
 
-`sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, masking, and protobuf. Its bridge records itself with `@DariBridge` and sends callbacks through `dariEvaluateJavaScript`, as in [Compile-time capture with macros](./ios/capture#compile-time-capture-with-macros). The parsers live in `SampleCapture`. To try [automatic capture](./ios/capture#automatic-capture) instead, add `-DariAutoCapture YES` to the scheme's launch arguments. Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
+`sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, masking, and protobuf, plus an **Inspector** button that opens the in-app inspector. Its bridge records itself with `@DariBridge` and sends callbacks through `dariEvaluateJavaScript`, as in [Compile-time capture with macros](./ios/capture#compile-time-capture-with-macros). The parsers live in `SampleCapture`. To try [automatic capture](./ios/capture#automatic-capture) instead, add `-DariAutoCapture YES` to the scheme's launch arguments. Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
 
 ## Next steps
 

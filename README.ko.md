@@ -11,7 +11,7 @@
 
 **Dari**는 한국어 **"다리(bridge)"** 에서 이름을 따왔습니다. [Chucker](https://github.com/ChuckerTeam/chucker)에서 영감을 받은, Android·iOS 앱의 WebView 브릿지 통신을 실시간으로 검사하는 도구입니다.
 
-Chucker가 HTTP 트래픽을 가로채 보여 주듯, Dari는 웹 콘텐츠와 네이티브 코드 사이의 **WebView JavaScript 브릿지 메시지**를 캡처하고 시각화합니다. **Dari 데스크톱 앱**은 macOS, Windows, Linux에서 Android와 iOS 앱의 메시지를 모두 보여 줍니다. Android 앱은 기기 안의 인스펙터로도 확인할 수 있습니다.
+Chucker가 HTTP 트래픽을 가로채 보여 주듯, Dari는 웹 콘텐츠와 네이티브 코드 사이의 **WebView JavaScript 브릿지 메시지**를 캡처하고 시각화합니다. **Dari 데스크톱 앱**은 macOS, Windows, Linux에서 Android와 iOS 앱의 메시지를 모두 보여 줍니다. Android와 iOS 앱은 기기 안의 인스펙터로도 확인할 수 있습니다.
 
 📥 **[데스크톱 앱 다운로드](https://easyhooon.github.io/dari/ko/download)** · 📖 **[문서](https://easyhooon.github.io/dari/ko/docs)** — 설정 가이드, 구성 레퍼런스, API 문서.
 
@@ -54,14 +54,14 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
 | | Android | iOS |
 | --- | --- | --- |
 | 패키지 | `dari` + `dari-noop`(Maven Central) | `Dari` Swift 패키지(SPM, 3.0.0+) |
-| 최소 OS | Android 8.0(API 26) | iOS 15 |
+| 최소 OS | Android 8.0(API 26) | iOS 16 |
 | Web → App / App → Web 캡처 | ✅ | ✅ |
 | 태그, `displayName`, fire-and-forget, 페이지 URL, 환경 라벨 | ✅ | ✅ |
 | 직접 호출 없이 캡처 | Gradle 플러그인(2.6.0+) | `autoCapture`(3.1.0+) 또는 `@DariBridge` 매크로(3.2.0+) |
-| 앱 내 인스펙터(목록, 상세, 알림, 흔들어 열기, 런처 바로가기) | ✅ | ❌ |
+| 앱 내 인스펙터(목록, 상세, 알림, 흔들어 열기, 런처 바로가기) | ✅ | △ 목록, 상세, 검색, 내보내기. 디버그 메뉴에서 열기 |
 | 데스크톱 앱 | ✅ adb로 기기·에뮬레이터 연결, macOS·Windows·Linux | ✅ Simulator·USB 기기, macOS 전용 |
 | 민감 정보 마스킹 | ✅ 앱 내, 데스크톱 | ✅ 데스크톱, 직접 정한 규칙 포함(`setPayloadRedactor`) |
-| 텍스트 / JSON 내보내기 | ✅ 앱 내, 데스크톱 | ✅ 데스크톱 |
+| 텍스트 / JSON 내보내기 | ✅ 앱 내, 데스크톱 | ✅ 앱 내, 데스크톱 |
 | Protocol Buffers 검사 | ✅ | ✅ 인터셉터 직접 호출 |
 | `retentionPeriod` 정리 | ✅ | ✅(메모리) |
 | 릴리스 빌드 | `dari-noop`(같은 API, 캡처 코드 없음) | `#if DEBUG` 안에서만 `start()` 호출 |

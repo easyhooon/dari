@@ -31,17 +31,17 @@ struct ServerHello: Codable, Equatable {
     var app: AppInfo?
 }
 
-struct AppInfo: Codable, Equatable {
-    let applicationId: String
-    let appName: String
-    let appVersion: String
-    let dariVersion: String
-    let deviceModel: String
+package struct AppInfo: Codable, Equatable {
+    package let applicationId: String
+    package let appName: String
+    package let appVersion: String
+    package let dariVersion: String
+    package let deviceModel: String
     /** Android API level; always 0 on iOS. */
-    let sdkInt: Int
-    var environment: [String: String]?
-    var platform: String?
-    var osVersion: String?
+    package let sdkInt: Int
+    package var environment: [String: String]?
+    package var platform: String?
+    package var osVersion: String?
 }
 
 struct WireMessageSummary: Codable, Equatable {
