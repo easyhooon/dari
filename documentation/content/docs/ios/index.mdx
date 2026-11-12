@@ -67,6 +67,25 @@ While Dari is running, any process that can reach the device's loopback can read
 | `fireAndForget` | `false` | Record requests as finished when they are sent |
 | `ports` | `38670...38677` | Loopback ports to try; the desktop app probes the same range |
 
+## Add your own masking
+
+The desktop app's **Mask sensitive values** setting covers keys such as `token` or `password`. For other fields, such as account numbers or resident IDs, rewrite messages before they're sent:
+
+```swift
+Dari.shared.setPayloadRedactor { message in
+    var message = message
+    message.requestData = message.requestData?.replacingOccurrences(
+        of: #""accountNo":"[^"]*""#, with: #""accountNo":"***""#, options: .regularExpression
+    )
+    return message
+}
+```
+
+- It runs on every message sent to the desktop app, after the built-in masking when that is on. Recorded messages stay as they are.
+- You can change `requestData`, `responseData` and `pageUrl`. Unlike Android, handler names and the other fields are read-only.
+- If it throws, both payloads are replaced with `[dari: payload hidden, redactor failed]` and the page URL is dropped, instead of being sent as they are.
+- It runs on background threads, possibly several at once, so the closure must be `@Sendable`. Pass `nil` to remove it.
+
 ## Sample app
 
 `sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, and masking. Its bridge records itself with `@DariBridge` and sends callbacks through `dariEvaluateJavaScript`, as in [Compile-time capture with macros](./ios/capture#compile-time-capture-with-macros). The parsers live in `SampleCapture`. To try [automatic capture](./ios/capture#automatic-capture) instead, add `-DariAutoCapture YES` to the scheme's launch arguments. Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.

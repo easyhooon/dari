@@ -25,7 +25,7 @@
     <div class="grid">
         <button onclick="request('getAppInfo', null)">getAppInfo</button>
         <button onclick="request('showToast', {message: 'Hello from WebView!'})">showToast</button>
-        <button onclick="request('signIn', {email: 'dari@example.com', password: 'hunter2'})">signIn (masking)</button>
+        <button onclick="request('signIn', {email: 'dari@example.com', password: 'hunter2'})">signIn (masking + redactor)</button>
         <button onclick="request('simulateSlowResponse', null)">Slow (3s)</button>
         <button onclick="request('simulateError', {errorType: 'network_timeout'})">Error</button>
         <button onclick="request('noResponsePending', null)">No response</button>

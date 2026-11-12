@@ -49,6 +49,7 @@ public final class Dari {
     private var listener: InspectorListener?
     private var configuration = DariConfiguration()
     private var environment: [String: String] = [:]
+    private var payloadRedactor: (@Sendable (DariMessage) throws -> DariMessage)?
 
     init() {}
 
@@ -60,7 +61,12 @@ public final class Dari {
             let store = MessageStore(maxEntries: configuration.maxEntries, retentionPeriod: configuration.retentionPeriod)
             let listener = InspectorListener(ports: configuration.ports) { [weak self] channel in
                 guard let self else { return }
-                InspectorSession(channel: channel, appInfo: { [weak self] in self?.appInfo() ?? AppInfo.current([:]) }, store: store).run()
+                InspectorSession(
+                    channel: channel,
+                    appInfo: { [weak self] in self?.appInfo() ?? AppInfo.current([:]) },
+                    store: store,
+                    redact: { [weak self] in self?.redact($0) ?? $0 }
+                ).run()
             }
             try listener.start()
             self.configuration = configuration
@@ -92,6 +98,17 @@ public final class Dari {
     /// Labels shown in the desktop's app info, like Android's `Dari.setEnvironment`.
     public func setEnvironment(_ labels: [String: String]) {
         lock.withLock { environment = labels }
+    }
+
+    /// Runs on every message sent to the desktop app, after the built-in masking when the desktop turns it on.
+    /// Throwing hides the fields it could edit. Called on background threads, possibly concurrently; recorded messages stay as they are.
+    public func setPayloadRedactor(_ redactor: (@Sendable (DariMessage) throws -> DariMessage)?) {
+        lock.withLock { payloadRedactor = redactor }
+    }
+
+    func redact(_ record: MessageRecord) -> MessageRecord {
+        guard let redactor = lock.withLock({ payloadRedactor }) else { return record }
+        return record.redacted(by: redactor)
     }
 
     /// Creates an interceptor for one bridge. Use one per WKWebView so page URLs stay separate.
