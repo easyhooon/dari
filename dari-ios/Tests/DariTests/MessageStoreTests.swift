@@ -18,6 +18,15 @@ final class MessageStoreTests: XCTestCase {
         XCTAssertEqual(store.snapshot().last?.responseTimestamp, 1_250)
     }
 
+    func testRespondWithIdCompletesThatRecordOnly() {
+        let store = MessageStore(maxEntries: 10)
+        add(store, "1", .appToWeb)
+        let target = store.responseTarget(requestId: "1", tag: nil, direction: .appToWeb)
+        add(store, "1", .appToWeb)
+        store.respond(requestId: "1", tag: nil, direction: .appToWeb, id: target?.id) { record, _ in record.status = .success }
+        XCTAssertEqual(store.snapshot().map(\.status), [.success, .inProgress])
+    }
+
     func testDropsOldestBeyondMaxEntriesAndKeepsIds() {
         let store = MessageStore(maxEntries: 2)
         (1...3).forEach { add(store, "\($0)", .webToApp) }

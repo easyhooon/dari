@@ -60,6 +60,7 @@ final class SampleBridge: NSObject, WKScriptMessageHandler {
 
     private func greet(_ requestId: String, _ request: Data) {
         let handler = "protobufGreeting"
+        protobuf.onPageUrlChanged(webView?.url?.absoluteString)
         protobuf.onWebToAppProtobufRequest(handlerName: handler, requestId: requestId, requestData: request)
         let response = SampleCapture.stringValue("Hello, \(SampleCapture.stringValue(request) ?? "")!")
         protobuf.onWebToAppProtobufResponse(handlerName: handler, requestId: requestId, responseData: response, isSuccess: true)

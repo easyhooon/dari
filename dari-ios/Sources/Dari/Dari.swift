@@ -217,7 +217,7 @@ public final class DariInterceptor {
 
     /// The handler name comes from the matching request, as on Android.
     public func onAppToWebProtobufResponse(requestId: String?, isSuccess: Bool, responseData: Data) {
-        addResponse(.appToWeb, requestId, isSuccess) { [protobufDecoder] handlerName, max in
+        addResponse(.appToWeb, requestId, isSuccess, needsTarget: true) { [protobufDecoder] handlerName, max in
             let decode = handlerName.flatMap { protobufDecoder?.decoder(handlerName: $0, direction: .appToWeb, part: .response) }
             return Self.rendered(responseData, decode, max)
         }
@@ -271,14 +271,16 @@ public final class DariInterceptor {
         _ direction: MessageDirection,
         _ requestId: String?,
         _ isSuccess: Bool,
+        needsTarget: Bool = false,
         _ payload: (_ handlerName: String?, _ maxLength: Int) -> Payload
     ) {
         // Without a request id there is nothing to pair with, as on Android.
         guard let requestId else { return }
         dari?.record { store, configuration in
-            let handlerName = store.responseTarget(requestId: requestId, tag: tag, direction: direction)?.handlerName
-            let payload = payload(handlerName, configuration.maxContentLength)
-            store.respond(requestId: requestId, tag: tag, direction: direction) { record, now in
+            // The lock is released while decoding, so complete the record the decoder was chosen for.
+            let target = needsTarget ? store.responseTarget(requestId: requestId, tag: tag, direction: direction) : nil
+            let payload = payload(target?.handlerName, configuration.maxContentLength)
+            store.respond(requestId: requestId, tag: tag, direction: direction, id: target?.id) { record, now in
                 record.responseData = payload.data
                 record.responseDataTruncated = payload.truncated
                 record.responsePayloadMetadata = payload.metadata

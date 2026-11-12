@@ -181,14 +181,16 @@ let decoder = DariProtobufDecoder()
     .webToApp("createOrder",
         request: { try CreateOrderRequest(serializedBytes: $0).jsonString() },
         response: { try CreateOrderResponse(serializedBytes: $0).jsonString() })
-    .appToWeb("orderUpdated", request: { try OrderUpdate(serializedBytes: $0).jsonString() })
+    .appToWeb("orderUpdated",
+        request: { try OrderUpdate(serializedBytes: $0).jsonString() },
+        response: { try OrderUpdateAck(serializedBytes: $0).jsonString() })
 
 let dari = Dari.shared.interceptor(tag: "main", protobufDecoder: decoder)
 
 dari.onWebToAppProtobufRequest(handlerName: "createOrder", requestId: id, requestData: bytes)
 dari.onWebToAppProtobufResponse(handlerName: "createOrder", requestId: id, responseData: replyBytes, isSuccess: true)
-dari.onAppToWebProtobufRequest(handlerName: "orderUpdated", requestId: nil, data: updateBytes)
-dari.onAppToWebProtobufResponse(requestId: id, isSuccess: true, responseData: ackBytes)
+dari.onAppToWebProtobufRequest(handlerName: "orderUpdated", requestId: pushId, data: updateBytes)
+dari.onAppToWebProtobufResponse(requestId: pushId, isSuccess: true, responseData: ackBytes)
 ```
 
 - A closure that returns `nil` shows the payload as decoder unavailable; one that throws shows it as failed. Registering the same handler, direction and part twice stops the app, as on Android.

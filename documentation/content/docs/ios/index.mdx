@@ -88,7 +88,7 @@ Dari.shared.setPayloadRedactor { message in
 
 ## Sample app
 
-`sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, and masking. Its bridge records itself with `@DariBridge` and sends callbacks through `dariEvaluateJavaScript`, as in [Compile-time capture with macros](./ios/capture#compile-time-capture-with-macros). The parsers live in `SampleCapture`. To try [automatic capture](./ios/capture#automatic-capture) instead, add `-DariAutoCapture YES` to the scheme's launch arguments. Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
+`sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, masking, and protobuf. Its bridge records itself with `@DariBridge` and sends callbacks through `dariEvaluateJavaScript`, as in [Compile-time capture with macros](./ios/capture#compile-time-capture-with-macros). The parsers live in `SampleCapture`. To try [automatic capture](./ios/capture#automatic-capture) instead, add `-DariAutoCapture YES` to the scheme's launch arguments. Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
 
 ## Next steps
 

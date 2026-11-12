@@ -84,9 +84,17 @@ final class MessageStore {
     }
 
     /// Completes the newest matching request still waiting for a response, like Android's `responseTargets`.
-    func respond(requestId: String, tag: String?, direction: MessageDirection, _ transform: (inout MessageRecord, Int64) -> Void) {
+    /// With [id], completes that record only, e.g. the one a [responseTarget] lookup rendered for.
+    func respond(
+        requestId: String,
+        tag: String?,
+        direction: MessageDirection,
+        id: Int64? = nil,
+        _ transform: (inout MessageRecord, Int64) -> Void
+    ) {
         lock.withLock {
-            guard let index = targetIndex(requestId, tag, direction) else { return }
+            let index = id.map { id in records.firstIndex { $0.id == id } } ?? targetIndex(requestId, tag, direction)
+            guard let index else { return }
             transform(&records[index], now())
             notify(.updated(records[index]))
         }

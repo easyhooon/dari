@@ -2,7 +2,7 @@ import Foundation
 
 /// Turns protobuf bytes into display text per handler, like Android's `protobufDecoder { }`.
 /// Dari has no SwiftProtobuf dependency: decode with your own message types, e.g. `try Order(serializedBytes: $0).jsonString()`.
-public struct DariProtobufDecoder {
+public struct DariProtobufDecoder: Sendable {
     /// Returning nil reports the decoder as unavailable; throwing reports a failed decode.
     public typealias Decode = @Sendable (Data) throws -> String?
 

@@ -88,7 +88,7 @@ Dari.shared.setPayloadRedactor { message in
 
 ## 샘플 앱
 
-`sample-ios/DariSample.xcodeproj`는 Web → App과 App → Web 시나리오가 담긴 페이지를 엽니다. 성공, 에러, 느린 응답, 응답 없음, fire-and-forget, 마스킹을 확인할 수 있습니다. 브릿지는 [매크로로 컴파일 시점 수집](./ios/capture#매크로로-컴파일-시점-수집)처럼 `@DariBridge`로 메시지를 기록하고 `dariEvaluateJavaScript`로 콜백을 보냅니다. 파서는 `SampleCapture`에 있습니다. [자동 수집](./ios/capture#자동-수집)으로 바꿔 보려면 scheme의 launch argument에 `-DariAutoCapture YES`를 추가하세요. Xcode 16 이상에서 열고 Simulator에서 **DariSample** scheme을 실행하세요.
+`sample-ios/DariSample.xcodeproj`는 Web → App과 App → Web 시나리오가 담긴 페이지를 엽니다. 성공, 에러, 느린 응답, 응답 없음, fire-and-forget, 마스킹, protobuf를 확인할 수 있습니다. 브릿지는 [매크로로 컴파일 시점 수집](./ios/capture#매크로로-컴파일-시점-수집)처럼 `@DariBridge`로 메시지를 기록하고 `dariEvaluateJavaScript`로 콜백을 보냅니다. 파서는 `SampleCapture`에 있습니다. [자동 수집](./ios/capture#자동-수집)으로 바꿔 보려면 scheme의 launch argument에 `-DariAutoCapture YES`를 추가하세요. Xcode 16 이상에서 열고 Simulator에서 **DariSample** scheme을 실행하세요.
 
 ## 다음 단계
 
