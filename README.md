@@ -11,7 +11,7 @@
 
 **Dari** (다리) means **"bridge"** in Korean. Dari is a tool for inspecting WebView bridge communication in Android and iOS apps in real time, inspired by [Chucker](https://github.com/ChuckerTeam/chucker).
 
-Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualizes **WebView JavaScript bridge messages** between your web content and native code. The **Dari Desktop App** shows them from Android and iOS apps alike, on macOS, Windows and Linux. Android apps also get an in-app inspector on the device.
+Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualizes **WebView JavaScript bridge messages** between your web content and native code. The **Dari Desktop App** shows them from Android and iOS apps alike, on macOS, Windows and Linux. Android and iOS apps also get an in-app inspector on the device.
 
 📥 **[Download the Desktop App](https://easyhooon.github.io/dari/download)** · 📖 **[Documentation](https://easyhooon.github.io/dari)** — Setup guide, configuration reference, and API docs.
 
@@ -54,14 +54,14 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
 | | Android | iOS |
 | --- | --- | --- |
 | Package | `dari` + `dari-noop` (Maven Central) | `Dari` Swift package (SPM, 3.0.0+) |
-| Minimum OS | Android 8.0 (API 26) | iOS 15 |
+| Minimum OS | Android 8.0 (API 26) | iOS 16 |
 | Web → App / App → Web capture | ✅ | ✅ |
 | Tags, `displayName`, fire-and-forget, page URL, environment labels | ✅ | ✅ |
 | Capture without manual calls | Gradle plugin (2.6.0+) | `autoCapture` (3.1.0+) or `@DariBridge` macro (3.2.0+) |
-| In-app inspector (list, detail, notification, shake-to-open, launcher shortcut) | ✅ | ❌ |
+| In-app inspector (list, detail, notification, shake-to-open, launcher shortcut) | ✅ | △ List, detail, search and export, opened from your debug menu |
 | Desktop App | ✅ Device or emulator over adb, on macOS, Windows and Linux | ✅ Simulator or USB device, macOS only |
-| Masking of sensitive values | ✅ In-app and desktop | ✅ Desktop, including your own rules (`setPayloadRedactor`) |
-| Text / JSON export | ✅ In-app and desktop | ✅ Desktop |
+| Masking of sensitive values | ✅ In-app and desktop | ✅ In-app and desktop, plus your own rules for the desktop (`setPayloadRedactor`) |
+| Text / JSON export | ✅ In-app and desktop | ✅ In-app and desktop |
 | Protocol Buffers inspection | ✅ | ✅ Manual interceptor calls |
 | `retentionPeriod` cleanup | ✅ | ✅ (in memory) |
 | Release builds | `dari-noop` (same API, no capture code) | Call `start()` only under `#if DEBUG` |
@@ -74,6 +74,7 @@ Debugging a hybrid app usually means sprinkling logs across bridge handlers and 
 - Pretty-printed JSON payloads, status (`IN_PROGRESS` / `SUCCESS` / `ERROR`), and timing
 - One desktop app for Android and iOS, on macOS, Windows or Linux
 - On Android, a live notification and shake-to-open, so the in-app inspector is one tap away while testing
+- On iOS, an in-app inspector (`DariUI`) you open from your debug menu, for testing on a device without a Mac
 - Nothing in production: `dari-noop` on Android, `#if DEBUG` on iOS
 
 ## Quick Start
@@ -126,7 +127,7 @@ func userContentController(_ controller: WKUserContentController, didReceive mes
 }
 ```
 
-Run the app in a Simulator or on a USB-attached device and open the Desktop App on the same Mac. To skip the manual calls, pass `autoCapture` (3.1.0+) to `start()` or mark the handler with `@DariBridge` from `DariMacros` (3.2.0+).
+Run the app in a Simulator or on a USB-attached device and open the Desktop App on the same Mac. To skip the manual calls, pass `autoCapture` (3.1.0+) to `start()` or mark the handler with `@DariBridge` from `DariMacros` (3.2.0+). To check messages on the device without a Mac, also link `DariUI` and call `Dari.shared.presentInspector()` (3.5.0+).
 
 ## Guides
 
@@ -135,11 +136,13 @@ Run the app in a Simulator or on a USB-attached device and open the Desktop App 
 | Setup | [Setup](https://easyhooon.github.io/dari/docs/setup) | [iOS guide](https://easyhooon.github.io/dari/docs/ios) |
 | Capture without manual calls | [Gradle plugin](https://easyhooon.github.io/dari/docs/gradle-plugin) | [Automatic capture](https://easyhooon.github.io/dari/docs/ios/capture#automatic-capture), [Macros](https://easyhooon.github.io/dari/docs/ios/capture#compile-time-capture-with-macros) |
 | API | [Interceptor](https://easyhooon.github.io/dari/docs/interceptor), [Configuration and runtime API](https://easyhooon.github.io/dari/docs/configuration) | [iOS guide](https://easyhooon.github.io/dari/docs/ios/capture#record-bridge-calls) |
-| More | [Protocol Buffers](https://easyhooon.github.io/dari/docs/protobuf), [In-app inspector](https://easyhooon.github.io/dari/docs/inspector), [Modules](https://easyhooon.github.io/dari/docs/modules) | [Staging builds](https://easyhooon.github.io/dari/docs/ios/connection#staging-builds), [Troubleshooting](https://easyhooon.github.io/dari/docs/ios/connection#troubleshooting) |
+| More | [Protocol Buffers](https://easyhooon.github.io/dari/docs/protobuf), [In-app inspector](https://easyhooon.github.io/dari/docs/inspector), [Modules](https://easyhooon.github.io/dari/docs/modules) | [In-app inspector](https://easyhooon.github.io/dari/docs/ios#in-app-inspector), [Staging builds](https://easyhooon.github.io/dari/docs/ios/connection#staging-builds), [Troubleshooting](https://easyhooon.github.io/dari/docs/ios/connection#troubleshooting) |
 
 Both platforms: [Desktop App](https://easyhooon.github.io/dari/docs/desktop) · [Masking](https://easyhooon.github.io/dari/docs/masking)
 
-## In-app Inspector (Android)
+## In-app Inspector
+
+iOS apps get one too, from the `DariUI` library (3.5.0+): a searchable list, Overview / Request / Response, and text or JSON export, opened from your debug menu. See the [iOS guide](https://easyhooon.github.io/dari/docs/ios#in-app-inspector). The rest of this section shows Android's.
 
 Android apps also get an inspector on the device, Chucker-style: a live notification of recent bridge activity, a searchable list with status, handler and tag filters, Overview / Request / Response tabs, per-handler response times, text or JSON export, shake-to-open, a launcher shortcut, and dark mode.
 

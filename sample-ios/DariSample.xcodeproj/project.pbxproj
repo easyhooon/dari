@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		D4A100000000000000000001 /* DariMacros in Frameworks */ = {isa = PBXBuildFile; productRef = D4A100000000000000000002 /* DariMacros */; };
+		D4A100000000000000000090 /* DariUI in Frameworks */ = {isa = PBXBuildFile; productRef = D4A100000000000000000091 /* DariUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +25,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D4A100000000000000000001 /* DariMacros in Frameworks */,
+				D4A100000000000000000090 /* DariUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -67,6 +69,7 @@
 			name = DariSample;
 			packageProductDependencies = (
 				D4A100000000000000000002 /* DariMacros */,
+				D4A100000000000000000091 /* DariUI */,
 			);
 			productName = DariSample;
 			productReference = D4A100000000000000000010 /* DariSample.app */;
@@ -250,6 +253,10 @@
 		D4A100000000000000000002 /* DariMacros */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = DariMacros;
+		};
+		D4A100000000000000000091 /* DariUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DariUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

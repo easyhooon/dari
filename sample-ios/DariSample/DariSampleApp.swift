@@ -1,4 +1,5 @@
 import DariMacros
+import DariUI
 import SwiftUI
 
 @main
@@ -29,6 +30,18 @@ struct DariSampleApp: App {
     var body: some Scene {
         WindowGroup {
             BridgeWebView()
+                #if DEBUG || DARI
+                // Stands in for an app's debug menu: opens the in-app inspector.
+                .overlay(alignment: .bottomTrailing) {
+                    Button {
+                        Dari.shared.presentInspector()
+                    } label: {
+                        Label("Inspector", systemImage: "list.bullet.rectangle")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding()
+                }
+                #endif
         }
     }
 }

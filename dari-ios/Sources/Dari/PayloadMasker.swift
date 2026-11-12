@@ -1,8 +1,8 @@
 import Foundation
 
-/// Port of Android's `PayloadMasker`, applied per desktop connection when masking is on.
+/// Port of Android's `PayloadMasker`, applied per desktop connection and in the in-app inspector when masking is on.
 /// Fails closed: a payload that can't be processed is replaced, not shown raw.
-enum PayloadMasker {
+package enum PayloadMasker {
     static let mask = "***"
     static let redactionFailed = "[dari: payload hidden, masking failed]"
 
@@ -17,7 +17,7 @@ enum PayloadMasker {
     )
     private static let authScheme = try! NSRegularExpression(pattern: #"(?i)\b(Bearer|Basic)\s+[A-Za-z0-9._~+/\-]+=*"#)
 
-    static func mask(_ record: MessageRecord) -> MessageRecord {
+    package static func mask(_ record: MessageRecord) -> MessageRecord {
         var masked = record
         masked.requestData = maskText(record.requestData)
         masked.responseData = maskText(record.responseData)

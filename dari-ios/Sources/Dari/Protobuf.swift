@@ -46,22 +46,22 @@ public struct DariProtobufDecoder: Sendable {
 }
 
 /// Mirrors `MessagePayloadMetadata`; raw values match the Kotlin enums the desktop reads.
-struct PayloadMetadata: Equatable {
-    enum DecodeStatus: String {
+package struct PayloadMetadata: Equatable {
+    package enum DecodeStatus: String {
         case decoded = "DECODED"
         case decoderUnavailable = "DECODER_UNAVAILABLE"
         case failed = "FAILED"
     }
 
-    struct RawPreview: Equatable {
-        let base64: String
-        let sizeBytes: Int
-        let truncated: Bool
+    package struct RawPreview: Equatable {
+        package let base64: String
+        package let sizeBytes: Int
+        package let truncated: Bool
     }
 
-    let originalSizeBytes: Int
-    let decodeStatus: DecodeStatus
-    var rawPreview: RawPreview?
+    package let originalSizeBytes: Int
+    package let decodeStatus: DecodeStatus
+    package var rawPreview: RawPreview?
 
     var wire: WirePayloadMetadata {
         WirePayloadMetadata(

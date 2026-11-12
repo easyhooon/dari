@@ -1,6 +1,6 @@
 # Dari for iOS
 
-Records WKWebView bridge traffic and shows it in the Dari desktop app. There is no in-app inspector screen on iOS.
+Records WKWebView bridge traffic and shows it in the Dari desktop app. The optional `DariUI` library adds an in-app inspector.
 
 Status: Simulator and USB connections work. iOS connections are macOS-only by design: building and installing an iOS debug build already needs a Mac. Wi-Fi connections are not offered.
 

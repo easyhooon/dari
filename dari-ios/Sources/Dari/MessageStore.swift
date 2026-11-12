@@ -1,46 +1,46 @@
 import Foundation
 
 /// One captured bridge call. Mirrors `MessageEntry`.
-struct MessageRecord: Equatable {
-    let id: Int64
-    var requestId: String?
-    var handlerName: String
-    var displayName: String?
-    var direction: MessageDirection
-    var tag: String?
-    var requestData: String?
-    var requestDataTruncated = false
-    var responseData: String?
-    var responseDataTruncated = false
-    var requestPayloadMetadata: PayloadMetadata?
-    var responsePayloadMetadata: PayloadMetadata?
-    var status: MessageStatus
-    var requestTimestamp: Int64
-    var responseTimestamp: Int64?
-    var pageUrl: String?
+package struct MessageRecord: Equatable {
+    package let id: Int64
+    package var requestId: String?
+    package var handlerName: String
+    package var displayName: String?
+    package var direction: MessageDirection
+    package var tag: String?
+    package var requestData: String?
+    package var requestDataTruncated = false
+    package var responseData: String?
+    package var responseDataTruncated = false
+    package var requestPayloadMetadata: PayloadMetadata?
+    package var responsePayloadMetadata: PayloadMetadata?
+    package var status: MessageStatus
+    package var requestTimestamp: Int64
+    package var responseTimestamp: Int64?
+    package var pageUrl: String?
 }
 
 /// Raw values match `MessageDirection` in dari-core; the desktop filters on them.
-enum MessageDirection: String {
+package enum MessageDirection: String {
     case webToApp = "WEB_TO_APP"
     case appToWeb = "APP_TO_WEB"
 }
 
 /// Raw values match `MessageStatus` in dari-core.
-enum MessageStatus: String {
+package enum MessageStatus: String {
     case inProgress = "IN_PROGRESS"
     case success = "SUCCESS"
     case error = "ERROR"
 }
 
-enum StoreEvent: Equatable {
+package enum StoreEvent: Equatable {
     case added(MessageRecord)
     case updated(MessageRecord)
     case cleared
 }
 
 /// Bounded in-memory buffer. Ids are stable for the life of the process, like Android's wire ids.
-final class MessageStore {
+package final class MessageStore {
     private let lock = NSLock()
     private var records: [MessageRecord] = []
     private var nextId: Int64 = 1
@@ -61,7 +61,7 @@ final class MessageStore {
         Int64((Date().timeIntervalSince1970 * 1000).rounded())
     }
 
-    func snapshot() -> [MessageRecord] {
+    package func snapshot() -> [MessageRecord] {
         lock.withLock { records }
     }
 
@@ -107,7 +107,7 @@ final class MessageStore {
         return matches.last { records[$0].status == .inProgress } ?? matches.last { records[$0].responseTimestamp == nil }
     }
 
-    func clear() {
+    package func clear() {
         lock.withLock {
             records.removeAll()
             notify(.cleared)
@@ -115,7 +115,7 @@ final class MessageStore {
     }
 
     /// [observer] runs under the store lock, in event order; it must only hand the event off.
-    func subscribe(_ observer: @escaping (StoreEvent) -> Void) -> Int {
+    package func subscribe(_ observer: @escaping (StoreEvent) -> Void) -> Int {
         lock.withLock {
             nextObserver += 1
             observers[nextObserver] = observer
@@ -123,7 +123,7 @@ final class MessageStore {
         }
     }
 
-    func unsubscribe(_ token: Int) {
+    package func unsubscribe(_ token: Int) {
         lock.withLock { _ = observers.removeValue(forKey: token) }
     }
 
@@ -158,7 +158,7 @@ extension MessageRecord {
         return url.trimmingCharacters(in: .whitespaces).isEmpty ? nil : url
     }
 
-    func matches(_ query: String) -> Bool {
+    package func matches(_ query: String) -> Bool {
         [handlerName, displayName, tag, requestId, pageUrl, requestData, responseData]
             .compactMap { $0 }
             .contains { $0.range(of: query, options: .caseInsensitive) != nil }
