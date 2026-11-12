@@ -9,6 +9,20 @@ final class InspectorModel: ObservableObject {
     @Published private(set) var records: [MessageRecord] = []
     @Published private(set) var isRunning = false
     @Published var query = ""
+    /// Masks tokens, passwords and the like in the list, detail, search, share and export, like Android's in-app switch.
+    /// Persisted, and independent of the desktop app's masking setting.
+    @Published var maskingEnabled: Bool {
+        didSet {
+            guard maskingEnabled != oldValue else { return }
+            defaults.set(maskingEnabled, forKey: Self.maskingKey)
+            reload()
+        }
+    }
+
+    static let maskingKey = "dari.inspector.maskingEnabled"
+    private let defaults: UserDefaults
+    private var reloadGeneration = 0
+    private var maskedCache: [Int64: (raw: MessageRecord, masked: MessageRecord)] = [:]
 
     private let source: () -> MessageStore?
     private let coalesce: TimeInterval
@@ -18,9 +32,15 @@ final class InspectorModel: ObservableObject {
     private var attached = false
     private var storeObserver: NSObjectProtocol?
 
-    init(source: @escaping () -> MessageStore? = { Dari.shared.inspectorStore }, coalesce: TimeInterval = 0.15) {
+    init(
+        source: @escaping () -> MessageStore? = { Dari.shared.inspectorStore },
+        coalesce: TimeInterval = 0.15,
+        defaults: UserDefaults = .standard
+    ) {
         self.source = source
         self.coalesce = coalesce
+        self.defaults = defaults
+        maskingEnabled = defaults.bool(forKey: Self.maskingKey)
         // Dari.stop() / start() replace the store; follow it while the inspector is open.
         storeObserver = NotificationCenter.default.addObserver(forName: Dari.storeDidChange, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in
@@ -65,7 +85,27 @@ final class InspectorModel: ObservableObject {
     }
 
     func reload() {
-        records = store?.snapshot().reversed() ?? []
+        let snapshot = Array((store?.snapshot() ?? []).reversed())
+        reloadGeneration += 1
+        guard maskingEnabled else {
+            maskedCache = [:]
+            records = snapshot
+            return
+        }
+        // Masking can be slow for large payloads: do it off the main thread, reusing records that haven't changed.
+        let generation = reloadGeneration
+        let cache = maskedCache
+        Task {
+            let masked = await Task.detached(priority: .userInitiated) {
+                snapshot.map { record in
+                    if let hit = cache[record.id], hit.raw == record { return (record, hit.masked) }
+                    return (record, PayloadMasker.mask(record))
+                }
+            }.value
+            guard generation == reloadGeneration else { return }
+            maskedCache = Dictionary(masked.map { ($0.0.id, (raw: $0.0, masked: $0.1)) }, uniquingKeysWith: { first, _ in first })
+            records = masked.map(\.1)
+        }
     }
 
     func clear() {

@@ -36,17 +36,22 @@ public struct DariInspectorView: View {
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
+                        Toggle(isOn: $model.maskingEnabled) {
+                            Label("Mask Sensitive Values", systemImage: "eye.slash")
+                        }
                         ForEach(InspectorFormat.ExportFormat.allCases) { format in
                             Button(format == .text ? "Export as Text" : "Export as JSON") {
                                 let records = model.records
                                 Task { export = await ExportFile.make(format, newestFirst: records) }
                             }
+                            .disabled(model.records.isEmpty)
                         }
                         Button("Clear", role: .destructive) { confirmClear = true }
+                            .disabled(model.records.isEmpty)
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
-                    .disabled(model.records.isEmpty)
+
                 }
             }
             .confirmationDialog("Clear all messages?", isPresented: $confirmClear, titleVisibility: .visible) {

@@ -60,6 +60,27 @@ final class InspectorModelTests: XCTestCase {
         try await waitUntil { model.records.map(\.handlerName) == ["fresh"] }
     }
 
+    func testMaskingSwitchMasksAndPersists() async throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "dari.tests.\(UUID().uuidString)"))
+        let store = MessageStore(maxEntries: 10)
+        add(store, "signIn", data: #"{"password":"hunter2","email":"a@b.c"}"#)
+        let model = InspectorModel(source: { store }, coalesce: 0, defaults: defaults)
+        model.start()
+        XCTAssertFalse(model.maskingEnabled)
+        XCTAssertEqual(model.records.first?.requestData, #"{"password":"hunter2","email":"a@b.c"}"#)
+
+        model.maskingEnabled = true
+        try await waitUntil { model.records.first?.requestData?.contains("hunter2") == false }
+        XCTAssertTrue(try XCTUnwrap(model.records.first?.requestData).contains("a@b.c"))
+        model.query = "hunter2"
+        XCTAssertEqual(model.visible, [], "masked values aren't searchable")
+        XCTAssertTrue(defaults.bool(forKey: InspectorModel.maskingKey))
+        XCTAssertTrue(InspectorModel(source: { store }, defaults: defaults).maskingEnabled)
+
+        model.maskingEnabled = false
+        XCTAssertEqual(model.records.first?.requestData, #"{"password":"hunter2","email":"a@b.c"}"#)
+    }
+
     private func add(_ store: MessageStore, _ handler: String, data: String?) {
         store.add { id, now in
             MessageRecord(id: id, requestId: nil, handlerName: handler, direction: .webToApp, requestData: data, status: .success, requestTimestamp: now)

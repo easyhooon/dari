@@ -105,7 +105,8 @@ Dari.shared.presentInspector()
 - A list of recorded messages, newest first, with search over handler, tag and payloads.
 - Overview, Request and Response for each message, with pretty JSON and the protobuf Decoded / Raw views.
 - Share one message as text, or export all of them as text or JSON from the **⋯** menu. Clear is there too, and also clears a connected desktop app.
-- It shows messages as recorded: the desktop app's masking setting and `setPayloadRedactor` don't apply here, so anything you share is unmasked.
+- **Mask Sensitive Values** in the **⋯** menu masks tokens, passwords and the like in the list, detail, search, share and export, with the same [rules](./masking) as the desktop app. It's off by default and remembered across launches. Raw protobuf views are hidden while it's on.
+- The desktop app's masking setting and `setPayloadRedactor` apply only to what's sent to the desktop app, not here.
 - There's no notification or shake-to-open yet; open it from your own debug menu. Like the rest of Dari, use it only in debug builds.
 
 ## Sample app
