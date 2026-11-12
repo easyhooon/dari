@@ -50,7 +50,8 @@ final class MessageStore {
 
     init(maxEntries: Int, retentionPeriod: TimeInterval? = nil, now: @escaping () -> Int64 = MessageStore.currentMillis) {
         self.maxEntries = max(1, maxEntries)
-        retentionMillis = retentionPeriod.map { Int64(($0 * 1000).rounded()) }
+        // Saturates like Kotlin's `inWholeMilliseconds`, so `.infinity` doesn't trap.
+        retentionMillis = retentionPeriod.map { $0 * 1000 >= Double(Int64.max) ? Int64.max : Int64(($0 * 1000).rounded()) }
         self.now = now
     }
 

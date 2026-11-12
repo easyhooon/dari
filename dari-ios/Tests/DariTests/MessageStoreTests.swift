@@ -38,6 +38,14 @@ final class MessageStoreTests: XCTestCase {
         XCTAssertEqual(store.snapshot().map(\.id), [2, 3, 4])
     }
 
+    func testInfiniteRetentionPeriodKeepsEverything() {
+        let store = MessageStore(maxEntries: 10, retentionPeriod: .infinity) { [unowned self] in clock }
+        add(store, "1", .webToApp)
+        clock = 1_000_000_000
+        add(store, "2", .webToApp)
+        XCTAssertEqual(store.snapshot().map(\.id), [1, 2])
+    }
+
     func testKeepsOldMessagesWithoutRetentionPeriod() {
         let store = MessageStore(maxEntries: 10) { [unowned self] in clock }
         add(store, "1", .webToApp)
