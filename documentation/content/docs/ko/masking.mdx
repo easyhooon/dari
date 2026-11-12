@@ -69,4 +69,4 @@ session_token: "s3cr3t"     →  session_token: "***"
 - 전화번호, 이메일, 주소 같은 개인정보
 - URL이나 핸들러 이름에 들어간 비밀 값
 
-데스크톱 앱으로 보내는 메시지는 `Dari.setPayloadRedactor`로 규칙을 더할 수 있습니다. [데스크톱 앱](./desktop#개인정보-보호)을 참고하세요.
+데스크톱 앱으로 보내는 메시지는 `Dari.setPayloadRedactor`로 규칙을 더할 수 있습니다. [데스크톱 앱](./desktop#개인정보-보호)을 참고하세요. iOS에서는 `Dari.shared.setPayloadRedactor`를 씁니다. payload와 페이지 URL은 바꿀 수 있지만 핸들러 이름은 바꿀 수 없습니다. [iOS](./ios#직접-마스킹-규칙-더하기)를 참고하세요.

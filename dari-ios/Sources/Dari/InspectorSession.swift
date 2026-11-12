@@ -5,16 +5,23 @@ final class InspectorSession {
     private let channel: FrameChannel
     private let appInfo: () -> AppInfo
     private let store: MessageStore
+    private let redact: (MessageRecord) -> MessageRecord
     // Observe events and replies leave through one queue, so a slow desktop never blocks recording.
     private let writes: DispatchQueue
     private let lock = NSLock()
     private var streams: [String: Int] = [:]
     private var maskingEnabled = false
 
-    init(channel: FrameChannel, appInfo: @escaping () -> AppInfo, store: MessageStore) {
+    init(
+        channel: FrameChannel,
+        appInfo: @escaping () -> AppInfo,
+        store: MessageStore,
+        redact: @escaping (MessageRecord) -> MessageRecord
+    ) {
         self.channel = channel
         self.appInfo = appInfo
         self.store = store
+        self.redact = redact
         writes = DispatchQueue(label: "dari.inspector.session.\(channel.fd)")
     }
 
@@ -113,7 +120,7 @@ final class InspectorSession {
     }
 
     private func prepared(_ record: MessageRecord) -> MessageRecord {
-        lock.withLock { maskingEnabled } ? PayloadMasker.mask(record) : record
+        redact(lock.withLock { maskingEnabled } ? PayloadMasker.mask(record) : record)
     }
 
     private func reply<T: Encodable>(_ requestId: String, _ output: T) {

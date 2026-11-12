@@ -69,4 +69,4 @@ Masking fails closed. If a body can't be processed, the whole body is replaced w
 - Phone numbers, emails, addresses and other personal data.
 - Secrets in URLs or handler names.
 
-For messages sent to the desktop app, add your own rule with `Dari.setPayloadRedactor`. See [Desktop app](./desktop#privacy).
+For messages sent to the desktop app, add your own rule with `Dari.setPayloadRedactor`. See [Desktop app](./desktop#privacy). On iOS, use `Dari.shared.setPayloadRedactor`, which can rewrite payloads and page URLs but not handler names; see [iOS](./ios#add-your-own-masking).

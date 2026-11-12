@@ -12,6 +12,14 @@ struct DariSampleApp: App {
             let autoCapture = UserDefaults.standard.bool(forKey: "DariAutoCapture") ? SampleCapture.autoCapture : nil
             try Dari.shared.start(DariConfiguration(autoCapture: autoCapture))
             Dari.shared.setEnvironment(["sample": "ios"])
+            // Extra masking for the desktop app, after the built-in one when that is on.
+            Dari.shared.setPayloadRedactor { message in
+                var message = message
+                message.requestData = message.requestData?.replacingOccurrences(
+                    of: #""email":"[^"]*""#, with: #""email":"***""#, options: .regularExpression
+                )
+                return message
+            }
         } catch {
             print("Dari could not start: \(error)")
         }

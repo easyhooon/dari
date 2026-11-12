@@ -60,7 +60,7 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
 | 직접 호출 없이 캡처 | Gradle 플러그인(2.6.0+) | `autoCapture`(3.1.0+) 또는 `@DariBridge` 매크로(3.2.0+) |
 | 앱 내 인스펙터(목록, 상세, 알림, 흔들어 열기, 런처 바로가기) | ✅ | ❌ |
 | 데스크톱 앱 | ✅ adb로 기기·에뮬레이터 연결, macOS·Windows·Linux | ✅ Simulator·USB 기기, macOS 전용 |
-| 민감 정보 마스킹 | ✅ 앱 내, 데스크톱 | ✅ 데스크톱 |
+| 민감 정보 마스킹 | ✅ 앱 내, 데스크톱 | ✅ 데스크톱, 직접 정한 규칙 포함(`setPayloadRedactor`) |
 | 텍스트 / JSON 내보내기 | ✅ 앱 내, 데스크톱 | ✅ 데스크톱 |
 | Protocol Buffers 검사 | ✅ | ❌ |
 | `retentionPeriod` 정리 | ✅ | ❌(메모리에만 보관, `maxEntries`로 제한) |

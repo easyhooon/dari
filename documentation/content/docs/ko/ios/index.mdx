@@ -66,6 +66,25 @@ Dari가 실행 중일 때는 기기의 loopback에 접근할 수 있는 프로�
 | `fireAndForget` | `false` | 요청을 보내는 즉시 완료로 기록합니다 |
 | `ports` | `38670...38677` | 시도할 loopback 포트. 데스크톱 앱도 같은 범위를 확인합니다 |
 
+## 직접 마스킹 규칙 더하기
+
+데스크톱 앱의 **Mask sensitive values** 설정은 `token`, `password` 같은 키만 가립니다. 계좌번호나 주민등록번호처럼 다른 필드는 보내기 전에 직접 바꿀 수 있습니다.
+
+```swift
+Dari.shared.setPayloadRedactor { message in
+    var message = message
+    message.requestData = message.requestData?.replacingOccurrences(
+        of: #""accountNo":"[^"]*""#, with: #""accountNo":"***""#, options: .regularExpression
+    )
+    return message
+}
+```
+
+- 데스크톱 앱으로 보내는 모든 메시지에 실행됩니다. 기본 마스킹이 켜져 있으면 그다음에 실행됩니다. 기록된 메시지 자체는 바뀌지 않습니다.
+- `requestData`, `responseData`, `pageUrl`을 바꿀 수 있습니다. Android와 달리 핸들러 이름 등 나머지 필드는 읽기 전용입니다.
+- 오류를 던지면 두 payload를 그대로 보내지 않고 `[dari: payload hidden, redactor failed]`로 바꾸며, 페이지 URL은 빼고 보냅니다.
+- 메인 스레드가 아니라 백그라운드 스레드에서, 여러 개가 동시에 실행될 수 있으므로 클로저는 `@Sendable`이어야 합니다. 지우려면 `nil`을 넘기세요.
+
 ## 샘플 앱
 
 `sample-ios/DariSample.xcodeproj`는 Web → App과 App → Web 시나리오가 담긴 페이지를 엽니다. 성공, 에러, 느린 응답, 응답 없음, fire-and-forget, 마스킹을 확인할 수 있습니다. 브릿지는 [매크로로 컴파일 시점 수집](./ios/capture#매크로로-컴파일-시점-수집)처럼 `@DariBridge`로 메시지를 기록하고 `dariEvaluateJavaScript`로 콜백을 보냅니다. 파서는 `SampleCapture`에 있습니다. [자동 수집](./ios/capture#자동-수집)으로 바꿔 보려면 scheme의 launch argument에 `-DariAutoCapture YES`를 추가하세요. Xcode 16 이상에서 열고 Simulator에서 **DariSample** scheme을 실행하세요.

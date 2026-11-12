@@ -60,7 +60,7 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
 | Capture without manual calls | Gradle plugin (2.6.0+) | `autoCapture` (3.1.0+) or `@DariBridge` macro (3.2.0+) |
 | In-app inspector (list, detail, notification, shake-to-open, launcher shortcut) | ✅ | ❌ |
 | Desktop App | ✅ Device or emulator over adb, on macOS, Windows and Linux | ✅ Simulator or USB device, macOS only |
-| Masking of sensitive values | ✅ In-app and desktop | ✅ Desktop |
+| Masking of sensitive values | ✅ In-app and desktop | ✅ Desktop, including your own rules (`setPayloadRedactor`) |
 | Text / JSON export | ✅ In-app and desktop | ✅ Desktop |
 | Protocol Buffers inspection | ✅ | ❌ |
 | `retentionPeriod` cleanup | ✅ | ❌ (kept in memory, capped by `maxEntries`) |
