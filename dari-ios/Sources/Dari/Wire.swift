@@ -65,6 +65,17 @@ struct WireMessageDetail: Codable, Equatable {
     var responseData: String?
     var requestDataTruncated: Bool = false
     var responseDataTruncated: Bool = false
+    var requestPayloadMetadata: WirePayloadMetadata?
+    var responsePayloadMetadata: WirePayloadMetadata?
+}
+
+struct WirePayloadMetadata: Codable, Equatable {
+    let contentType: String
+    let originalSizeBytes: Int
+    let decodeStatus: String
+    var rawPreviewBase64: String?
+    var rawPreviewSizeBytes: Int?
+    var rawPreviewTruncated: Bool?
 }
 
 struct InspectorSettings: Codable, Equatable {

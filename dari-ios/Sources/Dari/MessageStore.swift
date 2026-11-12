@@ -1,6 +1,6 @@
 import Foundation
 
-/// One captured bridge call. Mirrors `MessageEntry` without protobuf metadata.
+/// One captured bridge call. Mirrors `MessageEntry`.
 struct MessageRecord: Equatable {
     let id: Int64
     var requestId: String?
@@ -12,6 +12,8 @@ struct MessageRecord: Equatable {
     var requestDataTruncated = false
     var responseData: String?
     var responseDataTruncated = false
+    var requestPayloadMetadata: PayloadMetadata?
+    var responsePayloadMetadata: PayloadMetadata?
     var status: MessageStatus
     var requestTimestamp: Int64
     var responseTimestamp: Int64?
@@ -76,17 +78,25 @@ final class MessageStore {
         }
     }
 
+    /// The record [respond] would complete now.
+    func responseTarget(requestId: String, tag: String?, direction: MessageDirection) -> MessageRecord? {
+        lock.withLock { targetIndex(requestId, tag, direction).map { records[$0] } }
+    }
+
     /// Completes the newest matching request still waiting for a response, like Android's `responseTargets`.
     func respond(requestId: String, tag: String?, direction: MessageDirection, _ transform: (inout MessageRecord, Int64) -> Void) {
         lock.withLock {
-            let matches = records.indices.filter {
-                records[$0].requestId == requestId && records[$0].tag == tag && records[$0].direction == direction
-            }
-            let target = matches.last { records[$0].status == .inProgress } ?? matches.last { records[$0].responseTimestamp == nil }
-            guard let index = target else { return }
+            guard let index = targetIndex(requestId, tag, direction) else { return }
             transform(&records[index], now())
             notify(.updated(records[index]))
         }
+    }
+
+    private func targetIndex(_ requestId: String, _ tag: String?, _ direction: MessageDirection) -> Int? {
+        let matches = records.indices.filter {
+            records[$0].requestId == requestId && records[$0].tag == tag && records[$0].direction == direction
+        }
+        return matches.last { records[$0].status == .inProgress } ?? matches.last { records[$0].responseTimestamp == nil }
     }
 
     func clear() {
@@ -157,8 +167,9 @@ extension MessageRecord {
             status: status.rawValue,
             requestTimestamp: requestTimestamp,
             responseTimestamp: responseTimestamp,
-            requestSizeBytes: requestData?.utf8.count ?? 0,
-            responseSizeBytes: responseData?.utf8.count ?? 0,
+            // The payload's own size for protobuf, like `MessageEntry.requestSizeBytes`.
+            requestSizeBytes: requestPayloadMetadata?.originalSizeBytes ?? requestData?.utf8.count ?? 0,
+            responseSizeBytes: responsePayloadMetadata?.originalSizeBytes ?? responseData?.utf8.count ?? 0,
             pageUrl: pageUrl
         )
     }
@@ -169,7 +180,9 @@ extension MessageRecord {
             requestData: requestData,
             responseData: responseData,
             requestDataTruncated: requestDataTruncated,
-            responseDataTruncated: responseDataTruncated
+            responseDataTruncated: responseDataTruncated,
+            requestPayloadMetadata: requestPayloadMetadata?.wire,
+            responsePayloadMetadata: responsePayloadMetadata?.wire
         )
     }
 }

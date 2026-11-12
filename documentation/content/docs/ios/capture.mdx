@@ -57,6 +57,7 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
 - `fireAndForget: true` records a message that is complete as soon as it is sent. A nil `requestId` alone only skips pairing: the message stays in progress unless `fireAndForget` (per call or in `DariConfiguration`) is true.
 - Pass `displayName:` when the handler name isn't readable on its own.
 - Calls made before `start()` are ignored.
+- For protobuf bytes, use the `…Protobuf…` methods. See [Protocol Buffers](../protobuf#ios).
 
 ## Automatic capture
 

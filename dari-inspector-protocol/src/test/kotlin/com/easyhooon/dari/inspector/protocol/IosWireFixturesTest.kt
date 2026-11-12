@@ -77,6 +77,32 @@ class IosWireFixturesTest {
             ),
         )
         check(
+            "result_detail_protobuf",
+            InspectorFrame.serializer(),
+            result(
+                "2",
+                WireMessageDetail.serializer(),
+                WireMessageDetail(
+                    summary,
+                    requestData = """{"value":"hi"}""",
+                    responseData = "(protobuf decoder unavailable)",
+                    requestPayloadMetadata = WirePayloadMetadata(
+                        contentType = "PROTOBUF",
+                        originalSizeBytes = 4,
+                        decodeStatus = "DECODED",
+                        rawPreviewBase64 = "CgJoaQ==",
+                        rawPreviewSizeBytes = 4,
+                        rawPreviewTruncated = false,
+                    ),
+                    responsePayloadMetadata = WirePayloadMetadata(
+                        contentType = "PROTOBUF",
+                        originalSizeBytes = 2,
+                        decodeStatus = "DECODER_UNAVAILABLE",
+                    ),
+                ),
+            ),
+        )
+        check(
             "result_observe_added",
             InspectorFrame.serializer(),
             result("3", ObserveEvent.serializer(), ObserveEvent.Added(summary), isFinal = false),

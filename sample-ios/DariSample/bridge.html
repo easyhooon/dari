@@ -31,6 +31,7 @@
         <button onclick="request('noResponsePending', null)">No response</button>
         <button onclick="fireAndForget('logEvent', {event: 'button_click'})">logEvent (fire-and-forget)</button>
         <button onclick="request('unknownHandler', null)">Unsupported</button>
+        <button onclick="protobufGreeting('Dari')">protobufGreeting (protobuf)</button>
     </div>
 
     <h2>App → Web</h2>
@@ -65,6 +66,15 @@
         function fireAndForget(handler, data) {
             log('→ ' + handler + ' (fire-and-forget)');
             post({ type: 'fireAndForget', handler: handler, data: JSON.stringify(data) });
+        }
+
+        // Sends google.protobuf.StringValue bytes as Base64: field 1, one-byte length, UTF-8.
+        function protobufGreeting(name) {
+            var requestId = 'req_' + Date.now() + '_' + (++counter);
+            var bytes = new TextEncoder().encode(name);
+            var message = String.fromCharCode(0x0A, bytes.length) + String.fromCharCode.apply(null, bytes);
+            log('→ protobufGreeting (protobuf)');
+            post({ type: 'protobuf', handler: 'protobufGreeting', requestId: requestId, data: btoa(message) });
         }
 
         function askAppToCallWeb(handler) {

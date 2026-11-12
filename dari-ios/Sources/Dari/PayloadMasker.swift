@@ -21,6 +21,9 @@ enum PayloadMasker {
         var masked = record
         masked.requestData = maskText(record.requestData)
         masked.responseData = maskText(record.responseData)
+        // Raw bytes can't be checked for sensitive keys, so previews are dropped as on Android.
+        masked.requestPayloadMetadata?.rawPreview = nil
+        masked.responsePayloadMetadata?.rawPreview = nil
         return masked
     }
 

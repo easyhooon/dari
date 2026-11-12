@@ -11,6 +11,8 @@ final class SampleBridge: NSObject, WKScriptMessageHandler {
 
     weak var webView: WKWebView?
     private var appToWebCount = 0
+    // @DariBridge records strings only, so protobuf messages are recorded by hand.
+    private let protobuf = Dari.shared.interceptor(tag: "protobuf", protobufDecoder: SampleCapture.protobufDecoder)
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
@@ -18,6 +20,11 @@ final class SampleBridge: NSObject, WKScriptMessageHandler {
         switch type {
         case "request":
             if let requestId = body["requestId"] as? String { handle(handler, requestId: requestId, data: body["data"] as? String) }
+        case "protobuf":
+            if let requestId = body["requestId"] as? String,
+               let bytes = (body["data"] as? String).flatMap({ Data(base64Encoded: $0) }) {
+                greet(requestId, bytes)
+            }
         case "askAppToCallWeb":
             callWeb(handler)
         default:
@@ -49,6 +56,14 @@ final class SampleBridge: NSObject, WKScriptMessageHandler {
         default:
             respond(handler, requestId, success: false, json(["error": "Unsupported handler", "handler": handler]))
         }
+    }
+
+    private func greet(_ requestId: String, _ request: Data) {
+        let handler = "protobufGreeting"
+        protobuf.onWebToAppProtobufRequest(handlerName: handler, requestId: requestId, requestData: request)
+        let response = SampleCapture.stringValue("Hello, \(SampleCapture.stringValue(request) ?? "")!")
+        protobuf.onWebToAppProtobufResponse(handlerName: handler, requestId: requestId, responseData: response, isSuccess: true)
+        respond(handler, requestId, success: true, response.base64EncodedString())
     }
 
     private func respond(_ handler: String, _ requestId: String, success: Bool, _ data: String) {
@@ -108,6 +123,25 @@ enum SampleCapture {
             return .request(handlerName: handler, requestId: args.dropFirst().first as? String, data: args.last as? String)
         }
         return DariAutoCapture.defaultScript(script)
+    }
+
+    /// Decodes `google.protobuf.StringValue` by hand; a real app would use its SwiftProtobuf types.
+    static let protobufDecoder = DariProtobufDecoder()
+        .webToApp("protobufGreeting", request: describe, response: describe)
+
+    @Sendable private static func describe(_ data: Data) -> String? {
+        stringValue(data).map { #"{"type":"google.protobuf.StringValue","value":\#(String(reflecting: $0))}"# }
+    }
+
+    static func stringValue(_ data: Data) -> String? {
+        let bytes = [UInt8](data)
+        guard bytes.count >= 2, bytes[0] == 0x0A, Int(bytes[1]) == bytes.count - 2 else { return nil }
+        return String(bytes: bytes[2...], encoding: .utf8)
+    }
+
+    static func stringValue(_ text: String) -> Data {
+        let utf8 = Array(text.utf8.prefix(127))
+        return Data([0x0A, UInt8(utf8.count)] + utf8)
     }
 
     static let autoCapture = DariAutoCapture(tag: "sample", parseMessage: parseMessage, parseScript: parseScript)
