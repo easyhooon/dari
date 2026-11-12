@@ -9,7 +9,7 @@ final class ProtobufTests: XCTestCase {
     private let dari = Dari()
 
     override func setUpWithError() throws {
-        try dari.start(DariConfiguration(ports: 38_700...38_707))
+        try dari.start(DariConfiguration(ports: 38_710...38_725))
     }
 
     override func tearDown() {
