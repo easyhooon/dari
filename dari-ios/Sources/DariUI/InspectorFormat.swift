@@ -42,6 +42,8 @@ enum InspectorFormat {
     static func prettyJSON(_ text: String) -> String {
         let chars = Array(text.trimmingCharacters(in: .whitespacesAndNewlines))
         guard let first = chars.first, first == "{" || first == "[" else { return text }
+        // Parse first, like Android and the desktop app, so `[INFO] …` or `[object Object]` stay as recorded.
+        guard (try? JSONSerialization.jsonObject(with: Data(text.utf8))) != nil else { return text }
         var out = ""
         var depth = 0
         var inString = false
@@ -165,13 +167,13 @@ enum InspectorFormat {
             return header(app, exportedAt, dateFormatter) + separator
                 + records.map { text($0, dateFormatter: dateFormatter) }.joined(separator: separator)
         case .json:
-            let document = ExportDocument(
-                meta: ExportMeta(app: app, exportedAt: Int64((exportedAt.timeIntervalSince1970 * 1000).rounded())),
-                messages: records.map(ExportMessage.init)
-            )
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-            return (try? encoder.encode(document)).map { String(decoding: $0, as: UTF8.self) } ?? "{}"
+            let exported = Int64((exportedAt.timeIntervalSince1970 * 1000).rounded())
+            let document: [(String, Any?)] = [
+                ("format_version", 2),
+                ("meta", meta(app, exported)),
+                ("messages", records.map(exportable)),
+            ]
+            return OrderedJSON.write(document)
         }
     }
 
@@ -197,117 +199,106 @@ enum InspectorFormat {
     }
 }
 
-// Field names follow `ExportDocument` in :dari and the desktop app's iOS variant.
-private struct ExportDocument: Encodable {
-    let formatVersion = 2
-    let meta: ExportMeta
-    let messages: [ExportMessage]
-
-    enum CodingKeys: String, CodingKey {
-        case formatVersion = "format_version", meta, messages
-    }
-}
-
-private struct ExportMeta: Encodable {
-    let applicationId, appName, appVersion, dariVersion, deviceModel: String
-    let sdkInt: Int
-    let exportedAt: Int64
-    let environment: [String: String]?
-    let platform: String?
-    let osVersion: String?
-
-    init(app: AppInfo, exportedAt: Int64) {
-        applicationId = app.applicationId
-        appName = app.appName
-        appVersion = app.appVersion
-        dariVersion = app.dariVersion
-        deviceModel = app.deviceModel
-        sdkInt = app.sdkInt
-        self.exportedAt = exportedAt
-        environment = app.environment
-        platform = app.platform
-        osVersion = app.osVersion
+// Field names and order follow `ExportMeta` / `ExportableMessage` in :dari and the desktop app's iOS variant.
+// Nil values are written as null, as Kotlin's `encodeDefaults = true` does.
+extension InspectorFormat {
+    static func meta(_ app: AppInfo, _ exportedAt: Int64) -> [(String, Any?)] {
+        [
+            ("application_id", app.applicationId),
+            ("app_name", app.appName),
+            ("app_version", app.appVersion),
+            ("dari_version", app.dariVersion),
+            ("device_model", app.deviceModel),
+            ("sdk_int", app.sdkInt),
+            ("exported_at", exportedAt),
+            ("environment", app.environment.map { env in env.sorted { $0.key < $1.key }.map { ($0.key, $0.value as Any?) } }),
+            ("platform", app.platform),
+            ("os_version", app.osVersion),
+        ]
     }
 
-    enum CodingKeys: String, CodingKey {
-        case applicationId = "application_id", appName = "app_name", appVersion = "app_version"
-        case dariVersion = "dari_version", deviceModel = "device_model", sdkInt = "sdk_int"
-        case exportedAt = "exported_at", environment, platform, osVersion = "os_version"
-    }
-}
-
-private struct ExportMessage: Encodable {
-    let id: Int64
-    let requestId: String?
-    let handlerName: String
-    let displayName: String?
-    let direction: String
-    let tag: String?
-    let pageUrl: String?
-    let requestData: String?
-    let responseData: String?
-    let requestDataTruncated: Bool
-    let responseDataTruncated: Bool
-    let requestContentType: String?
-    let requestOriginalSizeBytes: Int?
-    let requestDecodeStatus: String?
-    let requestRawPreviewBase64: String?
-    let requestRawPreviewSizeBytes: Int?
-    let requestRawPreviewTruncated: Bool?
-    let responseContentType: String?
-    let responseOriginalSizeBytes: Int?
-    let responseDecodeStatus: String?
-    let responseRawPreviewBase64: String?
-    let responseRawPreviewSizeBytes: Int?
-    let responseRawPreviewTruncated: Bool?
-    let status: String
-    let requestTimestamp: Int64
-    let responseTimestamp: Int64?
-    let durationMs: Int64?
-
-    init(_ record: MessageRecord) {
-        id = record.id
-        requestId = record.requestId
-        handlerName = record.handlerName
-        displayName = record.displayName
-        direction = record.direction.rawValue
-        tag = record.tag
-        pageUrl = record.pageUrl
-        requestData = record.requestData
-        responseData = record.responseData
-        requestDataTruncated = record.requestDataTruncated
-        responseDataTruncated = record.responseDataTruncated
+    static func exportable(_ record: MessageRecord) -> [(String, Any?)] {
         let request = record.requestPayloadMetadata
-        requestContentType = request.map { _ in "PROTOBUF" }
-        requestOriginalSizeBytes = request?.originalSizeBytes
-        requestDecodeStatus = request?.decodeStatus.rawValue
-        requestRawPreviewBase64 = request?.rawPreview?.base64
-        requestRawPreviewSizeBytes = request?.rawPreview?.sizeBytes
-        requestRawPreviewTruncated = request?.rawPreview?.truncated
         let response = record.responsePayloadMetadata
-        responseContentType = response.map { _ in "PROTOBUF" }
-        responseOriginalSizeBytes = response?.originalSizeBytes
-        responseDecodeStatus = response?.decodeStatus.rawValue
-        responseRawPreviewBase64 = response?.rawPreview?.base64
-        responseRawPreviewSizeBytes = response?.rawPreview?.sizeBytes
-        responseRawPreviewTruncated = response?.rawPreview?.truncated
-        status = record.status.rawValue
-        requestTimestamp = record.requestTimestamp
-        responseTimestamp = record.responseTimestamp
-        durationMs = InspectorFormat.duration(record)
+        return [
+            ("id", record.id),
+            ("request_id", record.requestId),
+            ("handler_name", record.handlerName),
+            ("display_name", record.displayName),
+            ("direction", record.direction.rawValue),
+            ("tag", record.tag),
+            ("page_url", record.pageUrl),
+            ("request_data", record.requestData),
+            ("response_data", record.responseData),
+            ("request_data_truncated", record.requestDataTruncated),
+            ("response_data_truncated", record.responseDataTruncated),
+            ("request_content_type", request.map { _ in "PROTOBUF" }),
+            ("request_original_size_bytes", request?.originalSizeBytes),
+            ("request_decode_status", request?.decodeStatus.rawValue),
+            ("request_raw_preview_base64", request?.rawPreview?.base64),
+            ("request_raw_preview_size_bytes", request?.rawPreview?.sizeBytes),
+            ("request_raw_preview_truncated", request?.rawPreview?.truncated),
+            ("response_content_type", response.map { _ in "PROTOBUF" }),
+            ("response_original_size_bytes", response?.originalSizeBytes),
+            ("response_decode_status", response?.decodeStatus.rawValue),
+            ("response_raw_preview_base64", response?.rawPreview?.base64),
+            ("response_raw_preview_size_bytes", response?.rawPreview?.sizeBytes),
+            ("response_raw_preview_truncated", response?.rawPreview?.truncated),
+            ("status", record.status.rawValue),
+            ("request_timestamp", record.requestTimestamp),
+            ("response_timestamp", record.responseTimestamp),
+            ("duration_ms", duration(record)),
+        ]
+    }
+}
+
+/// Pretty JSON with keys in the given order, two-space indent like the Kotlin exporters.
+enum OrderedJSON {
+    static func write(_ object: [(String, Any?)]) -> String {
+        var out = ""
+        append(object, to: &out, depth: 0)
+        return out
     }
 
-    enum CodingKeys: String, CodingKey {
-        case id, direction, tag, status
-        case requestId = "request_id", handlerName = "handler_name", displayName = "display_name", pageUrl = "page_url"
-        case requestData = "request_data", responseData = "response_data"
-        case requestDataTruncated = "request_data_truncated", responseDataTruncated = "response_data_truncated"
-        case requestContentType = "request_content_type", requestOriginalSizeBytes = "request_original_size_bytes"
-        case requestDecodeStatus = "request_decode_status", requestRawPreviewBase64 = "request_raw_preview_base64"
-        case requestRawPreviewSizeBytes = "request_raw_preview_size_bytes", requestRawPreviewTruncated = "request_raw_preview_truncated"
-        case responseContentType = "response_content_type", responseOriginalSizeBytes = "response_original_size_bytes"
-        case responseDecodeStatus = "response_decode_status", responseRawPreviewBase64 = "response_raw_preview_base64"
-        case responseRawPreviewSizeBytes = "response_raw_preview_size_bytes", responseRawPreviewTruncated = "response_raw_preview_truncated"
-        case requestTimestamp = "request_timestamp", responseTimestamp = "response_timestamp", durationMs = "duration_ms"
+    private static func append(_ value: Any?, to out: inout String, depth: Int) {
+        let indent = String(repeating: "  ", count: depth + 1)
+        let closing = String(repeating: "  ", count: depth)
+        switch value {
+        case nil:
+            out += "null"
+        case let object as [(String, Any?)]:
+            guard !object.isEmpty else { out += "{}"; return }
+            out += "{\n"
+            for (index, (key, item)) in object.enumerated() {
+                out += indent + string(key) + ": "
+                append(item, to: &out, depth: depth + 1)
+                out += index == object.count - 1 ? "\n" : ",\n"
+            }
+            out += closing + "}"
+        case let array as [[(String, Any?)]]:
+            guard !array.isEmpty else { out += "[]"; return }
+            out += "[\n"
+            for (index, item) in array.enumerated() {
+                out += indent
+                append(item, to: &out, depth: depth + 1)
+                out += index == array.count - 1 ? "\n" : ",\n"
+            }
+            out += closing + "]"
+        case let text as String:
+            out += string(text)
+        case let flag as Bool:
+            out += flag ? "true" : "false"
+        case let number as Int:
+            out += String(number)
+        case let number as Int64:
+            out += String(number)
+        case let .some(other):
+            out += string(String(describing: other))
+        }
+    }
+
+    private static func string(_ text: String) -> String {
+        let data = (try? JSONSerialization.data(withJSONObject: text, options: [.fragmentsAllowed, .withoutEscapingSlashes])) ?? Data("\"\"".utf8)
+        return String(decoding: data, as: UTF8.self)
     }
 }

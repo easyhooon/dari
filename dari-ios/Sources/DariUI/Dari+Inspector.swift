@@ -13,8 +13,13 @@ extension Dari {
         guard let window = scene?.windows.first(where: \.isKeyWindow) ?? scene?.windows.first,
               var top = window.rootViewController
         else { return }
-        while let presented = top.presentedViewController { top = presented }
-        guard !(top is InspectorHostingController) else { return }
+        // Skip when the inspector is anywhere in the chain, e.g. under its own share sheet.
+        var chain = [top]
+        while let presented = top.presentedViewController {
+            top = presented
+            chain.append(presented)
+        }
+        guard !chain.contains(where: { $0 is InspectorHostingController }) else { return }
         top.present(InspectorHostingController(rootView: DariInspectorView()), animated: true)
     }
 }

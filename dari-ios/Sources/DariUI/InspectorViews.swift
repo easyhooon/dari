@@ -37,7 +37,10 @@ public struct DariInspectorView: View {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
                         ForEach(InspectorFormat.ExportFormat.allCases) { format in
-                            Button(format == .text ? "Export as Text" : "Export as JSON") { export = ExportFile(format, model.records) }
+                            Button(format == .text ? "Export as Text" : "Export as JSON") {
+                                let records = model.records
+                                Task { export = await ExportFile.make(format, newestFirst: records) }
+                            }
                         }
                         Button("Clear", role: .destructive) { confirmClear = true }
                     } label: {
@@ -51,7 +54,7 @@ public struct DariInspectorView: View {
             } message: {
                 Text("This also clears them in a connected desktop app.")
             }
-            .sheet(item: $export) { ActivitySheet(items: [$0.url]) }
+            .sheet(item: $export) { ActivitySheet(items: [$0.item]) }
         }
         .onAppear { model.start() }
         .onDisappear { model.stop() }
@@ -135,6 +138,7 @@ struct MessageDetailView: View {
     @ObservedObject var model: InspectorModel
     let id: Int64
     @State private var tab = Tab.overview
+    @State private var share: ExportFile?
 
     var body: some View {
         Group {
@@ -153,8 +157,15 @@ struct MessageDetailView: View {
                 }
                 .navigationTitle(record.displayName ?? record.handlerName)
                 .toolbar {
-                    ShareLink(item: InspectorFormat.text(record))
+                    // Formats on tap, not on every render: payloads can be hundreds of KB.
+                    Button {
+                        Task { share = await ExportFile.text(record) }
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .accessibilityLabel("Share")
                 }
+                .sheet(item: $share) { ActivitySheet(items: [$0.item]) }
             } else {
                 Text("This message is no longer recorded.").foregroundStyle(.secondary)
             }
@@ -216,6 +227,7 @@ struct PayloadView: View {
     let truncated: Bool
     let metadata: PayloadMetadata?
     @State private var mode = Mode.decoded
+    @State private var rendered: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -227,7 +239,7 @@ struct PayloadView: View {
                 .padding([.horizontal, .bottom])
             }
             ScrollView([.vertical, .horizontal]) {
-                Text(content)
+                Text(rendered ?? "")
                     .font(.system(.footnote, design: .monospaced))
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -235,9 +247,16 @@ struct PayloadView: View {
             }
             .background(Color(uiColor: .secondarySystemBackground))
         }
+        // Re-renders only when the payload or the view mode changes, off the main thread.
+        .task(id: "\(mode.rawValue)|\(data?.utf8.count ?? -1)|\(metadata?.rawPreview?.sizeBytes ?? -1)") {
+            let (data, truncated, metadata, mode) = (data, truncated, metadata, mode)
+            rendered = await Task.detached(priority: .userInitiated) {
+                Self.content(data: data, truncated: truncated, metadata: metadata, mode: mode)
+            }.value
+        }
     }
 
-    private var content: String {
+    static func content(data: String?, truncated: Bool, metadata: PayloadMetadata?, mode: Mode) -> String {
         if mode == .raw, let metadata, let preview = metadata.rawPreview {
             let captured = "Captured \(preview.sizeBytes) of \(metadata.originalSizeBytes) bytes\(preview.truncated ? " (truncated)" : "")"
             return "\(captured)\n\nHex\n\(InspectorFormat.hex(preview))\n\nBase64\n\(preview.base64)"
@@ -247,16 +266,32 @@ struct PayloadView: View {
     }
 }
 
-/// A file written for the share sheet, so a large export isn't built on every render.
+/// Something to hand to the share sheet, built off the main thread.
 struct ExportFile: Identifiable {
     let id = UUID()
-    let url: URL
+    let item: Any
 
-    @MainActor
-    init(_ format: InspectorFormat.ExportFormat, _ newestFirst: [MessageRecord]) {
-        let text = InspectorFormat.export(newestFirst.reversed(), app: Dari.shared.inspectorAppInfo, format: format)
-        url = FileManager.default.temporaryDirectory.appendingPathComponent(InspectorFormat.fileName(format))
-        try? text.write(to: url, atomically: true, encoding: .utf8)
+    static func text(_ record: MessageRecord) async -> ExportFile {
+        let text = await Task.detached(priority: .userInitiated) { InspectorFormat.text(record) }.value
+        return ExportFile(item: text)
+    }
+
+    /// Writes every message to a fresh folder, removing earlier exports first. Nil when writing fails.
+    static func make(_ format: InspectorFormat.ExportFormat, newestFirst: [MessageRecord]) async -> ExportFile? {
+        let app = Dari.shared.inspectorAppInfo
+        return await Task.detached(priority: .userInitiated) { () -> ExportFile? in
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent("dari_export", isDirectory: true)
+            try? FileManager.default.removeItem(at: root)
+            let folder = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
+            let url = folder.appendingPathComponent(InspectorFormat.fileName(format))
+            do {
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                try InspectorFormat.export(newestFirst.reversed(), app: app, format: format).write(to: url, atomically: true, encoding: .utf8)
+                return ExportFile(item: url)
+            } catch {
+                return nil
+            }
+        }.value
     }
 }
 

@@ -35,6 +35,10 @@ final class InspectorFormatTests: XCTestCase {
         XCTAssertEqual(InspectorFormat.prettyJSON("fire and forget"), "fire and forget")
         XCTAssertEqual(InspectorFormat.prettyJSON(#"{"a":1"#), #"{"a":1"#)
         XCTAssertEqual(InspectorFormat.prettyJSON("]["), "][")
+        // Bracketed text that isn't JSON must stay as recorded.
+        XCTAssertEqual(InspectorFormat.prettyJSON("[object Object]"), "[object Object]")
+        XCTAssertEqual(InspectorFormat.prettyJSON("[INFO] user logged in: ok"), "[INFO] user logged in: ok")
+        XCTAssertEqual(InspectorFormat.prettyJSON(#"{"a":1} // note"#), #"{"a":1} // note"#)
     }
 
     func testHexMatchesAndroid() {
@@ -61,6 +65,11 @@ final class InspectorFormatTests: XCTestCase {
             deviceModel: "iPhone17,1", sdkInt: 0, environment: ["server": "dev"], platform: "ios", osVersion: "18.2.0"
         )
         let json = InspectorFormat.export([record()], app: app, format: .json, exportedAt: Date(timeIntervalSince1970: 2))
+        // Key order and explicit nulls follow the Kotlin exporters.
+        XCTAssertTrue(json.hasPrefix("{\n  \"format_version\": 2,\n  \"meta\": {\n    \"application_id\": \"com.example\","))
+        XCTAssertTrue(json.contains("\"page_url\": null,"))
+        XCTAssertTrue(json.contains("\"response_content_type\": null,"))
+        XCTAssertLessThan(try XCTUnwrap(json.range(of: "\"meta\"")).lowerBound, try XCTUnwrap(json.range(of: "\"messages\"")).lowerBound)
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
         XCTAssertEqual(object["format_version"] as? Int, 2)
         let meta = try XCTUnwrap(object["meta"] as? [String: Any])
@@ -71,7 +80,7 @@ final class InspectorFormatTests: XCTestCase {
         XCTAssertEqual(message["handler_name"] as? String, "getUser")
         XCTAssertEqual(message["duration_ms"] as? Int, 250)
         XCTAssertEqual(message["request_decode_status"] as? String, "DECODED")
-        XCTAssertNil(message["response_content_type"])
+        XCTAssertTrue(message["response_content_type"] is NSNull)
 
         let text = InspectorFormat.export([record()], app: app, format: .text, exportedAt: Date(timeIntervalSince1970: 2), dateFormatter: utc)
         XCTAssertTrue(text.hasPrefix("App: Example 1.0 (com.example)\nDevice: iPhone17,1, iOS 18.2.0\nDari: 3.5.0\nEnvironment: server=dev\nExported: 00:00:02\n"))

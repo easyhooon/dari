@@ -74,6 +74,7 @@ public final class Dari {
             self.listener = listener
         }
         if configuration.autoCapture != nil { WebKitHooks.install() }
+        NotificationCenter.default.post(name: Dari.storeDidChange, object: self)
     }
 
     /// Stops listening, drops connected desktops and discards recorded messages.
@@ -83,7 +84,11 @@ public final class Dari {
             listener = nil
             store = nil
         }
+        NotificationCenter.default.post(name: Dari.storeDidChange, object: self)
     }
+
+    /// Posted after [start] or [stop], so an open in-app inspector follows the new store.
+    package static let storeDidChange = Notification.Name("dari.storeDidChange")
 
     /// The port the listener bound, or nil when not started.
     public var port: UInt16? {

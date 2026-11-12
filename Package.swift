@@ -5,10 +5,11 @@ import PackageDescription
 
 let package = Package(
     name: "Dari",
-    platforms: [.iOS(.v15), .macOS(.v13)],
+    platforms: [.iOS(.v16), .macOS(.v13)],
     products: [
         .library(name: "Dari", targets: ["Dari"]),
         .library(name: "DariMacros", targets: ["DariMacros"]),
+        .library(name: "DariUI", targets: ["DariUI"]),
     ],
     dependencies: [
         // Only DariMacros builds it, on the host; apps that use just Dari never compile it.
@@ -25,5 +26,6 @@ let package = Package(
             path: "dari-ios/Sources/DariMacrosPlugin"
         ),
         .target(name: "DariMacros", dependencies: ["Dari", "DariMacrosPlugin"], path: "dari-ios/Sources/DariMacros"),
+        .target(name: "DariUI", dependencies: ["Dari"], path: "dari-ios/Sources/DariUI"),
     ]
 )

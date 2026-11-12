@@ -42,6 +42,24 @@ final class InspectorModelTests: XCTestCase {
         XCTAssertEqual(model.records.map(\.handlerName), ["new"])
     }
 
+    func testFollowsDariStopAndStart() async throws {
+        var current: MessageStore? = MessageStore(maxEntries: 10)
+        add(current!, "old", data: nil)
+        let model = InspectorModel(source: { current }, coalesce: 0)
+        model.start()
+        XCTAssertEqual(model.records.map(\.handlerName), ["old"])
+
+        current = nil
+        NotificationCenter.default.post(name: Dari.storeDidChange, object: nil)
+        try await waitUntil { !model.isRunning && model.records.isEmpty }
+
+        let fresh = MessageStore(maxEntries: 10)
+        add(fresh, "fresh", data: nil)
+        current = fresh
+        NotificationCenter.default.post(name: Dari.storeDidChange, object: nil)
+        try await waitUntil { model.records.map(\.handlerName) == ["fresh"] }
+    }
+
     private func add(_ store: MessageStore, _ handler: String, data: String?) {
         store.add { id, now in
             MessageRecord(id: id, requestId: nil, handlerName: handler, direction: .webToApp, requestData: data, status: .success, requestTimestamp: now)
