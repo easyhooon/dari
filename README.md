@@ -133,9 +133,9 @@ Run the app in a Simulator or on a USB-attached device and open the Desktop App 
 | | Android | iOS |
 | --- | --- | --- |
 | Setup | [Setup](https://easyhooon.github.io/dari/docs/setup) | [iOS guide](https://easyhooon.github.io/dari/docs/ios) |
-| Capture without manual calls | [Gradle plugin](https://easyhooon.github.io/dari/docs/gradle-plugin) | [Automatic capture](https://easyhooon.github.io/dari/docs/ios#automatic-capture), [Macros](https://easyhooon.github.io/dari/docs/ios#compile-time-capture-with-macros) |
-| API | [Interceptor](https://easyhooon.github.io/dari/docs/interceptor), [Configuration and runtime API](https://easyhooon.github.io/dari/docs/configuration) | [iOS guide](https://easyhooon.github.io/dari/docs/ios#record-bridge-calls) |
-| More | [Protocol Buffers](https://easyhooon.github.io/dari/docs/protobuf), [In-app inspector](https://easyhooon.github.io/dari/docs/inspector), [Modules](https://easyhooon.github.io/dari/docs/modules) | [Staging builds](https://easyhooon.github.io/dari/docs/ios#staging-builds), [Troubleshooting](https://easyhooon.github.io/dari/docs/ios#troubleshooting) |
+| Capture without manual calls | [Gradle plugin](https://easyhooon.github.io/dari/docs/gradle-plugin) | [Automatic capture](https://easyhooon.github.io/dari/docs/ios/capture#automatic-capture), [Macros](https://easyhooon.github.io/dari/docs/ios/capture#compile-time-capture-with-macros) |
+| API | [Interceptor](https://easyhooon.github.io/dari/docs/interceptor), [Configuration and runtime API](https://easyhooon.github.io/dari/docs/configuration) | [iOS guide](https://easyhooon.github.io/dari/docs/ios/capture#record-bridge-calls) |
+| More | [Protocol Buffers](https://easyhooon.github.io/dari/docs/protobuf), [In-app inspector](https://easyhooon.github.io/dari/docs/inspector), [Modules](https://easyhooon.github.io/dari/docs/modules) | [Staging builds](https://easyhooon.github.io/dari/docs/ios/connection#staging-builds), [Troubleshooting](https://easyhooon.github.io/dari/docs/ios/connection#troubleshooting) |
 
 Both platforms: [Desktop App](https://easyhooon.github.io/dari/docs/desktop) · [Masking](https://easyhooon.github.io/dari/docs/masking)
 
