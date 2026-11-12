@@ -1,0 +1,38 @@
+{
+    "type": "result",
+    "requestId": "2",
+    "output": {
+        "summary": {
+            "id": 3,
+            "requestId": "1",
+            "handlerName": "getUser",
+            "displayName": "Get user",
+            "direction": "WEB_TO_APP",
+            "tag": "demo",
+            "status": "SUCCESS",
+            "requestTimestamp": 1700000000000,
+            "responseTimestamp": 1700000000250,
+            "requestSizeBytes": 8,
+            "responseSizeBytes": 15,
+            "pageUrl": "https://example.com/checkout"
+        },
+        "requestData": "{\"value\":\"hi\"}",
+        "responseData": "(protobuf decoder unavailable)",
+        "requestDataTruncated": false,
+        "responseDataTruncated": false,
+        "requestPayloadMetadata": {
+            "contentType": "PROTOBUF",
+            "originalSizeBytes": 4,
+            "decodeStatus": "DECODED",
+            "rawPreviewBase64": "CgJoaQ==",
+            "rawPreviewSizeBytes": 4,
+            "rawPreviewTruncated": false
+        },
+        "responsePayloadMetadata": {
+            "contentType": "PROTOBUF",
+            "originalSizeBytes": 2,
+            "decodeStatus": "DECODER_UNAVAILABLE"
+        }
+    },
+    "isFinal": true
+}

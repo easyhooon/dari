@@ -41,6 +41,14 @@ final class WireFixturesTests: XCTestCase {
         try assertMatches("result_detail", ResultFrame(requestId: "2", output: WireMessageDetail(
             summary: summary, requestData: #"{"id":7}"#, responseData: #"{"name":"Dari"}"#
         )))
+        try assertMatches("result_detail_protobuf", ResultFrame(requestId: "2", output: WireMessageDetail(
+            summary: summary, requestData: #"{"value":"hi"}"#, responseData: "(protobuf decoder unavailable)",
+            requestPayloadMetadata: WirePayloadMetadata(
+                contentType: "PROTOBUF", originalSizeBytes: 4, decodeStatus: "DECODED",
+                rawPreviewBase64: "CgJoaQ==", rawPreviewSizeBytes: 4, rawPreviewTruncated: false
+            ),
+            responsePayloadMetadata: WirePayloadMetadata(contentType: "PROTOBUF", originalSizeBytes: 2, decodeStatus: "DECODER_UNAVAILABLE")
+        )))
         try assertMatches("result_observe_added", ResultFrame(requestId: "3", output: ObserveEvent(type: "added", message: summary), isFinal: false))
         try assertMatches("result_observe_cleared", ResultFrame(requestId: "3", output: ObserveEvent(type: "cleared"), isFinal: false))
         try assertMatches("result_clear", ResultFrame(requestId: "4", output: EmptyObject()))

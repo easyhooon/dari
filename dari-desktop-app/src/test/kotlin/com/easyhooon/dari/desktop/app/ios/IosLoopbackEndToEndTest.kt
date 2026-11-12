@@ -35,11 +35,21 @@ class IosLoopbackEndToEndTest {
             assertEquals("macos", conn.app.platform)
             val events = conn.observe()
             val messages = conn.list()
-            assertEquals(listOf("getUser", "onResume", "openCamera", "log"), messages.map { it.handlerName })
-            assertEquals(listOf("SUCCESS", "ERROR", "IN_PROGRESS", "SUCCESS"), messages.map { it.status })
-            assertEquals(listOf("WEB_TO_APP", "APP_TO_WEB", "WEB_TO_APP", "WEB_TO_APP"), messages.map { it.direction })
+            assertEquals(listOf("getUser", "onResume", "openCamera", "log", "greet"), messages.map { it.handlerName })
+            assertEquals(listOf("SUCCESS", "ERROR", "IN_PROGRESS", "SUCCESS", "IN_PROGRESS"), messages.map { it.status })
+            assertEquals(
+                listOf("WEB_TO_APP", "APP_TO_WEB", "WEB_TO_APP", "WEB_TO_APP", "WEB_TO_APP"),
+                messages.map { it.direction },
+            )
             assertEquals("https://example.com/checkout", messages.first().pageUrl)
             assertEquals("Open camera", messages[2].displayName)
+
+            val greet = messages.last()
+            assertEquals(4, greet.requestSizeBytes)
+            val protobuf = conn.detail(greet.id)
+            assertEquals("""{"value":"hi"}""", protobuf.requestData)
+            assertEquals("DECODED", protobuf.requestPayloadMetadata?.decodeStatus)
+            assertEquals("CgJoaQ==", protobuf.requestPayloadMetadata?.rawPreviewBase64)
 
             val first = messages.first().id
             assertEquals("""{"accessToken":"secret-value","id":7}""", conn.detail(first).requestData)
@@ -47,6 +57,7 @@ class IosLoopbackEndToEndTest {
             assertTrue(conn.setMasking(true))
             assertTrue(conn.detail(first).requestData!!.contains("\"accessToken\":\"***\""))
             assertEquals(emptySet(), conn.search("secret-value"))
+            assertEquals(null, conn.detail(greet.id).requestPayloadMetadata?.rawPreviewBase64)
 
             conn.clear()
             withTimeout(5_000) { assertEquals(ObserveEvent.Cleared, events.receive()) }

@@ -62,7 +62,7 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
 | Desktop App | ✅ Device or emulator over adb, on macOS, Windows and Linux | ✅ Simulator or USB device, macOS only |
 | Masking of sensitive values | ✅ In-app and desktop | ✅ Desktop, including your own rules (`setPayloadRedactor`) |
 | Text / JSON export | ✅ In-app and desktop | ✅ Desktop |
-| Protocol Buffers inspection | ✅ | ❌ |
+| Protocol Buffers inspection | ✅ | ✅ Manual interceptor calls |
 | `retentionPeriod` cleanup | ✅ | ✅ (in memory) |
 | Release builds | `dari-noop` (same API, no capture code) | Call `start()` only under `#if DEBUG` |
 

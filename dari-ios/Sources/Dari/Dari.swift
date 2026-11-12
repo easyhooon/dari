@@ -112,8 +112,9 @@ public final class Dari {
     }
 
     /// Creates an interceptor for one bridge. Use one per WKWebView so page URLs stay separate.
-    public func interceptor(tag: String? = nil) -> DariInterceptor {
-        DariInterceptor(tag: tag, dari: self)
+    /// [protobufDecoder] renders the bytes passed to the `…Protobuf…` methods.
+    public func interceptor(tag: String? = nil, protobufDecoder: DariProtobufDecoder? = nil) -> DariInterceptor {
+        DariInterceptor(tag: tag, protobufDecoder: protobufDecoder, dari: self)
     }
 
     /// Recorded messages, for tests.
@@ -135,12 +136,14 @@ public final class Dari {
 /// Calls before [Dari.start] or after [Dari.stop] are ignored.
 public final class DariInterceptor {
     public let tag: String?
+    private let protobufDecoder: DariProtobufDecoder?
     private weak var dari: Dari?
     private let lock = NSLock()
     private var pageUrl: String?
 
-    init(tag: String?, dari: Dari) {
+    init(tag: String?, protobufDecoder: DariProtobufDecoder? = nil, dari: Dari) {
         self.tag = tag
+        self.protobufDecoder = protobufDecoder
         self.dari = dari
     }
 
@@ -157,12 +160,12 @@ public final class DariInterceptor {
         requestData: String?,
         fireAndForget: Bool? = nil
     ) {
-        addRequest(.webToApp, handlerName, displayName, requestId, requestData, fireAndForget)
+        addRequest(.webToApp, handlerName, displayName, requestId, fireAndForget) { Self.text(requestData, $0) }
     }
 
     /// The app's response to a Web → App request.
     public func onWebToAppResponse(handlerName: String, requestId: String?, responseData: String?, isSuccess: Bool) {
-        addResponse(.webToApp, requestId, responseData, isSuccess)
+        addResponse(.webToApp, requestId, isSuccess) { Self.text(responseData, $1) }
     }
 
     /// An App → Web call, e.g. through `evaluateJavaScript`.
@@ -173,25 +176,77 @@ public final class DariInterceptor {
         data: String?,
         fireAndForget: Bool? = nil
     ) {
-        addRequest(.appToWeb, handlerName, displayName, requestId, data, fireAndForget)
+        addRequest(.appToWeb, handlerName, displayName, requestId, fireAndForget) { Self.text(data, $0) }
     }
 
     /// The web's response to an App → Web call.
     public func onAppToWebResponse(requestId: String?, isSuccess: Bool, responseData: String?) {
-        addResponse(.appToWeb, requestId, responseData, isSuccess)
+        addResponse(.appToWeb, requestId, isSuccess) { Self.text(responseData, $1) }
     }
 
+    /// A Web → App request carrying protobuf bytes, shown decoded by the interceptor's [DariProtobufDecoder].
+    public func onWebToAppProtobufRequest(
+        handlerName: String,
+        displayName: String? = nil,
+        requestId: String?,
+        requestData: Data,
+        fireAndForget: Bool? = nil
+    ) {
+        addRequest(.webToApp, handlerName, displayName, requestId, fireAndForget) { [protobufDecoder] max in
+            Self.rendered(requestData, protobufDecoder?.decoder(handlerName: handlerName, direction: .webToApp, part: .request), max)
+        }
+    }
+
+    public func onWebToAppProtobufResponse(handlerName: String, requestId: String?, responseData: Data, isSuccess: Bool) {
+        addResponse(.webToApp, requestId, isSuccess) { [protobufDecoder] _, max in
+            Self.rendered(responseData, protobufDecoder?.decoder(handlerName: handlerName, direction: .webToApp, part: .response), max)
+        }
+    }
+
+    public func onAppToWebProtobufRequest(
+        handlerName: String,
+        displayName: String? = nil,
+        requestId: String?,
+        data: Data,
+        fireAndForget: Bool? = nil
+    ) {
+        addRequest(.appToWeb, handlerName, displayName, requestId, fireAndForget) { [protobufDecoder] max in
+            Self.rendered(data, protobufDecoder?.decoder(handlerName: handlerName, direction: .appToWeb, part: .request), max)
+        }
+    }
+
+    /// The handler name comes from the matching request, as on Android.
+    public func onAppToWebProtobufResponse(requestId: String?, isSuccess: Bool, responseData: Data) {
+        addResponse(.appToWeb, requestId, isSuccess, needsTarget: true) { [protobufDecoder] handlerName, max in
+            let decode = handlerName.flatMap { protobufDecoder?.decoder(handlerName: $0, direction: .appToWeb, part: .response) }
+            return Self.rendered(responseData, decode, max)
+        }
+    }
+
+    private typealias Payload = (data: String?, truncated: Bool, metadata: PayloadMetadata?)
+
+    private static func text(_ data: String?, _ maxLength: Int) -> Payload {
+        let (data, truncated) = MessageRecord.truncate(data, maxLength: maxLength)
+        return (data, truncated, nil)
+    }
+
+    private static func rendered(_ payload: Data, _ decode: DariProtobufDecoder.Decode?, _ maxLength: Int) -> Payload {
+        let rendered = ProtobufRenderer.render(payload, decode: decode, maxContentLength: maxLength)
+        return (rendered.text, rendered.truncated, rendered.metadata)
+    }
+
+    // [payload] runs before the store lock is taken, so an app decoder can't block or re-enter recording.
     private func addRequest(
         _ direction: MessageDirection,
         _ handlerName: String,
         _ displayName: String?,
         _ requestId: String?,
-        _ data: String?,
-        _ fireAndForget: Bool?
+        _ fireAndForget: Bool?,
+        _ payload: (_ maxLength: Int) -> Payload
     ) {
         let pageUrl = lock.withLock { self.pageUrl }
         dari?.record { store, configuration in
-            let (data, truncated) = MessageRecord.truncate(data, maxLength: configuration.maxContentLength)
+            let payload = payload(configuration.maxContentLength)
             let finished = fireAndForget ?? configuration.fireAndForget
             store.add { id, now in
                 MessageRecord(
@@ -201,8 +256,9 @@ public final class DariInterceptor {
                     displayName: displayName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? displayName : nil,
                     direction: direction,
                     tag: tag,
-                    requestData: data,
-                    requestDataTruncated: truncated,
+                    requestData: payload.data,
+                    requestDataTruncated: payload.truncated,
+                    requestPayloadMetadata: payload.metadata,
                     status: finished ? .success : .inProgress,
                     requestTimestamp: now,
                     pageUrl: pageUrl
@@ -211,14 +267,23 @@ public final class DariInterceptor {
         }
     }
 
-    private func addResponse(_ direction: MessageDirection, _ requestId: String?, _ data: String?, _ isSuccess: Bool) {
+    private func addResponse(
+        _ direction: MessageDirection,
+        _ requestId: String?,
+        _ isSuccess: Bool,
+        needsTarget: Bool = false,
+        _ payload: (_ handlerName: String?, _ maxLength: Int) -> Payload
+    ) {
         // Without a request id there is nothing to pair with, as on Android.
         guard let requestId else { return }
         dari?.record { store, configuration in
-            let (data, truncated) = MessageRecord.truncate(data, maxLength: configuration.maxContentLength)
-            store.respond(requestId: requestId, tag: tag, direction: direction) { record, now in
-                record.responseData = data
-                record.responseDataTruncated = truncated
+            // The lock is released while decoding, so complete the record the decoder was chosen for.
+            let target = needsTarget ? store.responseTarget(requestId: requestId, tag: tag, direction: direction) : nil
+            let payload = payload(target?.handlerName, configuration.maxContentLength)
+            store.respond(requestId: requestId, tag: tag, direction: direction, id: target?.id) { record, now in
+                record.responseData = payload.data
+                record.responseDataTruncated = payload.truncated
+                record.responsePayloadMetadata = payload.metadata
                 record.responseTimestamp = now
                 record.status = isSuccess ? .success : .error
             }

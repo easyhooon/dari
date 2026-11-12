@@ -57,6 +57,7 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
 - `fireAndForget: true`를 넘기면 보내는 즉시 완료된 메시지로 기록합니다. `requestId`만 nil로 넘기면 짝짓기를 건너뛸 뿐, `fireAndForget`(호출별 또는 `DariConfiguration`)이 true가 아니면 진행 중으로 남습니다.
 - 핸들러 이름만으로 알아보기 어려우면 `displayName:`을 넘깁니다.
 - `start()` 전에 한 호출은 무시됩니다.
+- protobuf 바이트는 `…Protobuf…` 메서드로 넘깁니다. [Protocol Buffers](../protobuf#ios)를 참고하세요.
 
 ## 자동 수집
 

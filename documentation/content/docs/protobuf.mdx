@@ -171,3 +171,29 @@ The screenshots show the RESPONSE tab; the REQUEST tab provides the same two vie
 - Decoding runs synchronously on the interceptor caller's thread, so keep parsing and display conversion bounded.
 - Release builds use `dari-noop`; `Dari.createInterceptor()` returns `null`, and safe calls have no runtime overhead.
 - Existing String/JSON calls can continue on the same protobuf-capable interceptor.
+
+## iOS
+
+The `Dari` Swift package records protobuf payloads through the same interceptor. Dari doesn't depend on SwiftProtobuf: register a closure per handler that turns the bytes into display text with your own generated types.
+
+```swift
+let decoder = DariProtobufDecoder()
+    .webToApp("createOrder",
+        request: { try CreateOrderRequest(serializedBytes: $0).jsonString() },
+        response: { try CreateOrderResponse(serializedBytes: $0).jsonString() })
+    .appToWeb("orderUpdated",
+        request: { try OrderUpdate(serializedBytes: $0).jsonString() },
+        response: { try OrderUpdateAck(serializedBytes: $0).jsonString() })
+
+let dari = Dari.shared.interceptor(tag: "main", protobufDecoder: decoder)
+
+dari.onWebToAppProtobufRequest(handlerName: "createOrder", requestId: id, requestData: bytes)
+dari.onWebToAppProtobufResponse(handlerName: "createOrder", requestId: id, responseData: replyBytes, isSuccess: true)
+dari.onAppToWebProtobufRequest(handlerName: "orderUpdated", requestId: pushId, data: updateBytes)
+dari.onAppToWebProtobufResponse(requestId: pushId, isSuccess: true, responseData: ackBytes)
+```
+
+- A closure that returns `nil` shows the payload as decoder unavailable; one that throws shows it as failed. Registering the same handler, direction and part twice stops the app, as on Android.
+- Decoders run on the calling thread before Dari records the message, so they may call Dari themselves. They must be `@Sendable`.
+- The desktop app shows the same Decoded and Raw views as for Android. With masking on or a [payload redactor](./ios#add-your-own-masking) set, the Raw view is hidden.
+- `autoCapture` and `@DariBridge` record strings only. Call the protobuf methods yourself for protobuf handlers.

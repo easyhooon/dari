@@ -83,12 +83,13 @@ Dari.shared.setPayloadRedactor { message in
 
 - It runs on every message sent to the desktop app, after the built-in masking when that is on. Recorded messages stay as they are.
 - You can change `requestData`, `responseData` and `pageUrl`. Unlike Android, handler names and the other fields are read-only.
+- Raw protobuf previews aren't sent while it's set, because it can't edit raw bytes.
 - If it throws, both payloads are replaced with `[dari: payload hidden, redactor failed]` and the page URL is dropped, instead of being sent as they are.
 - It runs on background threads, possibly several at once, so the closure must be `@Sendable`. Pass `nil` to remove it.
 
 ## Sample app
 
-`sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, and masking. Its bridge records itself with `@DariBridge` and sends callbacks through `dariEvaluateJavaScript`, as in [Compile-time capture with macros](./ios/capture#compile-time-capture-with-macros). The parsers live in `SampleCapture`. To try [automatic capture](./ios/capture#automatic-capture) instead, add `-DariAutoCapture YES` to the scheme's launch arguments. Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
+`sample-ios/DariSample.xcodeproj` loads a page with Web → App and App → Web scenarios: success, error, slow response, no response, fire-and-forget, masking, and protobuf. Its bridge records itself with `@DariBridge` and sends callbacks through `dariEvaluateJavaScript`, as in [Compile-time capture with macros](./ios/capture#compile-time-capture-with-macros). The parsers live in `SampleCapture`. To try [automatic capture](./ios/capture#automatic-capture) instead, add `-DariAutoCapture YES` to the scheme's launch arguments. Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
 
 ## Next steps
 
