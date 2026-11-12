@@ -20,7 +20,7 @@ iOS connections are macOS-only: apps connect from an iOS Simulator, or from an i
 
 1. In Xcode, choose **File → Add Package Dependencies…** and enter `https://github.com/easyhooon/dari`.
 2. Choose **Up to Next Major Version** from `3.0.0`.
-3. Add the **Dari** library to your app target.
+3. Add the **Dari** library to your app target, and **DariUI** too for the [in-app inspector](#in-app-inspector).
 
 With `Package.swift`:
 
@@ -28,6 +28,7 @@ With `Package.swift`:
 .package(url: "https://github.com/easyhooon/dari", from: "3.0.0")
 // target dependencies
 .product(name: "Dari", package: "dari")
+.product(name: "DariUI", package: "dari") // optional: the in-app inspector
 ```
 
 ## Compatibility

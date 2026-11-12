@@ -74,6 +74,7 @@ Debugging a hybrid app usually means sprinkling logs across bridge handlers and 
 - Pretty-printed JSON payloads, status (`IN_PROGRESS` / `SUCCESS` / `ERROR`), and timing
 - One desktop app for Android and iOS, on macOS, Windows or Linux
 - On Android, a live notification and shake-to-open, so the in-app inspector is one tap away while testing
+- On iOS, an in-app inspector (`DariUI`) you open from your debug menu, for testing on a device without a Mac
 - Nothing in production: `dari-noop` on Android, `#if DEBUG` on iOS
 
 ## Quick Start
@@ -126,7 +127,7 @@ func userContentController(_ controller: WKUserContentController, didReceive mes
 }
 ```
 
-Run the app in a Simulator or on a USB-attached device and open the Desktop App on the same Mac. To skip the manual calls, pass `autoCapture` (3.1.0+) to `start()` or mark the handler with `@DariBridge` from `DariMacros` (3.2.0+).
+Run the app in a Simulator or on a USB-attached device and open the Desktop App on the same Mac. To skip the manual calls, pass `autoCapture` (3.1.0+) to `start()` or mark the handler with `@DariBridge` from `DariMacros` (3.2.0+). To check messages on the device without a Mac, also link `DariUI` and call `Dari.shared.presentInspector()` (3.5.0+).
 
 ## Guides
 
@@ -135,11 +136,13 @@ Run the app in a Simulator or on a USB-attached device and open the Desktop App 
 | Setup | [Setup](https://easyhooon.github.io/dari/docs/setup) | [iOS guide](https://easyhooon.github.io/dari/docs/ios) |
 | Capture without manual calls | [Gradle plugin](https://easyhooon.github.io/dari/docs/gradle-plugin) | [Automatic capture](https://easyhooon.github.io/dari/docs/ios/capture#automatic-capture), [Macros](https://easyhooon.github.io/dari/docs/ios/capture#compile-time-capture-with-macros) |
 | API | [Interceptor](https://easyhooon.github.io/dari/docs/interceptor), [Configuration and runtime API](https://easyhooon.github.io/dari/docs/configuration) | [iOS guide](https://easyhooon.github.io/dari/docs/ios/capture#record-bridge-calls) |
-| More | [Protocol Buffers](https://easyhooon.github.io/dari/docs/protobuf), [In-app inspector](https://easyhooon.github.io/dari/docs/inspector), [Modules](https://easyhooon.github.io/dari/docs/modules) | [Staging builds](https://easyhooon.github.io/dari/docs/ios/connection#staging-builds), [Troubleshooting](https://easyhooon.github.io/dari/docs/ios/connection#troubleshooting) |
+| More | [Protocol Buffers](https://easyhooon.github.io/dari/docs/protobuf), [In-app inspector](https://easyhooon.github.io/dari/docs/inspector), [Modules](https://easyhooon.github.io/dari/docs/modules) | [In-app inspector](https://easyhooon.github.io/dari/docs/ios#in-app-inspector), [Staging builds](https://easyhooon.github.io/dari/docs/ios/connection#staging-builds), [Troubleshooting](https://easyhooon.github.io/dari/docs/ios/connection#troubleshooting) |
 
 Both platforms: [Desktop App](https://easyhooon.github.io/dari/docs/desktop) · [Masking](https://easyhooon.github.io/dari/docs/masking)
 
-## In-app Inspector (Android)
+## In-app Inspector
+
+iOS apps get one too, from the `DariUI` library (3.5.0+): a searchable list, Overview / Request / Response, and text or JSON export, opened from your debug menu. See the [iOS guide](https://easyhooon.github.io/dari/docs/ios#in-app-inspector). The rest of this section shows Android's.
 
 Android apps also get an inspector on the device, Chucker-style: a live notification of recent bridge activity, a searchable list with status, handler and tag filters, Overview / Request / Response tabs, per-handler response times, text or JSON export, shake-to-open, a launcher shortcut, and dark mode.
 

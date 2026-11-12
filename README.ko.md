@@ -74,6 +74,7 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
 - JSON 페이로드 정렬 표시, 상태(`IN_PROGRESS` / `SUCCESS` / `ERROR`), 소요 시간을 확인할 수 있습니다
 - macOS, Windows, Linux에서 Android와 iOS를 하나의 데스크톱 앱으로 검사합니다
 - Android에서는 실시간 알림과 흔들어 열기로, 테스트 중에도 탭 한 번이면 앱 내 인스펙터를 열 수 있습니다
+- iOS에서는 디버그 메뉴에서 여는 앱 내 인스펙터(`DariUI`)로, Mac 없이 기기만으로 확인할 수 있습니다
 - 프로덕션에는 아무것도 포함되지 않습니다: Android는 `dari-noop`, iOS는 `#if DEBUG`
 
 ## 빠른 시작
@@ -126,7 +127,7 @@ func userContentController(_ controller: WKUserContentController, didReceive mes
 }
 ```
 
-Simulator나 USB로 연결한 기기에서 앱을 실행하고, 같은 Mac에서 데스크톱 앱을 여세요. 직접 호출 없이 기록하려면 `start()`에 `autoCapture`(3.1.0+)를 넘기거나, `DariMacros`의 `@DariBridge`(3.2.0+)로 핸들러를 표시하세요.
+Simulator나 USB로 연결한 기기에서 앱을 실행하고, 같은 Mac에서 데스크톱 앱을 여세요. 직접 호출 없이 기록하려면 `start()`에 `autoCapture`(3.1.0+)를 넘기거나, `DariMacros`의 `@DariBridge`(3.2.0+)로 핸들러를 표시하세요. Mac 없이 기기에서 바로 보려면 `DariUI`도 연결하고 `Dari.shared.presentInspector()`를 호출하세요(3.5.0+).
 
 ## 가이드
 
@@ -135,11 +136,13 @@ Simulator나 USB로 연결한 기기에서 앱을 실행하고, 같은 Mac에서
 | 설정 | [설정](https://easyhooon.github.io/dari/ko/docs/setup) | [iOS 가이드](https://easyhooon.github.io/dari/ko/docs/ios) |
 | 직접 호출 없이 캡처 | [Gradle 플러그인](https://easyhooon.github.io/dari/ko/docs/gradle-plugin) | [자동 수집](https://easyhooon.github.io/dari/ko/docs/ios/capture#자동-수집), [매크로](https://easyhooon.github.io/dari/ko/docs/ios/capture#매크로로-컴파일-시점-수집) |
 | API | [인터셉터](https://easyhooon.github.io/dari/ko/docs/interceptor), [구성과 런타임 API](https://easyhooon.github.io/dari/ko/docs/configuration) | [iOS 가이드](https://easyhooon.github.io/dari/ko/docs/ios/capture#브릿지-호출-기록) |
-| 더 보기 | [Protocol Buffers](https://easyhooon.github.io/dari/ko/docs/protobuf), [앱 내 인스펙터](https://easyhooon.github.io/dari/ko/docs/inspector), [모듈](https://easyhooon.github.io/dari/ko/docs/modules) | [Staging 빌드](https://easyhooon.github.io/dari/ko/docs/ios/connection#staging-빌드), [문제 해결](https://easyhooon.github.io/dari/ko/docs/ios/connection#문제-해결) |
+| 더 보기 | [Protocol Buffers](https://easyhooon.github.io/dari/ko/docs/protobuf), [앱 내 인스펙터](https://easyhooon.github.io/dari/ko/docs/inspector), [모듈](https://easyhooon.github.io/dari/ko/docs/modules) | [앱 내 인스펙터](https://easyhooon.github.io/dari/ko/docs/ios#앱-내-인스펙터), [Staging 빌드](https://easyhooon.github.io/dari/ko/docs/ios/connection#staging-빌드), [문제 해결](https://easyhooon.github.io/dari/ko/docs/ios/connection#문제-해결) |
 
 두 플랫폼 공통: [데스크톱 앱](https://easyhooon.github.io/dari/ko/docs/desktop) · [마스킹](https://easyhooon.github.io/dari/ko/docs/masking)
 
-## 앱 내 인스펙터 (Android)
+## 앱 내 인스펙터
+
+iOS 앱도 `DariUI` 라이브러리(3.5.0+)로 기기에서 볼 수 있습니다. 검색되는 목록, 개요 / 요청 / 응답, 텍스트·JSON 내보내기를 지원하고, 앱의 디버그 메뉴에서 엽니다. [iOS 가이드](https://easyhooon.github.io/dari/ko/docs/ios#앱-내-인스펙터)를 참고하세요. 아래 내용은 Android 기준입니다.
 
 Android 앱은 Chucker처럼 기기 안에서도 인스펙터를 쓸 수 있습니다: 최근 브릿지 활동을 보여 주는 실시간 알림, 상태·핸들러·태그 필터와 검색을 지원하는 목록, 개요 / 요청 / 응답 탭, 핸들러별 응답 시간, 텍스트·JSON 내보내기, 흔들어 열기, 런처 바로가기, 다크 모드.
 

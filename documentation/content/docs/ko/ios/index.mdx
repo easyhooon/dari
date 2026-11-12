@@ -20,7 +20,7 @@ iOS 연결은 macOS 전용입니다. iOS Simulator 앱과, Mac에 USB로 연결�
 
 1. Xcode에서 **File → Add Package Dependencies…**를 고르고 `https://github.com/easyhooon/dari`를 입력합니다.
 2. `3.0.0`부터 **Up to Next Major Version**을 고릅니다.
-3. 앱 타깃에 **Dari** 라이브러리를 추가합니다.
+3. 앱 타깃에 **Dari** 라이브러리를 추가합니다. [앱 내 인스펙터](#앱-내-인스펙터)를 쓰려면 **DariUI**도 추가합니다.
 
 `Package.swift`에서는 다음과 같이 추가합니다.
 
@@ -28,6 +28,7 @@ iOS 연결은 macOS 전용입니다. iOS Simulator 앱과, Mac에 USB로 연결�
 .package(url: "https://github.com/easyhooon/dari", from: "3.0.0")
 // 타깃 의존성
 .product(name: "Dari", package: "dari")
+.product(name: "DariUI", package: "dari") // 선택: 앱 내 인스펙터
 ```
 
 ## 호환성
