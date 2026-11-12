@@ -62,6 +62,7 @@ Dari가 실행 중일 때는 기기의 loopback에 접근할 수 있는 프로�
 | 옵션 | 기본값 | 의미 |
 |---|---|---|
 | `maxEntries` | 500 | 메모리에 보관할 메시지 수. 가장 오래된 것부터 지웁니다 |
+| `retentionPeriod` | `nil` | 메시지를 보관할 시간(초). 새 메시지를 기록할 때 이보다 오래된 메시지를 지웁니다 |
 | `maxContentLength` | 500,000 | 이보다 긴 payload는 Android와 같은 방식으로 자릅니다 |
 | `fireAndForget` | `false` | 요청을 보내는 즉시 완료로 기록합니다 |
 | `ports` | `38670...38677` | 시도할 loopback 포트. 데스크톱 앱도 같은 범위를 확인합니다 |

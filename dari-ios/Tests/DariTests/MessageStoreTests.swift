@@ -24,6 +24,36 @@ final class MessageStoreTests: XCTestCase {
         XCTAssertEqual(store.snapshot().map(\.id), [2, 3])
     }
 
+    func testDropsMessagesOlderThanRetentionPeriodOnAdd() {
+        let store = MessageStore(maxEntries: 10, retentionPeriod: 6) { [unowned self] in clock }
+        add(store, "1", .webToApp)
+        clock = 4_000
+        add(store, "2", .webToApp)
+        clock = 7_000
+        add(store, "3", .webToApp)
+        // Cutoff 1_000 keeps a message stamped exactly at it, as Android's `RetentionPolicy` does.
+        XCTAssertEqual(store.snapshot().map(\.id), [1, 2, 3])
+        clock = 10_000
+        add(store, "4", .webToApp)
+        XCTAssertEqual(store.snapshot().map(\.id), [2, 3, 4])
+    }
+
+    func testInfiniteRetentionPeriodKeepsEverything() {
+        let store = MessageStore(maxEntries: 10, retentionPeriod: .infinity) { [unowned self] in clock }
+        add(store, "1", .webToApp)
+        clock = 1_000_000_000
+        add(store, "2", .webToApp)
+        XCTAssertEqual(store.snapshot().map(\.id), [1, 2])
+    }
+
+    func testKeepsOldMessagesWithoutRetentionPeriod() {
+        let store = MessageStore(maxEntries: 10) { [unowned self] in clock }
+        add(store, "1", .webToApp)
+        clock = 1_000_000_000
+        add(store, "2", .webToApp)
+        XCTAssertEqual(store.snapshot().map(\.id), [1, 2])
+    }
+
     func testObserversSeeEventsInOrder() {
         let store = MessageStore(maxEntries: 10)
         var events: [String] = []

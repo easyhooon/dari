@@ -45,10 +45,13 @@ final class MessageStore {
     private var observers: [Int: (StoreEvent) -> Void] = [:]
     private var nextObserver = 0
     private let maxEntries: Int
+    private let retentionMillis: Int64?
     private let now: () -> Int64
 
-    init(maxEntries: Int, now: @escaping () -> Int64 = MessageStore.currentMillis) {
+    init(maxEntries: Int, retentionPeriod: TimeInterval? = nil, now: @escaping () -> Int64 = MessageStore.currentMillis) {
         self.maxEntries = max(1, maxEntries)
+        // Saturates like Kotlin's `inWholeMilliseconds`, so `.infinity` doesn't trap.
+        retentionMillis = retentionPeriod.map { $0 * 1000 >= Double(Int64.max) ? Int64.max : Int64(($0 * 1000).rounded()) }
         self.now = now
     }
 
@@ -62,8 +65,11 @@ final class MessageStore {
 
     func add(_ build: (_ id: Int64, _ now: Int64) -> MessageRecord) {
         lock.withLock {
-            let record = build(nextId, now())
+            let now = now()
+            let record = build(nextId, now)
             nextId += 1
+            // Same cutoff as Android's `RetentionPolicy`; like Android, pruned entries send no event.
+            if let retentionMillis { records.removeAll { $0.requestTimestamp < now - retentionMillis } }
             records.append(record)
             if records.count > maxEntries { records.removeFirst(records.count - maxEntries) }
             notify(.added(record))

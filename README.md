@@ -63,7 +63,7 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
 | Masking of sensitive values | ✅ In-app and desktop | ✅ Desktop |
 | Text / JSON export | ✅ In-app and desktop | ✅ Desktop |
 | Protocol Buffers inspection | ✅ | ❌ |
-| `retentionPeriod` cleanup | ✅ | ❌ (kept in memory, capped by `maxEntries`) |
+| `retentionPeriod` cleanup | ✅ | ✅ (in memory) |
 | Release builds | `dari-noop` (same API, no capture code) | Call `start()` only under `#if DEBUG` |
 
 ## Why Dari?
