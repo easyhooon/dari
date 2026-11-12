@@ -6,6 +6,10 @@ public struct DariConfiguration {
     public var maxEntries: Int
     /// Messages older than this many seconds are dropped when a new one is recorded. Nil keeps them until `maxEntries`.
     public var retentionPeriod: TimeInterval?
+    /// Keeps recorded messages on disk so they survive relaunches. Off by default; turning it off deletes the file.
+    public var persistsMessages: Bool
+    /// Overrides the persisted file location, for tests.
+    var persistenceURL: URL?
     /// Payloads longer than this many UTF-16 units are truncated, as on Android.
     public var maxContentLength: Int
     /// When true, requests are recorded as finished right away unless a call says otherwise.
@@ -18,6 +22,7 @@ public struct DariConfiguration {
     public init(
         maxEntries: Int = 500,
         retentionPeriod: TimeInterval? = nil,
+        persistsMessages: Bool = false,
         maxContentLength: Int = 500_000,
         fireAndForget: Bool = false,
         ports: ClosedRange<UInt16> = Dari.defaultPorts,
@@ -25,6 +30,7 @@ public struct DariConfiguration {
     ) {
         self.maxEntries = maxEntries
         self.retentionPeriod = retentionPeriod
+        self.persistsMessages = persistsMessages
         self.maxContentLength = maxContentLength
         self.fireAndForget = fireAndForget
         self.ports = ports
@@ -56,9 +62,17 @@ public final class Dari {
     /// Starts recording and listening for the desktop. Calling it again while running does nothing.
     public func start(_ configuration: DariConfiguration = DariConfiguration()) throws {
         precondition(configuration.retentionPeriod.map { $0 > 0 } ?? true, "retentionPeriod must be positive when set")
+        guard lock.withLock({ listener == nil }) else { return }
+        // Loads persisted messages before Dari's lock is taken; the file store waits for any earlier store's writes.
+        let fileStore = MessageFileStore(url: configuration.persistenceURL ?? MessageFileStore.defaultURL)
+        if !configuration.persistsMessages { fileStore.delete() }
+        let store = MessageStore(
+            maxEntries: configuration.maxEntries,
+            retentionPeriod: configuration.retentionPeriod,
+            fileStore: configuration.persistsMessages ? fileStore : nil
+        )
         try lock.withLock {
             guard listener == nil else { return }
-            let store = MessageStore(maxEntries: configuration.maxEntries, retentionPeriod: configuration.retentionPeriod)
             let listener = InspectorListener(ports: configuration.ports) { [weak self] channel in
                 guard let self else { return }
                 InspectorSession(
@@ -77,7 +91,7 @@ public final class Dari {
         NotificationCenter.default.post(name: Dari.storeDidChange, object: self)
     }
 
-    /// Stops listening, drops connected desktops and discards recorded messages.
+    /// Stops listening and drops connected desktops. Messages are discarded, unless persisted for the next start.
     public func stop() {
         lock.withLock {
             listener?.stop()

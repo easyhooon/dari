@@ -63,7 +63,8 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
 | 민감 정보 마스킹 | ✅ 앱 내, 데스크톱 | ✅ 앱 내, 데스크톱. 데스크톱용 직접 규칙(`setPayloadRedactor`) 포함 |
 | 텍스트 / JSON 내보내기 | ✅ 앱 내, 데스크톱 | ✅ 앱 내, 데스크톱 |
 | Protocol Buffers 검사 | ✅ | ✅ 인터셉터 직접 호출 |
-| `retentionPeriod` 정리 | ✅ | ✅(메모리) |
+| `retentionPeriod` 정리 | ✅ | ✅ |
+| 재실행 후에도 메시지 유지 | ✅ | ✅ `persistsMessages`로 켜기 |
 | 릴리스 빌드 | `dari-noop`(같은 API, 캡처 코드 없음) | `#if DEBUG` 안에서만 `start()` 호출 |
 
 ## 왜 Dari인가요?

@@ -1,9 +1,11 @@
 import Dari
 import Foundation
 
-// Records a few bridge calls and keeps serving them until killed. Pass `--tick` to add one call per second.
+// Records a few bridge calls and keeps serving them until killed. Pass `--tick` to add one call per second,
+// `--persist` to keep messages across runs, and `--crash[=<ms>]` to abort after recording.
+let arguments = CommandLine.arguments
 let dari = Dari.shared
-try dari.start()
+try dari.start(DariConfiguration(persistsMessages: arguments.contains("--persist")))
 dari.setEnvironment(["server": "demo"])
 // Reads google.protobuf.StringValue without SwiftProtobuf: tag 0x0A, one-byte length, UTF-8.
 let decoder = DariProtobufDecoder().webToApp("greet", request: { #"{"value":"\#(String(decoding: $0.dropFirst(2), as: UTF8.self))"}"# })
@@ -17,11 +19,17 @@ bridge.onAppToWebResponse(requestId: "1", isSuccess: false, responseData: #"{"er
 bridge.onWebToAppRequest(handlerName: "openCamera", displayName: "Open camera", requestId: "2", requestData: nil)
 bridge.onWebToAppRequest(handlerName: "log", requestId: nil, requestData: "fire and forget", fireAndForget: true)
 bridge.onWebToAppProtobufRequest(handlerName: "greet", requestId: "3", requestData: Data([0x0A, 0x02, 0x68, 0x69]))
+// `--crash=<ms>` waits that long after the last call, to see how much a crash loses.
+if let crash = arguments.first(where: { $0.hasPrefix("--crash") }) {
+    bridge.onWebToAppRequest(handlerName: "lastBeforeCrash", requestId: nil, requestData: nil, fireAndForget: true)
+    usleep(UInt32((Int(crash.split(separator: "=").last ?? "0") ?? 0) * 1000))
+    abort()
+}
 
 setvbuf(stdout, nil, _IONBF, 0)
 print("DARI_PORT=\(dari.port ?? 0)")
 
-if CommandLine.arguments.contains("--tick") {
+if arguments.contains("--tick") {
     var count = 0
     Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
         count += 1

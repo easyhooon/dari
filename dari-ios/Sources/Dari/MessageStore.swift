@@ -39,7 +39,7 @@ package enum StoreEvent: Equatable {
     case cleared
 }
 
-/// Bounded in-memory buffer. Ids are stable for the life of the process, like Android's wire ids.
+/// Bounded buffer, optionally backed by a [MessageFileStore]. Ids never change, like Android's wire ids.
 package final class MessageStore {
     private let lock = NSLock()
     private var records: [MessageRecord] = []
@@ -49,12 +49,32 @@ package final class MessageStore {
     private let maxEntries: Int
     private let retentionMillis: Int64?
     private let now: () -> Int64
+    private let fileStore: MessageFileStore?
+    private var appendsSinceCompaction = 0
+    /// Stored records are still being decoded; don't compact, or the file would lose them.
+    private var loading = false
+    /// Records below this id came from an earlier launch. Responses never pair with them: bridges reuse callback ids.
+    private let firstLiveId: Int64
 
-    init(maxEntries: Int, retentionPeriod: TimeInterval? = nil, now: @escaping () -> Int64 = MessageStore.currentMillis) {
+    init(
+        maxEntries: Int,
+        retentionPeriod: TimeInterval? = nil,
+        fileStore: MessageFileStore? = nil,
+        now: @escaping () -> Int64 = MessageStore.currentMillis
+    ) {
         self.maxEntries = max(1, maxEntries)
         // Saturates like Kotlin's `inWholeMilliseconds`, so `.infinity` doesn't trap.
         retentionMillis = retentionPeriod.map { $0 * 1000 >= Double(Int64.max) ? Int64.max : Int64(($0 * 1000).rounded()) }
         self.now = now
+        self.fileStore = fileStore
+        // Live ids continue after the stored ones; the stored records are decoded in the background and merged in,
+        // as Android loads Room asynchronously, so start() doesn't block app launch on a large file.
+        let lastStoredId = fileStore?.lastId() ?? 0
+        nextId = lastStoredId + 1
+        firstLiveId = nextId
+        guard let fileStore, lastStoredId > 0 else { return }
+        loading = true
+        fileStore.load { [weak self] in self?.merge($0) }
     }
 
     static func currentMillis() -> Int64 {
@@ -74,6 +94,7 @@ package final class MessageStore {
             if let retentionMillis { records.removeAll { $0.requestTimestamp < now - retentionMillis } }
             records.append(record)
             if records.count > maxEntries { records.removeFirst(records.count - maxEntries) }
+            persist(record)
             notify(.added(record))
         }
     }
@@ -96,13 +117,46 @@ package final class MessageStore {
             let index = id.map { id in records.firstIndex { $0.id == id } } ?? targetIndex(requestId, tag, direction)
             guard let index else { return }
             transform(&records[index], now())
+            persist(records[index])
             notify(.updated(records[index]))
+        }
+    }
+
+    /// Puts earlier launches' records before the ones recorded since start(), with the same retention and maxEntries
+    /// rules as on insert. Observers get `cleared` then every record in order, so lists rebuild in id order.
+    private func merge(_ stored: [MessageRecord]) {
+        lock.withLock {
+            guard loading else { return }
+            loading = false
+            var combined = stored
+            if let retentionMillis {
+                let cutoff = now() - retentionMillis
+                combined.removeAll { $0.requestTimestamp < cutoff }
+            }
+            combined += records
+            if combined.count > maxEntries { combined.removeFirst(combined.count - maxEntries) }
+            records = combined
+            guard !stored.isEmpty else { return }
+            notify(.cleared)
+            records.forEach { notify(.added($0)) }
+        }
+    }
+
+    /// Queued under the store lock, so the file sees changes in the order they happened.
+    /// Pruned records leave stale lines behind; compact once those pile up.
+    private func persist(_ record: MessageRecord) {
+        guard let fileStore else { return }
+        fileStore.append(record)
+        appendsSinceCompaction += 1
+        if !loading, appendsSinceCompaction > maxEntries * 4 {
+            fileStore.compact(records)
+            appendsSinceCompaction = 0
         }
     }
 
     private func targetIndex(_ requestId: String, _ tag: String?, _ direction: MessageDirection) -> Int? {
         let matches = records.indices.filter {
-            records[$0].requestId == requestId && records[$0].tag == tag && records[$0].direction == direction
+            records[$0].id >= firstLiveId && records[$0].requestId == requestId && records[$0].tag == tag && records[$0].direction == direction
         }
         return matches.last { records[$0].status == .inProgress } ?? matches.last { records[$0].responseTimestamp == nil }
     }
@@ -110,6 +164,9 @@ package final class MessageStore {
     package func clear() {
         lock.withLock {
             records.removeAll()
+            loading = false // Drop stored records still being decoded.
+            fileStore?.delete()
+            appendsSinceCompaction = 0
             notify(.cleared)
         }
     }
