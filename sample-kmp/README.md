@@ -1,14 +1,13 @@
 # sample-kmp
 
-PoC for [#13](https://github.com/easyhooon/dari/issues/13), explained in [docs/kmp-swift-bridge.md](../docs/kmp-swift-bridge.md): a `commonMain` bridge (`SharedBridge`) records through `dari-kmp`, which forwards to the Swift SDK on iOS.
+Sample for [#13](https://github.com/easyhooon/dari/issues/13), explained in [docs/kmp-swift-bridge.md](../docs/kmp-swift-bridge.md): a `commonMain` bridge (`SharedBridge`) records through `dari-kmp`, which forwards to the Swift SDK on iOS.
 
-Run it in `sample-ios` on a Simulator. The plain sample build skips it (`#if canImport(DariKmpSample)`).
+Run it on the booted iOS Simulator with:
 
 ```bash
-./gradlew :sample-kmp:linkDebugFrameworkIosSimulatorArm64
-cd sample-ios && xcodebuild -project DariSample.xcodeproj -scheme DariSample -destination 'platform=iOS Simulator,name=<device>' \
-  "FRAMEWORK_SEARCH_PATHS=\$(inherited) $PWD/../sample-kmp/build/bin/iosSimulatorArm64/debugFramework" \
-  "OTHER_LDFLAGS=\$(inherited) -framework DariKmpSample" build
+sample-kmp/run-on-simulator.sh
 ```
+
+The script links `DariKmpSample` through `xcodebuild` overrides, so `sample-ios` itself needs no Gradle or JDK. The plain sample build skips the Kotlin code (`#if canImport(DariKmpSample)`).
 
 Launching the app records `getUser`, `onThemeChanged` and `logEvent` with tag `kmp`.

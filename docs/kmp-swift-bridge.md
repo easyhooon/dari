@@ -1,6 +1,6 @@
 # KMP Bridge to the Swift SDK (#13)
 
-Status: PoC ([#304](https://github.com/easyhooon/dari/pull/304)) · Not published · Korean: [kmp-swift-bridge.ko.md](kmp-swift-bridge.ko.md)
+Status: ready to ship with the next full release ([#304](https://github.com/easyhooon/dari/pull/304)) · User guide: [Kotlin Multiplatform](../documentation/content/docs/kmp.mdx) · Korean: [kmp-swift-bridge.ko.md](kmp-swift-bridge.ko.md)
 
 This explains how `dari-kmp` lets Kotlin `commonMain` code record bridge messages on iOS through the Swift
 SDK, why it is built this way, and how Kotlin's Swift export may change it. Kotlin facts cite the official
@@ -69,8 +69,9 @@ line, which the docs say "is treated as part of the header file"
 ([definition file](https://kotlinlang.org/docs/native-definition-file.html)), it declares:
 
 1. An ObjC `@protocol` listing the selectors, so the compiler knows the argument types.
-2. `static inline` trampolines. One calls `NSClassFromString(@"DariObjC")` and returns nil when the class is
-   missing. The others send one message each:
+2. `static inline` trampolines. `dari_kmp_status()` looks up both classes with `NSClassFromString` and checks
+   every selector, so an SDK older than `dari-kmp` is caught before any message is sent. The others send one
+   message each:
 
 ```objc
 static inline void dari_kmp_onPageUrlChanged(id target, NSString *url) {
@@ -85,9 +86,18 @@ The message send compiles to `objc_msgSend`, so nothing refers to a Dari symbol 
 
 - `commonMain`: `DariKmp.createInterceptor(tag): DariInterceptor?`, nullable like Android's
   `Dari.createInterceptor`.
-- `androidMain`: returns `DefaultDariInterceptor` from `dari-runtime`.
-- `iosMain`: returns `SwiftDariInterceptor`, which forwards each call to a trampoline. When `DariObjC` isn't
-  found, it logs with `NSLog` and returns null.
+- `androidMain`: calls `Dari.createInterceptor`. It compiles against `dari-noop` only (`compileOnly`), so the
+  app's `debugImplementation(dari)` / `releaseImplementation(dari-noop)` decides what runs. Without either, it
+  catches the `LinkageError` and returns null.
+- `iosMain`: checks `dari_kmp_status()` once, then returns `SwiftDariInterceptor`, which forwards each call to a
+  trampoline. When the SDK is missing or too old, it logs once with `NSLog` and returns null.
+
+### Version skew
+
+`dari-kmp` ships through Maven Central and `DariObjC` through the Swift package's git tags, so an app can mix
+releases. A selector the SDK lacks would end in an unrecognized-selector crash, which is why every selector is
+checked up front. `DariObjCTests` in `dari-ios` reads the `.def` and fails when a selector it lists is missing
+from `DariObjC`.
 
 ### Why not call `objc_msgSend` from Kotlin directly?
 
@@ -159,8 +169,8 @@ declaration with `@HiddenFromObjC` ([ObjC interop](https://kotlinlang.org/docs/n
 - The `.def` sets `package = com.easyhooon.dari.kmp.objc`. The docs advise a custom package for interop in a
   published library, to avoid clashes such as "symbol multiply defined"
   ([library import](https://kotlinlang.org/docs/native-lib-import-stability.html)).
-- Gradle warns that cinterop commonization is disabled. The PoC uses the cinterop only from `iosMain`; its
-  current status in the docs is unclear, so check before publishing.
+- `kotlin.mpp.enableCInteropCommonization=true` in `gradle.properties`. Without it, each iOS target compiles,
+  but the shared `iosMain` metadata compile that publishing runs can't see the cinterop declarations.
 - `export(project(":dari-core"))` puts all of `dari-core`'s API in the framework and "disables dead code
   elimination" for it. Export is non-transitive by default
   ([native binaries](https://kotlinlang.org/docs/multiplatform/multiplatform-build-native-binaries.html)).
@@ -218,22 +228,25 @@ would bring type safety and a link-time dependency. It can't reach the Swift-onl
 | SwiftPM import becomes stable | (a) becomes practical: typed calls to `DariObjC`, no `.def` |
 | Kotlin imports pure Swift (not announced) | `DariObjC` and the trampolines could go; Kotlin calls the SDK directly |
 
-## 6. Before shipping
+## 6. Shipping status
 
-| Area | Work | Estimate |
-| --- | --- | --- |
-| Publishing | Maven coordinates, ABI baseline, settle the cinterop commonization warning | 1 day |
-| Android release builds | `dari-kmp` depends on `dari-runtime` directly, with no noop variant, and relies on `dari`'s initializer having set `DariRuntime.config` | 1 day |
-| `DariObjC` | Start options, `setEnvironment`, protobuf; a Swift test that keeps the selectors in sync with the `.def` | 1 day |
-| Sample and docs | Xcode build phase instead of `xcodebuild` overrides; a user page on the docs site | 1–2 days |
-| Verification | USB device, the desktop window itself, Android at runtime, `autoCapture` with WebKit calls from Kotlin | 0.5 day |
+| Area | State |
+| --- | --- |
+| Publishing | Done: Maven coordinates, ABI baseline, cinterop commonization on (the shared `iosMain` metadata compile needs it). Checked with a publish to the local `compat` repo |
+| Android release builds | Done: `compileOnly(dari-noop)`, host test with `dari-noop` |
+| `DariObjC` | Done: the selector-sync test. Protobuf is out of scope on iOS; record it from Swift |
+| Sample | `sample-kmp/run-on-simulator.sh`; `sample-ios` needs no Gradle |
+| User docs | [Kotlin Multiplatform](../documentation/content/docs/kmp.mdx) (en/ko). The site deploys on merge to `main`, so merge with the release |
+| Not verified | USB device, the desktop window itself, `autoCapture` with WebKit calls from Kotlin |
 
-## Verified in the PoC
+## Verified
 
 - iPhone Simulator (iOS 27.2, Xcode 27), Debug and Staging. Six calls from a `commonMain` bridge were recorded
   with the right direction, status, display name, pairing and sanitized page URL. Checked in the persisted
   store, in the in-app inspector, and over loopback with the desktop app's `IosAppFinder` client.
 - Without the Swift SDK linked (`:dari-kmp:iosSimulatorArm64Test`), the factory logs and returns null.
+- Android host test: with `dari-noop` on the classpath, the factory returns null.
+- `DariObjCTests`: selectors match the `.def`, and calls reach the Swift store.
 - The name-clash results above come from `swiftc -typecheck` against the built modules.
 
 ## References

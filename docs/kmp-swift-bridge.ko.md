@@ -1,6 +1,6 @@
 # Swift SDK로 가는 KMP 브리지 (#13)
 
-상태: PoC ([#304](https://github.com/easyhooon/dari/pull/304)) · 배포 전 · English: [kmp-swift-bridge.md](kmp-swift-bridge.md)
+상태: 다음 정식 릴리스에 출하 준비 완료 ([#304](https://github.com/easyhooon/dari/pull/304)) · 사용자 가이드: [Kotlin Multiplatform](../documentation/content/docs/ko/kmp.mdx) · English: [kmp-swift-bridge.md](kmp-swift-bridge.md)
 
 `dari-kmp`가 iOS에서 Kotlin `commonMain` 코드의 브리지 메시지를 Swift SDK로 기록하는 방법을 정리한 문서입니다.
 왜 이렇게 만들었는지, Kotlin의 Swift export가 이 구조를 어떻게 바꿀 수 있는지도 함께 다룹니다.
@@ -67,7 +67,7 @@ flowchart LR
 여기에 두 가지를 선언합니다.
 
 1. selector를 나열한 ObjC `@protocol`. 컴파일러가 인자 타입을 알게 하려는 용도입니다.
-2. `static inline` 트램폴린. 하나는 `NSClassFromString(@"DariObjC")`를 호출하고, 클래스가 없으면 nil을 반환합니다. 나머지는 각각 메시지를 하나씩 보냅니다.
+2. `static inline` 트램폴린. `dari_kmp_status()`는 `NSClassFromString`으로 두 클래스를 찾고 모든 selector를 확인합니다. 그래서 `dari-kmp`보다 오래된 SDK를 메시지를 보내기 전에 잡아냅니다. 나머지는 각각 메시지를 하나씩 보냅니다.
 
 ```objc
 static inline void dari_kmp_onPageUrlChanged(id target, NSString *url) {
@@ -81,8 +81,14 @@ Kotlin은 이 함수들을 일반 C 함수처럼 호출하고, 그 경계에서 
 ### Kotlin: 모듈 구성
 
 - `commonMain`: `DariKmp.createInterceptor(tag): DariInterceptor?`. Android의 `Dari.createInterceptor`처럼 nullable입니다.
-- `androidMain`: `dari-runtime`의 `DefaultDariInterceptor`를 반환합니다.
-- `iosMain`: 각 호출을 트램폴린으로 넘기는 `SwiftDariInterceptor`를 반환합니다. `DariObjC`를 못 찾으면 `NSLog`로 로그를 남기고 null을 반환합니다.
+- `androidMain`: `Dari.createInterceptor`를 호출합니다. 컴파일 시점에만 `dari-noop`에 의존(`compileOnly`)하므로, 실제로 무엇이 실행될지는 앱의 `debugImplementation(dari)` / `releaseImplementation(dari-noop)`이 정합니다. 둘 다 없으면 `LinkageError`를 잡고 null을 반환합니다.
+- `iosMain`: `dari_kmp_status()`를 한 번 확인한 뒤, 각 호출을 트램폴린으로 넘기는 `SwiftDariInterceptor`를 반환합니다. SDK가 없거나 너무 오래됐으면 `NSLog`로 로그를 한 번 남기고 null을 반환합니다.
+
+### 버전 차이(version skew)
+
+`dari-kmp`는 Maven Central로, `DariObjC`는 Swift 패키지의 git 태그로 배포됩니다. 그래서 앱이 서로 다른 릴리스를 섞어 쓸 수 있습니다.
+SDK에 없는 selector를 보내면 unrecognized selector 크래시가 나기 때문에, 모든 selector를 미리 확인합니다.
+`dari-ios`의 `DariObjCTests`는 `.def`를 읽어서, 거기 적힌 selector가 `DariObjC`에 없으면 실패합니다.
 
 ### Kotlin에서 `objc_msgSend`를 직접 부르면 안 되나?
 
@@ -151,7 +157,7 @@ SDK가 정적 라이브러리(`.a`)로 들어오면, 링커는 심볼이 참조�
 
 - cinterop 선언을 쓰려면 `@OptIn(ExperimentalForeignApi::class)`가 필요합니다. ObjC 라이브러리 import는 Kotlin 2.3.0부터 Beta입니다([what's new 2.3](https://kotlinlang.org/docs/whatsnew23.html)).
 - `.def`는 `package = com.easyhooon.dari.kmp.objc`를 지정합니다. 공식 문서는 배포하는 라이브러리라면 interop에 별도 패키지를 쓰라고 권합니다. 그래야 "symbol multiply defined" 같은 충돌을 피할 수 있습니다([library import](https://kotlinlang.org/docs/native-lib-import-stability.html)).
-- Gradle이 cinterop commonization이 꺼져 있다고 경고합니다. PoC는 이 cinterop을 `iosMain`에서만 씁니다. 공식 문서에서 현재 상태를 확인하지 못했으니 배포 전에 확인해야 합니다.
+- `gradle.properties`에 `kotlin.mpp.enableCInteropCommonization=true`가 필요합니다. 이게 없으면 iOS 타깃별 컴파일은 되지만, 배포할 때 도는 공유 `iosMain` 메타데이터 컴파일이 cinterop 선언을 보지 못합니다.
 - `export(project(":dari-core"))`는 `dari-core`의 API 전체를 프레임워크에 넣고, 그 부분의 dead code elimination을 끕니다. export는 기본적으로 전이되지 않습니다([native binaries](https://kotlinlang.org/docs/multiplatform/multiplatform-build-native-binaries.html)).
 
 ## 5. 전망: Swift export와 SwiftPM import
@@ -204,22 +210,25 @@ Dari에 적용하면 Dari 패키지에서 `DariObjC`를 import해 손으로 쓴 
 | SwiftPM import 안정화 | (a)가 현실적이 됨: `.def` 없이 `DariObjC`를 타입 안전하게 호출 |
 | Kotlin의 순수 Swift import (발표된 계획 없음) | `DariObjC`와 트램폴린 제거 가능. Kotlin이 SDK를 직접 호출 |
 
-## 6. 출하 전 체크리스트
+## 6. 출하 상태
 
-| 영역 | 할 일 | 예상 |
-| --- | --- | --- |
-| 배포 | Maven 좌표, ABI baseline, cinterop commonization 경고 정리 | 1일 |
-| Android release 빌드 | `dari-kmp`가 noop 버전 없이 `dari-runtime`에 직접 의존함. `dari`의 초기화가 `DariRuntime.config`를 설정해 둔 것에 기대고 있음 | 1일 |
-| `DariObjC` | start 옵션, `setEnvironment`, protobuf 추가. selector와 `.def`를 맞춰 두는 Swift 테스트 | 1일 |
-| 샘플과 문서 | `xcodebuild` 덮어쓰기 대신 Xcode build phase 사용. documentation 사이트 사용자 페이지 | 1~2일 |
-| 검증 | USB 실기기, 데스크톱 앱 화면, Android 실행, Kotlin에서 부른 WebKit 호출을 `autoCapture`가 잡는지 | 0.5일 |
+| 영역 | 상태 |
+| --- | --- |
+| 배포 | 완료: Maven 좌표, ABI baseline, cinterop commonization 켬(공유 `iosMain` 메타데이터 컴파일에 필요). 로컬 `compat` 저장소 배포로 확인 |
+| Android release 빌드 | 완료: `compileOnly(dari-noop)`, `dari-noop`으로 호스트 테스트 |
+| `DariObjC` | 완료: selector 동기화 테스트. iOS의 protobuf는 범위 밖이므로 Swift에서 기록 |
+| 샘플 | `sample-kmp/run-on-simulator.sh`. `sample-ios`에는 Gradle이 필요 없음 |
+| 사용자 문서 | [Kotlin Multiplatform](../documentation/content/docs/ko/kmp.mdx) (영어/한국어). 사이트는 `main`에 머지되면 배포되므로 릴리스와 함께 머지 |
+| 검증 못 함 | USB 실기기, 데스크톱 앱 화면, Kotlin에서 부른 WebKit 호출을 `autoCapture`가 잡는지 |
 
-## PoC에서 검증한 것
+## 검증한 것
 
 - iPhone 시뮬레이터(iOS 27.2, Xcode 27), Debug와 Staging 빌드에서 확인했습니다.
   `commonMain` 브리지가 보낸 호출 6개가 방향, 상태, displayName, 요청/응답 짝, 정리된 페이지 URL까지 정확히 기록됐습니다.
   영구 저장 파일, 인앱 인스펙터, 데스크톱 앱의 `IosAppFinder` 클라이언트 루프백 접속, 세 곳에서 확인했습니다.
 - Swift SDK가 링크되지 않은 경우(`:dari-kmp:iosSimulatorArm64Test`), 팩토리는 로그를 남기고 null을 반환합니다.
+- Android 호스트 테스트: `dari-noop`이 클래스패스에 있으면 팩토리가 null을 반환합니다.
+- `DariObjCTests`: selector가 `.def`와 일치하고, 호출이 Swift 저장소까지 도달합니다.
 - 위의 이름 충돌 결과는 빌드된 모듈에 `swiftc -typecheck`를 돌려서 얻었습니다.
 
 ## 참고 자료
