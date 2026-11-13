@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "dari-core/**"
+      - "dari-kmp/**"
+      - "gradle.properties"
       - "compat/**"
       - "detekt-config.yml"
       - "dari/build.gradle.kts"
@@ -16,6 +18,8 @@ on:
     branches: [main]
     paths:
       - "dari-core/**"
+      - "dari-kmp/**"
+      - "gradle.properties"
       - "compat/**"
       - "detekt-config.yml"
       - "dari/build.gradle.kts"
@@ -59,5 +63,11 @@ jobs:
           :dari-core:publishAllPublicationsToCompatRepository
           :dari:assemble
           :dari-noop:assemble
+          :dari-kmp:iosSimulatorArm64Test
+          :dari-kmp:testAndroidHostTest
+          :dari-kmp:compileIosMainKotlinMetadata
+          :dari-kmp:ktlintCheck
+          :dari-kmp:detekt
+          :dari-kmp:checkLegacyAbi
       - name: Compile external Android consumer against published dari-core
         run: ./gradlew -p compat/android-consumer assembleDebug

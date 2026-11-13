@@ -1,0 +1,64 @@
+language = Objective-C
+compilerOpts = -fobjc-arc
+package = com.easyhooon.dari.kmp.objc
+---
+#import <Foundation/Foundation.h>
+
+// Selectors of DariObjC / DariObjCInterceptor in the Swift SDK. Sent through objc_msgSend, so
+// the SDK is looked up at runtime and never linked.
+@protocol DariKmpObjCFactory
++ (id)interceptorWithTag:(NSString *)tag;
+@end
+
+@protocol DariKmpObjCInterceptor
+- (void)onPageUrlChanged:(NSString *)url;
+- (void)onWebToAppRequestWithHandlerName:(NSString *)handlerName displayName:(NSString *)displayName requestId:(NSString *)requestId requestData:(NSString *)requestData fireAndForget:(NSNumber *)fireAndForget;
+- (void)onWebToAppResponseWithHandlerName:(NSString *)handlerName requestId:(NSString *)requestId responseData:(NSString *)responseData isSuccess:(BOOL)isSuccess;
+- (void)onAppToWebRequestWithHandlerName:(NSString *)handlerName displayName:(NSString *)displayName requestId:(NSString *)requestId data:(NSString *)data fireAndForget:(NSNumber *)fireAndForget;
+- (void)onAppToWebResponseWithRequestId:(NSString *)requestId isSuccess:(BOOL)isSuccess responseData:(NSString *)responseData;
+@end
+
+// 0: ready, 1: the Swift SDK (DariObjC) isn't linked, 2: it is older than this dari-kmp and lacks a selector.
+// Checked up front so a version skew between the Maven and SPM releases can't end in an unrecognized selector.
+static inline int dari_kmp_status(void) {
+    Class factory = NSClassFromString(@"DariObjC");
+    Class interceptor = NSClassFromString(@"DariObjCInterceptor");
+    if (factory == nil || interceptor == nil) return 1;
+    if (![factory respondsToSelector:@selector(interceptorWithTag:)]) return 2;
+    SEL selectors[] = {
+        @selector(onPageUrlChanged:),
+        @selector(onWebToAppRequestWithHandlerName:displayName:requestId:requestData:fireAndForget:),
+        @selector(onWebToAppResponseWithHandlerName:requestId:responseData:isSuccess:),
+        @selector(onAppToWebRequestWithHandlerName:displayName:requestId:data:fireAndForget:),
+        @selector(onAppToWebResponseWithRequestId:isSuccess:responseData:),
+    };
+    for (size_t i = 0; i < sizeof(selectors) / sizeof(selectors[0]); i++) {
+        if (![interceptor instancesRespondToSelector:selectors[i]]) return 2;
+    }
+    return 0;
+}
+
+// Call only after dari_kmp_status() returned 0.
+static inline id dari_kmp_interceptor(NSString *tag) {
+    return [(id<DariKmpObjCFactory>)NSClassFromString(@"DariObjC") interceptorWithTag:tag];
+}
+
+static inline void dari_kmp_onPageUrlChanged(id target, NSString *url) {
+    [(id<DariKmpObjCInterceptor>)target onPageUrlChanged:url];
+}
+
+static inline void dari_kmp_onWebToAppRequest(id target, NSString *handlerName, NSString *displayName, NSString *requestId, NSString *requestData, NSNumber *fireAndForget) {
+    [(id<DariKmpObjCInterceptor>)target onWebToAppRequestWithHandlerName:handlerName displayName:displayName requestId:requestId requestData:requestData fireAndForget:fireAndForget];
+}
+
+static inline void dari_kmp_onWebToAppResponse(id target, NSString *handlerName, NSString *requestId, NSString *responseData, BOOL isSuccess) {
+    [(id<DariKmpObjCInterceptor>)target onWebToAppResponseWithHandlerName:handlerName requestId:requestId responseData:responseData isSuccess:isSuccess];
+}
+
+static inline void dari_kmp_onAppToWebRequest(id target, NSString *handlerName, NSString *displayName, NSString *requestId, NSString *data, NSNumber *fireAndForget) {
+    [(id<DariKmpObjCInterceptor>)target onAppToWebRequestWithHandlerName:handlerName displayName:displayName requestId:requestId data:data fireAndForget:fireAndForget];
+}
+
+static inline void dari_kmp_onAppToWebResponse(id target, NSString *requestId, BOOL isSuccess, NSString *responseData) {
+    [(id<DariKmpObjCInterceptor>)target onAppToWebResponseWithRequestId:requestId isSuccess:isSuccess responseData:responseData];
+}
