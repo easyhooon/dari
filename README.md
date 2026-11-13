@@ -63,7 +63,8 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
 | Masking of sensitive values | ✅ In-app and desktop | ✅ In-app and desktop, plus your own rules for the desktop (`setPayloadRedactor`) |
 | Text / JSON export | ✅ In-app and desktop | ✅ In-app and desktop |
 | Protocol Buffers inspection | ✅ | ✅ Manual interceptor calls |
-| `retentionPeriod` cleanup | ✅ | ✅ (in memory) |
+| `retentionPeriod` cleanup | ✅ | ✅ |
+| Messages kept across relaunches | ✅ | ✅ Opt-in with `persistsMessages` |
 | Release builds | `dari-noop` (same API, no capture code) | Call `start()` only under `#if DEBUG` |
 
 ## Why Dari?

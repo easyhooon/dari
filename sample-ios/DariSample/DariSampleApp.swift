@@ -11,7 +11,7 @@ struct DariSampleApp: App {
         do {
             // SampleBridge records itself with @DariBridge. `-DariAutoCapture YES` hooks WebKit instead.
             let autoCapture = UserDefaults.standard.bool(forKey: "DariAutoCapture") ? SampleCapture.autoCapture : nil
-            try Dari.shared.start(DariConfiguration(autoCapture: autoCapture))
+            try Dari.shared.start(DariConfiguration(persistsMessages: true, autoCapture: autoCapture))
             Dari.shared.setEnvironment(["sample": "ios"])
             // Extra masking for the desktop app, after the built-in one when that is on.
             Dari.shared.setPayloadRedactor { message in

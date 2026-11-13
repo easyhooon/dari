@@ -64,9 +64,25 @@ While Dari is running, any process that can reach the device's loopback can read
 |---|---|---|
 | `maxEntries` | 500 | Messages kept in memory; the oldest are dropped first |
 | `retentionPeriod` | `nil` | Seconds a message is kept; older ones are dropped when a new one is recorded |
+| `persistsMessages` | `false` | Keep messages across relaunches (3.6.0+); see [Keep messages across relaunches](#keep-messages-across-relaunches) |
 | `maxContentLength` | 500,000 | Longer payloads are truncated, as on Android |
 | `fireAndForget` | `false` | Record requests as finished when they are sent |
 | `ports` | `38670...38677` | Loopback ports to try; the desktop app probes the same range |
+
+## Keep messages across relaunches
+
+By default, messages live in memory and are gone when the app relaunches or crashes. To keep them, as Android does:
+
+```swift
+try? Dari.shared.start(DariConfiguration(persistsMessages: true))
+```
+
+- Messages are written to `Application Support/Dari/messages.jsonl` as they're recorded, and come back on the next `start()`, in the in-app inspector and in the desktop app.
+- `maxEntries` and `retentionPeriod` apply to the stored messages too. There is no separate size limit, as on Android: with 500 messages at the 500,000-character limit the file could reach hundreds of MB, though real bridge traffic is usually a few MB.
+- Stored messages load in the background, so `start()` doesn't slow app launch. They appear a moment later, before the messages recorded since launch.
+- Responses never complete a request from an earlier launch, even when the bridge reuses callback ids.
+- A crash can lose the last few milliseconds of messages.
+- Payloads are stored as recorded, including tokens. The file is excluded from backups and protected until the device is first unlocked. **Clear** in either inspector deletes it, and starting with `persistsMessages: false` deletes it too. `stop()` keeps it for the next `start()`.
 
 ## Add your own masking
 
