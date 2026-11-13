@@ -1,6 +1,6 @@
 # KMP Bridge to the Swift SDK (#13)
 
-Status: ready to ship with the next full release ([#304](https://github.com/easyhooon/dari/pull/304)) · User guide: [Kotlin Multiplatform](../documentation/content/docs/kmp.mdx) · Korean: [kmp-swift-bridge.ko.md](kmp-swift-bridge.ko.md)
+Status: ready to ship with the next full release ([#304](https://github.com/easyhooon/dari/pull/304)) · User guide: [#305](https://github.com/easyhooon/dari/pull/305) · Korean: [kmp-swift-bridge.ko.md](kmp-swift-bridge.ko.md)
 
 This explains how `dari-kmp` lets Kotlin `commonMain` code record bridge messages on iOS through the Swift
 SDK, why it is built this way, and how Kotlin's Swift export may change it. Kotlin facts cite the official
@@ -236,7 +236,7 @@ would bring type safety and a link-time dependency. It can't reach the Swift-onl
 | Android release builds | Done: `compileOnly(dari-noop)`, host test with `dari-noop` |
 | `DariObjC` | Done: the selector-sync test. Protobuf is out of scope on iOS; record it from Swift |
 | Sample | `sample-kmp/run-on-simulator.sh`; `sample-ios` needs no Gradle |
-| User docs | [Kotlin Multiplatform](../documentation/content/docs/kmp.mdx) (en/ko). The site deploys on merge to `main`, so merge with the release |
+| User docs | Separate PR [#305](https://github.com/easyhooon/dari/pull/305) (en/ko). The site deploys on merge to `main`, so it merges with the release |
 | Not verified | USB device, the desktop window itself, `autoCapture` with WebKit calls from Kotlin |
 
 ## Verified

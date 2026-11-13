@@ -1,6 +1,6 @@
 # Swift SDK로 가는 KMP 브리지 (#13)
 
-상태: 다음 정식 릴리스에 출하 준비 완료 ([#304](https://github.com/easyhooon/dari/pull/304)) · 사용자 가이드: [Kotlin Multiplatform](../documentation/content/docs/ko/kmp.mdx) · English: [kmp-swift-bridge.md](kmp-swift-bridge.md)
+상태: 다음 정식 릴리스에 출하 준비 완료 ([#304](https://github.com/easyhooon/dari/pull/304)) · 사용자 가이드: [#305](https://github.com/easyhooon/dari/pull/305) · English: [kmp-swift-bridge.md](kmp-swift-bridge.md)
 
 `dari-kmp`가 iOS에서 Kotlin `commonMain` 코드의 브리지 메시지를 Swift SDK로 기록하는 방법을 정리한 문서입니다.
 왜 이렇게 만들었는지, Kotlin의 Swift export가 이 구조를 어떻게 바꿀 수 있는지도 함께 다룹니다.
@@ -218,7 +218,7 @@ Dari에 적용하면 Dari 패키지에서 `DariObjC`를 import해 손으로 쓴 
 | Android release 빌드 | 완료: `compileOnly(dari-noop)`, `dari-noop`으로 호스트 테스트 |
 | `DariObjC` | 완료: selector 동기화 테스트. iOS의 protobuf는 범위 밖이므로 Swift에서 기록 |
 | 샘플 | `sample-kmp/run-on-simulator.sh`. `sample-ios`에는 Gradle이 필요 없음 |
-| 사용자 문서 | [Kotlin Multiplatform](../documentation/content/docs/ko/kmp.mdx) (영어/한국어). 사이트는 `main`에 머지되면 배포되므로 릴리스와 함께 머지 |
+| 사용자 문서 | 별도 PR [#305](https://github.com/easyhooon/dari/pull/305) (영어/한국어). 사이트는 `main`에 머지되면 배포되므로 릴리스와 함께 머지 |
 | 검증 못 함 | USB 실기기, 데스크톱 앱 화면, Kotlin에서 부른 WebKit 호출을 `autoCapture`가 잡는지 |
 
 ## 검증한 것
