@@ -2,7 +2,7 @@
 
 Where the Android library (`dari`) and the iOS SDK (`Dari` Swift package) behave differently, why, and whether
 the gap is intended. For maintainers: check this before porting a feature, so an intended difference isn't
-"fixed" by accident. As of 3.5.0 (iOS) and 3.0.0 (Android library). Update it when either side changes.
+"fixed" by accident. As of 3.6.0 (iOS) and 3.0.0 (Android library). Update it when either side changes.
 
 Status: **Intended** means keep it as is. **Gap** means not ported yet; follow the linked issue.
 
@@ -13,10 +13,10 @@ Support section.
 
 | | Android | iOS (`DariUI`) | Status |
 | --- | --- | --- | --- |
-| Opening it | Ongoing notification, shake, launcher shortcut | `Dari.shared.presentInspector()` from the app's debug menu, or `DariInspectorView` in its own sheet | Gap: floating button and shake in #288 step 2. No ongoing notification on iOS |
-| While a desktop is connected | Notification and shake pause, resume on disconnect | Nothing to pause yet | Gap: mirror it when step 2 adds entry points (#288) |
-| Filters | Status, handler, tag chips plus search | Search only | Gap (#288) |
-| Response-time stats per handler | Yes | No | Gap (#288 step 2). The desktop app already has the screen |
+| Opening it | Ongoing notification, shake, launcher shortcut | `Dari.shared.presentInspector()` from the app's debug menu, or `DariInspectorView` in its own sheet | Intended: #288 stopped at step 1, so no floating button or shake. No ongoing notification on iOS |
+| While a desktop is connected | Notification and shake pause, resume on disconnect | Nothing to pause | Intended: iOS has no entry points of its own (#288) |
+| Filters | Status, handler, tag chips plus search | Search only | Intended: not planned (#288). The desktop app has the filters |
+| Response-time stats per handler | Yes | No | Intended: not planned (#288). The desktop app has the screen |
 | Masking switch | `Dari.setMaskingEnabled`, settings sheet | **Mask Sensitive Values** in the ⋯ menu | Intended: same rules, different entry. No public API on iOS yet |
 | Save to a chosen location | Share or Save (SAF) | Share sheet only, which offers Save to Files | Intended |
 | History after relaunch | Kept (Room), always | Kept with `persistsMessages: true` (3.6.0+), off by default | Intended (#300). See below |
