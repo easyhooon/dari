@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
 
 ## 왜 Dari인가요?
 
-하이브리드 앱을 디버깅하다 보면 브릿지 핸들러마다 로그를 심고, Logcat이나 Xcode 콘솔을 스크롤하며 요청과 응답을 직접 짝지어야 합니다. Dari를 쓰면:
+웹뷰를 띄워 쓰는 앱을 디버깅하다 보면 브릿지 핸들러마다 로그를 심고, Logcat이나 Xcode 콘솔을 스크롤하며 요청과 응답을 직접 짝지어야 합니다. Dari를 쓰면:
 
 - 모든 Web ↔ App 브릿지 호출을 한 목록에서 보고, 요청과 응답이 `requestId`로 짝지어 표시됩니다
 - JSON 페이로드 정렬 표시, 상태(`IN_PROGRESS` / `SUCCESS` / `ERROR`), 소요 시간을 확인할 수 있습니다

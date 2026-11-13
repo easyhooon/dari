@@ -69,7 +69,7 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
 
 ## Why Dari?
 
-Debugging a hybrid app usually means sprinkling logs across bridge handlers and scrolling Logcat or the Xcode console to match requests with responses. Dari gives you:
+Debugging an app that embeds a WebView usually means sprinkling logs across bridge handlers and scrolling Logcat or the Xcode console to match requests with responses. Dari gives you:
 
 - Every Web ↔ App bridge call in one list, with request/response paired by `requestId`
 - Pretty-printed JSON payloads, status (`IN_PROGRESS` / `SUCCESS` / `ERROR`), and timing
