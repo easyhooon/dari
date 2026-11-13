@@ -53,6 +53,7 @@ package final class MessageStore {
     private var appendsSinceCompaction = 0
     /// Stored records are still being decoded; don't compact, or the file would lose them.
     private var loading = false
+    private let loadGroup = DispatchGroup()
     /// Records below this id came from an earlier launch. Responses never pair with them: bridges reuse callback ids.
     private let firstLiveId: Int64
 
@@ -74,7 +75,16 @@ package final class MessageStore {
         firstLiveId = nextId
         guard let fileStore, lastStoredId > 0 else { return }
         loading = true
-        fileStore.load { [weak self] in self?.merge($0) }
+        loadGroup.enter()
+        fileStore.load { [weak self, loadGroup] in
+            self?.merge($0)
+            loadGroup.leave()
+        }
+    }
+
+    /// Waits until stored records have been merged, for tests.
+    func waitUntilLoaded() {
+        loadGroup.wait()
     }
 
     static func currentMillis() -> Int64 {
@@ -136,6 +146,9 @@ package final class MessageStore {
             combined += records
             if combined.count > maxEntries { combined.removeFirst(combined.count - maxEntries) }
             records = combined
+            // Rewrites the file with what survived, so lines from earlier launches don't pile up.
+            fileStore?.compact(records)
+            appendsSinceCompaction = 0
             guard !stored.isEmpty else { return }
             notify(.cleared)
             records.forEach { notify(.added($0)) }

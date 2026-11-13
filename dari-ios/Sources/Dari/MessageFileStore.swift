@@ -8,20 +8,31 @@ final class MessageFileStore {
     static let formatVersion = 1
 
     let url: URL
-    private let queue: DispatchQueue
+    private let shared: Shared
+    private var queue: DispatchQueue { shared.queue }
     /// Kept open between appends, so a write right before a crash has the best chance of landing. Used on [queue].
-    private var handle: FileHandle?
+    private var handle: FileHandle? {
+        get { shared.handle }
+        set { shared.handle = newValue }
+    }
 
-    private static let queuesLock = NSLock()
-    private static var queues: [URL: DispatchQueue] = [:]
+    /// One queue and one open handle per file, shared by every instance: a store started after stop() then waits
+    /// for the old store's writes, and a compaction by one instance can't leave another writing to the replaced file.
+    private final class Shared {
+        let queue: DispatchQueue
+        var handle: FileHandle?
+        init(_ url: URL) { queue = DispatchQueue(label: "dari.filestore.\(url.lastPathComponent)") }
+    }
+
+    private static let sharedLock = NSLock()
+    private static var sharedByURL: [URL: Shared] = [:]
 
     init(url: URL) {
         self.url = url
-        // Shared per file, so a store started after stop() loads only after the old store's writes have finished.
-        queue = Self.queuesLock.withLock {
-            if let existing = Self.queues[url] { return existing }
-            let created = DispatchQueue(label: "dari.filestore.\(url.lastPathComponent)")
-            Self.queues[url] = created
+        shared = Self.sharedLock.withLock {
+            if let existing = Self.sharedByURL[url] { return existing }
+            let created = Shared(url)
+            Self.sharedByURL[url] = created
             return created
         }
     }
@@ -63,11 +74,16 @@ final class MessageFileStore {
     /// Decodes records from earlier launches, oldest first, on the file's queue, then hands them to [completion].
     /// Runs after any writes queued before it, and before any queued after.
     func load(_ completion: @escaping ([MessageRecord]) -> Void) {
-        queue.async { [self] in completion(decodeAll()) }
+        queue.async { [self] in
+            // Only map the file here; decoding elsewhere keeps appends from waiting behind a large file.
+            // The mapping keeps its bytes even if a later compaction replaces or deletes the file.
+            let data = try? Data(contentsOf: url, options: .mappedIfSafe)
+            DispatchQueue.global(qos: .utility).async { completion(Self.decodeAll(data)) }
+        }
     }
 
-    private func decodeAll() -> [MessageRecord] {
-        guard let data = try? Data(contentsOf: url, options: .mappedIfSafe), !data.isEmpty else { return [] }
+    private static func decodeAll(_ data: Data?) -> [MessageRecord] {
+        guard let data, !data.isEmpty else { return [] }
         var byId: [Int64: MessageRecord] = [:]
         let decoder = JSONDecoder()
         for line in data.split(separator: UInt8(ascii: "\n")) {
@@ -75,7 +91,7 @@ final class MessageFileStore {
             guard let tab = line.firstIndex(of: UInt8(ascii: "\t")),
                   let entry = try? decoder.decode(StoredLine.self, from: Data(line[line.index(after: tab)...]))
             else { continue }
-            guard entry.v == Self.formatVersion else { return [] }
+            guard entry.v == formatVersion else { return [] }
             if let record = entry.record.record { byId[record.id] = record }
         }
         return byId.values.sorted { $0.id < $1.id }
@@ -127,9 +143,18 @@ final class MessageFileStore {
                 FileManager.default.createFile(atPath: url.path, contents: nil)
                 protect()
             }
-            handle = try? FileHandle(forWritingTo: url)
-            _ = try? handle?.seekToEnd()
+            handle = try? FileHandle(forUpdating: url)
+            // A crash can leave a partial last line; start on a fresh line so this record isn't glued to it.
+            if let handle, let end = try? handle.seekToEnd(), end > 0 {
+                try? handle.seek(toOffset: end - 1)
+                if (try? handle.read(upToCount: 1)) != Data("\n".utf8) {
+                    _ = try? handle.seekToEnd()
+                    try? handle.write(contentsOf: Data("\n".utf8))
+                }
+            }
         }
+        // Seek every time: another instance for the same file may have appended since.
+        _ = try? handle?.seekToEnd()
         try? handle?.write(contentsOf: data)
     }
 

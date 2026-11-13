@@ -80,7 +80,7 @@ final class MessageFileStoreTests: XCTestCase {
         try handle.close()
         XCTAssertEqual(loaded().snapshot().map(\.handlerName), ["kept"])
 
-        try Data("{\"v\":99,\"record\":{}}\n".utf8).write(to: url)
+        try Data("1\t{\"v\":99,\"record\":{}}\n".utf8).write(to: url)
         XCTAssertEqual(loaded().snapshot(), [])
     }
 
@@ -105,7 +105,7 @@ final class MessageFileStoreTests: XCTestCase {
         dari.interceptor().onWebToAppRequest(handlerName: "kept", requestId: nil, requestData: nil)
         dari.stop()
         try dari.start(configuration)
-        flush()
+        dari.inspectorStore?.waitUntilLoaded()
         XCTAssertEqual(dari.records.map(\.handlerName), ["kept"], "stop() keeps the file for the next start")
         dari.stop()
 
@@ -133,6 +133,7 @@ final class MessageFileStoreTests: XCTestCase {
             }
         }
         add(second, "live")
+        second.waitUntilLoaded()
         flush()
         second.unsubscribe(token)
         XCTAssertEqual(second.snapshot().map(\.handlerName), ["old1", "old2", "live"])
@@ -146,14 +147,55 @@ final class MessageFileStoreTests: XCTestCase {
         flush()
         let second = store()
         second.clear()
+        second.waitUntilLoaded()
         flush()
         XCTAssertEqual(second.snapshot(), [])
         XCTAssertEqual(loaded().snapshot(), [])
     }
 
+    func testWritesAfterAPartialLineSurvive() throws {
+        add(store(), "before")
+        flush()
+        let handle = try FileHandle(forWritingTo: url)
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data("2\t{\"v\":1,\"record\":{\"id\":2,\"hand".utf8))
+        try handle.close()
+        let afterCrash = loaded()
+        add(afterCrash, "afterCrash")
+        flush()
+        XCTAssertEqual(loaded().snapshot().map(\.handlerName), ["before", "afterCrash"])
+    }
+
+    func testFileStaysBoundedAcrossShortRuns() throws {
+        for _ in 0..<20 {
+            let run = loaded(maxEntries: 10)
+            for _ in 0..<5 { add(run, "h") }
+            flush()
+        }
+        let lines = try String(contentsOf: url, encoding: .utf8).split(separator: "\n").count
+        XCTAssertLessThanOrEqual(lines, 10 + 5, "each launch compacts after merging")
+    }
+
+    func testTwoInstancesDontOverwriteEachOther() {
+        let a = store()
+        add(a, "a1")
+        flush()
+        let b = loaded()
+        add(b, "b1")
+        add(a, "a-late")
+        add(b, "b2")
+        flush()
+        // Every line lands intact; neither instance overwrites the other's bytes.
+        let lines = (try? String(contentsOf: url, encoding: .utf8))?.split(separator: "\n") ?? []
+        for name in ["a1", "b1", "b2", "a-late"] {
+            XCTAssertEqual(lines.filter { $0.contains("\"handlerName\":\"\(name)\"") }.count, 1, name)
+        }
+    }
+
     /// A store whose stored records have been merged.
     private func loaded(maxEntries: Int = 100, retentionPeriod: TimeInterval? = nil) -> MessageStore {
         let store = store(maxEntries: maxEntries, retentionPeriod: retentionPeriod)
+        store.waitUntilLoaded()
         flush()
         return store
     }
