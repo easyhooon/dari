@@ -48,7 +48,7 @@ public final class Dari {
     public static let defaultPorts: ClosedRange<UInt16> = 38_670...38_677
 
     /// Reported to the desktop as `dariVersion`.
-    public static let version = "3.5.0"
+    public static let version = "3.6.0"
 
     private let lock = NSLock()
     private var store: MessageStore?
