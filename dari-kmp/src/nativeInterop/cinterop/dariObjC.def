@@ -1,0 +1,45 @@
+language = Objective-C
+compilerOpts = -fobjc-arc
+package = com.easyhooon.dari.kmp.objc
+---
+#import <Foundation/Foundation.h>
+
+// Selectors of DariObjC / DariObjCInterceptor in the Swift SDK. Sent through objc_msgSend, so
+// the SDK is looked up at runtime and never linked.
+@protocol DariKmpObjCFactory
++ (id)interceptorWithTag:(NSString *)tag;
+@end
+
+@protocol DariKmpObjCInterceptor
+- (void)onPageUrlChanged:(NSString *)url;
+- (void)onWebToAppRequestWithHandlerName:(NSString *)handlerName displayName:(NSString *)displayName requestId:(NSString *)requestId requestData:(NSString *)requestData fireAndForget:(NSNumber *)fireAndForget;
+- (void)onWebToAppResponseWithHandlerName:(NSString *)handlerName requestId:(NSString *)requestId responseData:(NSString *)responseData isSuccess:(BOOL)isSuccess;
+- (void)onAppToWebRequestWithHandlerName:(NSString *)handlerName displayName:(NSString *)displayName requestId:(NSString *)requestId data:(NSString *)data fireAndForget:(NSNumber *)fireAndForget;
+- (void)onAppToWebResponseWithRequestId:(NSString *)requestId isSuccess:(BOOL)isSuccess responseData:(NSString *)responseData;
+@end
+
+static inline id dari_kmp_interceptor(NSString *tag) {
+    Class cls = NSClassFromString(@"DariObjC");
+    if (cls == nil || ![cls respondsToSelector:@selector(interceptorWithTag:)]) return nil;
+    return [(id<DariKmpObjCFactory>)cls interceptorWithTag:tag];
+}
+
+static inline void dari_kmp_onPageUrlChanged(id target, NSString *url) {
+    [(id<DariKmpObjCInterceptor>)target onPageUrlChanged:url];
+}
+
+static inline void dari_kmp_onWebToAppRequest(id target, NSString *handlerName, NSString *displayName, NSString *requestId, NSString *requestData, NSNumber *fireAndForget) {
+    [(id<DariKmpObjCInterceptor>)target onWebToAppRequestWithHandlerName:handlerName displayName:displayName requestId:requestId requestData:requestData fireAndForget:fireAndForget];
+}
+
+static inline void dari_kmp_onWebToAppResponse(id target, NSString *handlerName, NSString *requestId, NSString *responseData, BOOL isSuccess) {
+    [(id<DariKmpObjCInterceptor>)target onWebToAppResponseWithHandlerName:handlerName requestId:requestId responseData:responseData isSuccess:isSuccess];
+}
+
+static inline void dari_kmp_onAppToWebRequest(id target, NSString *handlerName, NSString *displayName, NSString *requestId, NSString *data, NSNumber *fireAndForget) {
+    [(id<DariKmpObjCInterceptor>)target onAppToWebRequestWithHandlerName:handlerName displayName:displayName requestId:requestId data:data fireAndForget:fireAndForget];
+}
+
+static inline void dari_kmp_onAppToWebResponse(id target, NSString *requestId, BOOL isSuccess, NSString *responseData) {
+    [(id<DariKmpObjCInterceptor>)target onAppToWebResponseWithRequestId:requestId isSuccess:isSuccess responseData:responseData];
+}
