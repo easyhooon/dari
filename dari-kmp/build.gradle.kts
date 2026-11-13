@@ -34,6 +34,9 @@ kotlin {
         withHostTestBuilder {}
     }
 
+    // Desktop targets of a Compose Multiplatform app compile, and record nothing.
+    jvm()
+
     listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach { target ->
         // Declares DariObjC's selectors only; nothing from the Swift SDK is linked.
         target.compilations.getByName("main").cinterops.create("dariObjC")

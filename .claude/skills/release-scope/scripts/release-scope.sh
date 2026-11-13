@@ -19,7 +19,7 @@ classify() {
     dari-ios/Tests/*) echo test ;;
     # SPM resolves the root manifest from git tags, so every tag is an iOS release.
     dari-ios/Sources/* | Package.swift) echo ios ;;
-    dari/* | dari-core/* | dari-noop/* | dari-runtime/*) echo library ;;
+    dari/* | dari-core/* | dari-noop/* | dari-runtime/* | dari-kmp/*) echo library ;;
     # The plugin ships to Maven Central with the library, under the same `dari` version.
     dari-gradle-plugin/src/main/* | dari-gradle-plugin/build.gradle.kts | dari-gradle-plugin/settings.gradle.kts) echo library ;;
     dari-inspector-protocol/*) echo protocol ;;

@@ -13,9 +13,9 @@ The desktop updater, `install-desktop.sh` and the download page all read GitHub'
 - **Every mode**: set `Dari.version` to the version, so iOS apps report the tag SPM resolved.
 - **Full release**: set both `dari` and `dariDesktop` to the version.
 - **Desktop-only release**: set only `dariDesktop`; leave `dari` alone.
-  - First run `git diff --stat <latest_tag>..HEAD -- dari dari-core dari-noop dari-runtime dari-inspector-protocol dari-gradle-plugin`. If it lists anything, stop and ask the user: library or protocol changes need a full release, or apps never get them.
+  - First run `git diff --stat <latest_tag>..HEAD -- dari dari-core dari-noop dari-runtime dari-kmp dari-inspector-protocol dari-gradle-plugin`. If it lists anything, stop and ask the user: library or protocol changes need a full release, or apps never get them.
 - **iOS-only release**: leave `dari` and `dariDesktop` alone.
-  - First run `git diff --stat <latest_tag>..HEAD -- dari dari-core dari-noop dari-runtime dari-inspector-protocol dari-gradle-plugin dari-desktop-app`. If it lists anything, stop and ask the user: those need a full or desktop release.
+  - First run `git diff --stat <latest_tag>..HEAD -- dari dari-core dari-noop dari-runtime dari-kmp dari-inspector-protocol dari-gradle-plugin dari-desktop-app`. If it lists anything, stop and ask the user: those need a full or desktop release.
 - Make the bump in a PR: branch `chore/bump-desktop-<version>` (`chore/bump-ios-<version>` for iOS-only, `chore/bump-version-<version>` for a full release) from `origin/main`, commit `chore: bump the desktop app to <version>`, open the PR, wait for CI, then merge it.
 - The bump must be on `main` before tagging, because `desktop-release.yml` checks out the tag and fails when `dariDesktop` doesn't match it.
 

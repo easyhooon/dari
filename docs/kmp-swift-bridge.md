@@ -88,7 +88,7 @@ The message send compiles to `objc_msgSend`, so nothing refers to a Dari symbol 
   `Dari.createInterceptor`.
 - `androidMain`: calls `Dari.createInterceptor`. It compiles against `dari-noop` only (`compileOnly`), so the
   app's `debugImplementation(dari)` / `releaseImplementation(dari-noop)` decides what runs. Without either, it
-  catches the `LinkageError` and returns null.
+  catches the `NoClassDefFoundError` and returns null.
 - `iosMain`: checks `dari_kmp_status()` once, then returns `SwiftDariInterceptor`, which forwards each call to a
   trampoline. When the SDK is missing or too old, it logs once with `NSLog` and returns null.
 

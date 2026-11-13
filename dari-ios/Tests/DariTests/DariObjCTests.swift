@@ -23,7 +23,7 @@ final class DariObjCTests: XCTestCase {
         let interceptor = try XCTUnwrap(NSClassFromString("DariObjCInterceptor") as? NSObject.Type)
         for name in selectors {
             let selector = NSSelectorFromString(name)
-            let found = factory.responds(to: selector) || interceptor.instancesRespond(to: selector)
+            let found = name == "interceptorWithTag:" ? factory.responds(to: selector) : interceptor.instancesRespond(to: selector)
             XCTAssertTrue(found, "\(name) is declared in dariObjC.def but missing from DariObjC")
         }
     }

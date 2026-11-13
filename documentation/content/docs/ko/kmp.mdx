@@ -32,7 +32,7 @@ dependencies {
 }
 ```
 
-`dari-kmp`는 이 API에 컴파일 시점에만 의존합니다. 그래서 실제로 무엇이 실행될지는 앱이 고른 의존성이 정합니다. 둘 다 없으면 `createInterceptor`가 `null`을 반환하고 경고 로그를 남깁니다.
+`dari-kmp`는 이 API에 컴파일 시점에만 의존합니다. 그래서 실제로 무엇이 실행될지는 앱이 고른 의존성이 정합니다. 둘 다 추가하세요. 없으면 R8이 `com.easyhooon.dari.Dari`가 없다고 보고하고, minify하지 않은 빌드에서는 `createInterceptor`가 `null`을 반환하고 경고 로그를 남깁니다.
 
 iOS 앱에는 **Dari** Swift 패키지를 추가하고, debug 빌드에서 `Dari.shared.start()`를 호출합니다([iOS 시작하기](./ios)).
 
@@ -57,6 +57,10 @@ class SharedBridge {
 ```
 
 인터셉터는 Android와 같은 `DariInterceptor`입니다([인터셉터](./interceptor)). `onPageUrlChanged`와 표시 이름도 그대로 씁니다. WebView마다 인터셉터를 하나씩 쓰세요.
+
+## 지원 타깃
+
+`dari-kmp`는 Android, iOS(`iosArm64`, `iosSimulatorArm64`, `iosX64`), JVM을 지원합니다. Compose Multiplatform 앱의 데스크톱 타깃 같은 JVM에서는 `createInterceptor`가 `null`을 반환합니다.
 
 ## Release 빌드
 

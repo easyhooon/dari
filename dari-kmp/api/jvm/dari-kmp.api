@@ -1,0 +1,6 @@
+public final class com/easyhooon/dari/kmp/DariKmp {
+	public static final field INSTANCE Lcom/easyhooon/dari/kmp/DariKmp;
+	public final fun createInterceptor (Ljava/lang/String;)Lcom/easyhooon/dari/interceptor/DariInterceptor;
+	public static synthetic fun createInterceptor$default (Lcom/easyhooon/dari/kmp/DariKmp;Ljava/lang/String;ILjava/lang/Object;)Lcom/easyhooon/dari/interceptor/DariInterceptor;
+}
+

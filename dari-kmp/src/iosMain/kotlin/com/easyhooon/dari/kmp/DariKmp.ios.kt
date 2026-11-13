@@ -11,7 +11,7 @@ import platform.Foundation.NSLog
 private val swiftSdkReady: Boolean by lazy {
     when (dari_kmp_status()) {
         0 -> true
-        1 -> false.also { NSLog("Dari: the Dari Swift package isn't linked, so nothing is recorded.") }
+        1 -> false.also { NSLog("Dari: DariObjC not found. Link the Dari Swift package, from the same release as dari-kmp or newer.") }
         else -> false.also { NSLog("Dari: the linked Dari Swift package is older than dari-kmp. Update it.") }
     }
 }

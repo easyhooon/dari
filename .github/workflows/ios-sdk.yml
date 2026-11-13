@@ -4,12 +4,16 @@ on:
   pull_request:
     paths:
       - "dari-ios/**"
+      # DariObjCTests checks DariObjC against this file.
+      - "dari-kmp/src/nativeInterop/**"
       - "Package.swift"
       - ".github/workflows/ios-sdk.yml"
   push:
     branches: [main]
     paths:
       - "dari-ios/**"
+      # DariObjCTests checks DariObjC against this file.
+      - "dari-kmp/src/nativeInterop/**"
       - "Package.swift"
       - ".github/workflows/ios-sdk.yml"
 

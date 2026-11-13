@@ -6,7 +6,7 @@ import com.easyhooon.dari.interceptor.DariInterceptor
 
 internal actual fun platformInterceptor(tag: String?): DariInterceptor? = try {
     Dari.createInterceptor(tag)
-} catch (e: LinkageError) {
+} catch (e: NoClassDefFoundError) {
     Log.w("Dari", "Add io.github.easyhooon:dari (debug) or dari-noop (release) to the app.", e)
     null
 }

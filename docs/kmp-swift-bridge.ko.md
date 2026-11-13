@@ -81,7 +81,7 @@ Kotlin은 이 함수들을 일반 C 함수처럼 호출하고, 그 경계에서 
 ### Kotlin: 모듈 구성
 
 - `commonMain`: `DariKmp.createInterceptor(tag): DariInterceptor?`. Android의 `Dari.createInterceptor`처럼 nullable입니다.
-- `androidMain`: `Dari.createInterceptor`를 호출합니다. 컴파일 시점에만 `dari-noop`에 의존(`compileOnly`)하므로, 실제로 무엇이 실행될지는 앱의 `debugImplementation(dari)` / `releaseImplementation(dari-noop)`이 정합니다. 둘 다 없으면 `LinkageError`를 잡고 null을 반환합니다.
+- `androidMain`: `Dari.createInterceptor`를 호출합니다. 컴파일 시점에만 `dari-noop`에 의존(`compileOnly`)하므로, 실제로 무엇이 실행될지는 앱의 `debugImplementation(dari)` / `releaseImplementation(dari-noop)`이 정합니다. 둘 다 없으면 `NoClassDefFoundError`를 잡고 null을 반환합니다.
 - `iosMain`: `dari_kmp_status()`를 한 번 확인한 뒤, 각 호출을 트램폴린으로 넘기는 `SwiftDariInterceptor`를 반환합니다. SDK가 없거나 너무 오래됐으면 `NSLog`로 로그를 한 번 남기고 null을 반환합니다.
 
 ### 버전 차이(version skew)

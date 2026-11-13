@@ -32,7 +32,7 @@ dependencies {
 }
 ```
 
-`dari-kmp` only compiles against this API, so the app's choice decides what runs. Without either dependency, `createInterceptor` returns `null` and logs a warning.
+`dari-kmp` only compiles against this API, so the app's choice decides what runs. Add both: without them, R8 reports `com.easyhooon.dari.Dari` as missing, and a build without minification returns `null` from `createInterceptor` and logs a warning.
 
 In the iOS app, add the **Dari** Swift package and call `Dari.shared.start()` in debug builds ([iOS getting started](./ios)).
 
@@ -57,6 +57,10 @@ class SharedBridge {
 ```
 
 The interceptor is the same `DariInterceptor` as on Android ([Interceptor](./interceptor)), including `onPageUrlChanged` and display names. Use one interceptor per WebView.
+
+## Targets
+
+`dari-kmp` supports Android, iOS (`iosArm64`, `iosSimulatorArm64`, `iosX64`) and JVM. On JVM, such as the desktop target of a Compose Multiplatform app, `createInterceptor` returns `null`.
 
 ## Release builds
 

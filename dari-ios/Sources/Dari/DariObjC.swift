@@ -2,6 +2,7 @@ import Foundation
 
 /// Objective-C entry point over [Dari], for Kotlin/Native (`dari-kmp`) and Objective-C callers.
 /// The runtime names are fixed so `NSClassFromString("DariObjC")` finds the class.
+/// Published dari-kmp releases call these selectors by name: never change a selector's parameters, add a new one.
 @objc(DariObjC)
 public final class DariObjC: NSObject {
     /// Starts with the default configuration. Returns nil on success, or the error description.
