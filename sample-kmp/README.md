@@ -1,6 +1,6 @@
 # sample-kmp
 
-PoC for [#13](https://github.com/easyhooon/dari/issues/13): a `commonMain` bridge (`SharedBridge`) records through `dari-kmp`, which forwards to the Swift SDK on iOS.
+PoC for [#13](https://github.com/easyhooon/dari/issues/13), explained in [docs/kmp-swift-bridge.md](../docs/kmp-swift-bridge.md): a `commonMain` bridge (`SharedBridge`) records through `dari-kmp`, which forwards to the Swift SDK on iOS.
 
 Run it in `sample-ios` on a Simulator. The plain sample build skips it (`#if canImport(DariKmpSample)`).
 
