@@ -19,7 +19,9 @@ Support section.
 | Response-time stats per handler | Yes | No | Gap (#288 step 2). The desktop app already has the screen |
 | Masking switch | `Dari.setMaskingEnabled`, settings sheet | **Mask Sensitive Values** in the ⋯ menu | Intended: same rules, different entry. No public API on iOS yet |
 | Save to a chosen location | Share or Save (SAF) | Share sheet only, which offers Save to Files | Intended |
-| History after relaunch | Kept (Room) | Lost (memory only) | Gap (#297). See below |
+| History after relaunch | Kept (Room), always | Kept with `persistsMessages: true` (3.6.0+), off by default | Intended (#300). See below |
+| Response after relaunch with a reused callback id | Can complete a request from the earlier launch | Only completes requests from this launch | Intended (#300) |
+| Total size cap | None | None | Gap on both: #299 |
 | Look | Material | System components; Liquid Glass on iOS 26+ | Intended |
 
 ## SDK and integration
@@ -40,13 +42,13 @@ Support section.
 
 ## Why
 
-### iOS keeps messages in memory only
+### iOS persistence is opt-in
 
-The iOS SDK started (3.0) desktop-first: the desktop app holds the history, and the device only buffers the
-latest `maxEntries` until it sends them. Writing payloads to disk would keep tokens and personal data on the
-device and add migrations and I/O. With `DariUI` (3.5.0) there is a case for keeping history across relaunches
-(a QA tester checking what happened before a crash). It can be done with Foundation alone, but needs a
-retention and encryption decision first: #297.
+The iOS SDK started (3.0) desktop-first and memory-only: the desktop app holds the history. With `DariUI` (3.5.0) a
+QA tester needs what happened before a crash, so 3.6.0 adds `persistsMessages` (#300). It stays off by default
+because payloads, stored as recorded, can hold tokens; the file is excluded from backups and protected until first
+unlock. Stored messages load in the background, like Android's Room load, and responses never pair with them. A
+total size cap for both platforms is #299.
 
 ### Android needs stable wire ids, iOS doesn't
 
