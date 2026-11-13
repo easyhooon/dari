@@ -9,9 +9,9 @@
 [![Documentation](https://img.shields.io/badge/docs-easyhooon.github.io%2Fdari-blue)](https://easyhooon.github.io/dari)
 [![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/easyhooon/dari?utm_source=readme&utm_medium=badge)
 
-**Dari** (다리) means **"bridge"** in Korean. Dari is a tool for inspecting WebView bridge communication in Android and iOS apps in real time, inspired by [Chucker](https://github.com/ChuckerTeam/chucker).
+**Dari** (다리) means **"bridge"** in Korean. Dari is a tool for inspecting WebView bridge communication in Android and iOS apps in real time.
 
-Just as Chucker intercepts and displays HTTP traffic, Dari captures and visualizes **WebView JavaScript bridge messages** between your web content and native code. The **Dari Desktop App** shows them from Android and iOS apps alike, on macOS, Windows and Linux. Android and iOS apps also get an in-app inspector on the device.
+Dari captures and visualizes the **WebView JavaScript bridge messages** between your web content and native code, with each request and response paired. The **Dari Desktop App** shows them from Android and iOS apps alike, on macOS, Windows and Linux. Android and iOS apps also get an in-app inspector on the device.
 
 📥 **[Download the Desktop App](https://easyhooon.github.io/dari/download)** · 📖 **[Documentation](https://easyhooon.github.io/dari)** — Setup guide, configuration reference, and API docs.
 
@@ -145,7 +145,7 @@ Both platforms: [Desktop App](https://easyhooon.github.io/dari/docs/desktop) · 
 
 iOS apps get one too, from the `DariUI` library (3.5.0+): a searchable list, Overview / Request / Response, and text or JSON export, opened from your debug menu. See the [iOS guide](https://easyhooon.github.io/dari/docs/ios#in-app-inspector). The rest of this section shows Android's.
 
-Android apps also get an inspector on the device, Chucker-style: a live notification of recent bridge activity, a searchable list with status, handler and tag filters, Overview / Request / Response tabs, per-handler response times, text or JSON export, shake-to-open, a launcher shortcut, and dark mode.
+Android apps also get an inspector on the device, inspired by [Chucker](https://github.com/ChuckerTeam/chucker): a live notification of recent bridge activity, a searchable list with status, handler and tag filters, Overview / Request / Response tabs, per-handler response times, text or JSON export, shake-to-open, a launcher shortcut, and dark mode.
 
 <p align="center">
   <img src="screenshots/demo.gif" width="300" alt="Dari demo: bridge calls, notification, message detail" />

@@ -9,9 +9,9 @@
 [![Documentation](https://img.shields.io/badge/docs-easyhooon.github.io%2Fdari-blue)](https://easyhooon.github.io/dari/ko/docs)
 [![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/easyhooon/dari?utm_source=readme&utm_medium=badge)
 
-**Dari**는 한국어 **"다리(bridge)"** 에서 이름을 따왔습니다. [Chucker](https://github.com/ChuckerTeam/chucker)에서 영감을 받은, Android·iOS 앱의 WebView 브릿지 통신을 실시간으로 검사하는 도구입니다.
+**Dari**는 한국어 **"다리(bridge)"** 에서 이름을 따왔습니다. Android·iOS 앱의 WebView 브릿지 통신을 실시간으로 검사하는 도구입니다.
 
-Chucker가 HTTP 트래픽을 가로채 보여 주듯, Dari는 웹 콘텐츠와 네이티브 코드 사이의 **WebView JavaScript 브릿지 메시지**를 캡처하고 시각화합니다. **Dari 데스크톱 앱**은 macOS, Windows, Linux에서 Android와 iOS 앱의 메시지를 모두 보여 줍니다. Android와 iOS 앱은 기기 안의 인스펙터로도 확인할 수 있습니다.
+Dari는 웹 콘텐츠와 네이티브 코드 사이의 **WebView JavaScript 브릿지 메시지**를 캡처해, 요청과 응답을 짝지어 보여 줍니다. **Dari 데스크톱 앱**은 macOS, Windows, Linux에서 Android와 iOS 앱의 메시지를 모두 보여 줍니다. Android와 iOS 앱은 기기 안의 인스펙터로도 확인할 수 있습니다.
 
 📥 **[데스크톱 앱 다운로드](https://easyhooon.github.io/dari/ko/download)** · 📖 **[문서](https://easyhooon.github.io/dari/ko/docs)** — 설정 가이드, 구성 레퍼런스, API 문서.
 
@@ -145,7 +145,7 @@ Simulator나 USB로 연결한 기기에서 앱을 실행하고, 같은 Mac에서
 
 iOS 앱도 `DariUI` 라이브러리(3.5.0+)로 기기에서 볼 수 있습니다. 검색되는 목록, 개요 / 요청 / 응답, 텍스트·JSON 내보내기를 지원하고, 앱의 디버그 메뉴에서 엽니다. [iOS 가이드](https://easyhooon.github.io/dari/ko/docs/ios#앱-내-인스펙터)를 참고하세요. 아래 내용은 Android 기준입니다.
 
-Android 앱은 Chucker처럼 기기 안에서도 인스펙터를 쓸 수 있습니다: 최근 브릿지 활동을 보여 주는 실시간 알림, 상태·핸들러·태그 필터와 검색을 지원하는 목록, 개요 / 요청 / 응답 탭, 핸들러별 응답 시간, 텍스트·JSON 내보내기, 흔들어 열기, 런처 바로가기, 다크 모드.
+Android 앱은 [Chucker](https://github.com/ChuckerTeam/chucker)에서 영감을 받은 기기 안 인스펙터도 쓸 수 있습니다: 최근 브릿지 활동을 보여 주는 실시간 알림, 상태·핸들러·태그 필터와 검색을 지원하는 목록, 개요 / 요청 / 응답 탭, 핸들러별 응답 시간, 텍스트·JSON 내보내기, 흔들어 열기, 런처 바로가기, 다크 모드.
 
 <p align="center">
   <img src="screenshots/demo.gif" width="300" alt="Dari 데모: 브릿지 호출, 알림, 메시지 상세" />
