@@ -1,0 +1,79 @@
+language = Objective-C
+compilerOpts = -fobjc-arc
+package = com.easyhooon.dari.kmp.fakes
+---
+#import <Foundation/Foundation.h>
+#import <objc/runtime.h>
+
+// Test-only stand-ins for the Swift SDK's DariObjC / DariObjCInterceptor, registered at runtime because
+// cinterop can't compile @implementation. Each call is recorded as one line on the receiving object.
+static inline void dari_kmp_fake_record(id self, NSString *line) {
+    SEL key = sel_registerName("dariKmpFakeCalls");
+    NSMutableArray *calls = objc_getAssociatedObject(self, key);
+    if (calls == nil) {
+        calls = [NSMutableArray new];
+        objc_setAssociatedObject(self, key, calls, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    [calls addObject:line];
+}
+
+static void dari_kmp_fake_onPageUrlChanged(id self, SEL _cmd, NSString *url) {
+    dari_kmp_fake_record(self, [NSString stringWithFormat:@"page %@", url]);
+}
+
+static void dari_kmp_fake_onWebToAppRequest(id self, SEL _cmd, NSString *handlerName, NSString *displayName, NSString *requestId, NSString *requestData, NSNumber *fireAndForget) {
+    dari_kmp_fake_record(self, [NSString stringWithFormat:@"w2aReq %@ %@ %@ %@ %@", handlerName, displayName, requestId, requestData, fireAndForget]);
+}
+
+static void dari_kmp_fake_onWebToAppResponse(id self, SEL _cmd, NSString *handlerName, NSString *requestId, NSString *responseData, BOOL isSuccess) {
+    dari_kmp_fake_record(self, [NSString stringWithFormat:@"w2aRes %@ %@ %@ %d", handlerName, requestId, responseData, isSuccess]);
+}
+
+static void dari_kmp_fake_onAppToWebRequest(id self, SEL _cmd, NSString *handlerName, NSString *displayName, NSString *requestId, NSString *data, NSNumber *fireAndForget) {
+    dari_kmp_fake_record(self, [NSString stringWithFormat:@"a2wReq %@ %@ %@ %@ %@", handlerName, displayName, requestId, data, fireAndForget]);
+}
+
+static void dari_kmp_fake_onAppToWebResponse(id self, SEL _cmd, NSString *requestId, BOOL isSuccess, NSString *responseData) {
+    dari_kmp_fake_record(self, [NSString stringWithFormat:@"a2wRes %@ %d %@", requestId, isSuccess, responseData]);
+}
+
+static id dari_kmp_fake_interceptorWithTag(id self, SEL _cmd, NSString *tag) {
+    id interceptor = [NSClassFromString(@"DariKmpFakeInterceptor") new];
+    objc_setAssociatedObject(interceptor, sel_registerName("dariKmpFakeTag"), tag, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    return interceptor;
+}
+
+static inline Class dari_kmp_fake_interceptor_class(const char *name, BOOL withAppToWebResponse) {
+    Class cls = objc_allocateClassPair([NSObject class], name, 0);
+    class_addMethod(cls, sel_registerName("onPageUrlChanged:"), (IMP)dari_kmp_fake_onPageUrlChanged, "v@:@");
+    class_addMethod(cls, sel_registerName("onWebToAppRequestWithHandlerName:displayName:requestId:requestData:fireAndForget:"), (IMP)dari_kmp_fake_onWebToAppRequest, "v@:@@@@@");
+    class_addMethod(cls, sel_registerName("onWebToAppResponseWithHandlerName:requestId:responseData:isSuccess:"), (IMP)dari_kmp_fake_onWebToAppResponse, "v@:@@@B");
+    class_addMethod(cls, sel_registerName("onAppToWebRequestWithHandlerName:displayName:requestId:data:fireAndForget:"), (IMP)dari_kmp_fake_onAppToWebRequest, "v@:@@@@@");
+    if (withAppToWebResponse) {
+        class_addMethod(cls, sel_registerName("onAppToWebResponseWithRequestId:isSuccess:responseData:"), (IMP)dari_kmp_fake_onAppToWebResponse, "v@:@B@");
+    }
+    objc_registerClassPair(cls);
+    return cls;
+}
+
+// DariKmpFakeFactory / DariKmpFakeInterceptor match the current SDK. DariKmpFakeOldFactory (no
+// interceptorWithTag:) and DariKmpFakeOldInterceptor (no onAppToWebResponse...) stand in for an older one.
+static inline void dari_kmp_fakes_register(void) {
+    if (NSClassFromString(@"DariKmpFakeFactory") != nil) return;
+    dari_kmp_fake_interceptor_class("DariKmpFakeInterceptor", YES);
+    dari_kmp_fake_interceptor_class("DariKmpFakeOldInterceptor", NO);
+
+    Class factory = objc_allocateClassPair([NSObject class], "DariKmpFakeFactory", 0);
+    class_addMethod(object_getClass(factory), sel_registerName("interceptorWithTag:"), (IMP)dari_kmp_fake_interceptorWithTag, "@@:@");
+    objc_registerClassPair(factory);
+
+    objc_registerClassPair(objc_allocateClassPair([NSObject class], "DariKmpFakeOldFactory", 0));
+}
+
+static inline NSArray *dari_kmp_fake_calls(id target) {
+    return objc_getAssociatedObject(target, sel_registerName("dariKmpFakeCalls")) ?: @[];
+}
+
+static inline NSString *dari_kmp_fake_tag(id target) {
+    return objc_getAssociatedObject(target, sel_registerName("dariKmpFakeTag"));
+}

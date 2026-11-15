@@ -8,12 +8,12 @@ import platform.Foundation.NSLog
 
 // Resolved once; the linked Swift SDK can't change while the app runs.
 @OptIn(ExperimentalForeignApi::class)
-private val swiftSdkReady: Boolean by lazy {
-    when (dari_kmp_status()) {
-        0 -> true
-        1 -> false.also { NSLog("Dari: DariObjC not found. Link the Dari Swift package, from the same release as dari-kmp or newer.") }
-        else -> false.also { NSLog("Dari: the linked Dari Swift package is older than dari-kmp. Update it.") }
-    }
+private val swiftSdkReady: Boolean by lazy { isSwiftSdkReady(dari_kmp_status()) }
+
+internal fun isSwiftSdkReady(status: Int): Boolean = when (status) {
+    0 -> true
+    1 -> false.also { NSLog("Dari: DariObjC not found. Link the Dari Swift package, from the same release as dari-kmp or newer.") }
+    else -> false.also { NSLog("Dari: the linked Dari Swift package is older than dari-kmp. Update it.") }
 }
 
 @OptIn(ExperimentalForeignApi::class)

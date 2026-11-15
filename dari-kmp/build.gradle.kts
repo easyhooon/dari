@@ -40,6 +40,8 @@ kotlin {
     listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach { target ->
         // Declares DariObjC's selectors only; nothing from the Swift SDK is linked.
         target.compilations.getByName("main").cinterops.create("dariObjC")
+        // Fake DariObjC classes for iosTest; never published.
+        target.compilations.getByName("test").cinterops.create("dariObjCFakes")
     }
 
     sourceSets {
