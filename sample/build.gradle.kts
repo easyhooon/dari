@@ -129,6 +129,8 @@ dependencies {
     debugImplementation(project(":dari"))
     releaseImplementation(project(":dari-noop"))
     "stagingImplementation"(project(":dari"))
+    // dari-kmp sample: commonMain code that records through whichever of dari / dari-noop is above.
+    implementation(project(":sample-kmp"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

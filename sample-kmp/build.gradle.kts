@@ -1,9 +1,17 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
 }
 
-// iOS-only shared framework for the dari-kmp PoC; sample-ios links it when built with the overrides in its README.
+// Shared module of the dari-kmp sample: `sample` depends on it on Android, and sample-ios links its
+// framework when built with the overrides in its README.
 kotlin {
+    android {
+        namespace = "com.easyhooon.dari.sample.kmp"
+        compileSdk = 36
+        minSdk = 26
+    }
+
     listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach { target ->
         target.binaries.framework {
             baseName = "DariKmpSample"
