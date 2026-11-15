@@ -1,0 +1,85 @@
+---
+title: Kotlin Multiplatform
+description: commonMain에 둔 브릿지를 Android와 iOS에서 기록합니다
+---
+
+`dari-kmp`는 `commonMain`에 WebView 브릿지를 둔 Kotlin Multiplatform 앱을 위한 단일 진입점입니다. Android에서는 `dari`(release 빌드에서는 `dari-noop`)에 위임합니다. iOS에서는 [Dari Swift 패키지](./ios)로 넘기고, Swift 패키지가 메시지를 기록해 [데스크톱 앱](./desktop)으로 보냅니다.
+
+<Callout>
+iOS 쪽은 Swift 패키지를 실행 중에 찾기 때문에, `dari-kmp`가 Swift 패키지를 링크하지 않습니다. `dari-kmp`와 같은 Dari 릴리스 이상의 Swift 패키지를 쓰세요. 패키지가 없거나 더 오래된 버전이면 `createInterceptor`는 크래시 대신 `null`을 반환하고 로그를 한 번 남깁니다.
+</Callout>
+
+## 설치
+
+공유 모듈의 `build.gradle.kts`에 추가합니다.
+
+```kotlin
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation("io.github.easyhooon:dari-kmp:{{DARI_VERSION}}")
+        }
+    }
+}
+```
+
+Android 앱 모듈에는 일반 Android 앱과 같은 의존성을 추가합니다([설정](./setup)).
+
+```kotlin
+dependencies {
+    debugImplementation("io.github.easyhooon:dari:{{DARI_VERSION}}")
+    releaseImplementation("io.github.easyhooon:dari-noop:{{DARI_VERSION}}")
+}
+```
+
+`dari-kmp`는 이 API에 컴파일 시점에만 의존합니다. 그래서 실제로 무엇이 실행될지는 앱이 고른 의존성이 정합니다. 둘 다 추가하세요. 없으면 R8이 `com.easyhooon.dari.Dari`가 없다고 보고하고, minify하지 않은 빌드에서는 `createInterceptor`가 `null`을 반환하고 경고 로그를 남깁니다.
+
+iOS 앱에는 **Dari** Swift 패키지를 추가하고, debug 빌드에서 `Dari.shared.start()`를 호출합니다([iOS 시작하기](./ios)).
+
+## 브릿지 연결
+
+```kotlin
+import com.easyhooon.dari.kmp.DariKmp
+
+class SharedBridge {
+    private val interceptor = DariKmp.createInterceptor(tag = "MyBridge")
+
+    fun onRequest(handlerName: String, requestId: String, data: String?) {
+        interceptor?.onWebToAppRequest(handlerName, requestId, data)
+        // ...
+    }
+
+    fun sendResponse(handlerName: String, requestId: String, isSuccess: Boolean, data: String) {
+        interceptor?.onWebToAppResponse(handlerName, requestId, data, isSuccess)
+        // ...
+    }
+}
+```
+
+인터셉터는 Android와 같은 `DariInterceptor`입니다([인터셉터](./interceptor)). `onPageUrlChanged`와 표시 이름도 그대로 씁니다. WebView마다 인터셉터를 하나씩 쓰세요.
+
+## 지원 타깃
+
+`dari-kmp`는 Android, iOS(`iosArm64`, `iosSimulatorArm64`, `iosX64`), JVM을 지원합니다. Compose Multiplatform 앱의 데스크톱 타깃 같은 JVM에서는 `createInterceptor`가 `null`을 반환합니다.
+
+## Release 빌드
+
+- **Android:** `dari-noop`이 `null`을 반환하므로 safe call은 아무 일도 하지 않습니다.
+- **iOS:** `Dari.shared.start()`를 부르지 않으면 Swift 패키지가 모든 호출을 무시합니다. App Store 빌드에서는 `start()`를 빼세요.
+
+## 제한
+
+- iOS에서는 protobuf 페이로드를 넘기지 않습니다. `createInterceptor`는 일반 `DariInterceptor`를 반환합니다. protobuf는 Swift 패키지의 인터셉터로 Swift에서 기록하세요.
+- Swift 파일 하나에서 Dari 패키지와 `dari-core`를 export하는 Kotlin 프레임워크를 함께 import하면 `DariInterceptor`라는 이름이 모호해집니다. 그 파일에 `import class Dari.DariInterceptor`를 쓰세요. `Dari.DariInterceptor`는 `Dari` 클래스가 모듈 이름을 가려서 동작하지 않습니다.
+
+## 동작 방식
+
+Swift 패키지는 작은 Objective-C 진입점인 `DariObjC`를 제공합니다. `dari-kmp`는 라이브러리를 링크하지 않는 cinterop 정의로 여기에 닿습니다. 먼저 `NSClassFromString`으로 클래스와, 호출할 메서드가 모두 있는지 확인한 뒤 Objective-C 메시지를 보냅니다. 설계, 다른 방식과의 비교, Kotlin Swift export 전망은 [docs/kmp-swift-bridge.ko.md](https://github.com/easyhooon/dari/blob/main/docs/kmp-swift-bridge.ko.md)에 있습니다.
+
+## 참고 자료
+
+- [C, Objective-C, and Swift library import](https://kotlinlang.org/docs/native-lib-import-stability.html): Kotlin/Native는 순수 Swift 라이브러리를 import하지 못합니다
+- [Interoperability with Swift/Objective-C](https://kotlinlang.org/docs/native-objc-interop.html)
+- [Definition file](https://kotlinlang.org/docs/native-definition-file.html)
+- [Swift export](https://kotlinlang.org/docs/native-swift-export.html)
+- [SwiftPM import](https://kotlinlang.org/docs/multiplatform/multiplatform-spm-import.html)

@@ -1,0 +1,85 @@
+---
+title: Kotlin Multiplatform
+description: Record a bridge kept in commonMain on Android and iOS
+---
+
+`dari-kmp` gives Kotlin Multiplatform apps one entry point for a WebView bridge kept in `commonMain`. On Android it delegates to `dari` (or `dari-noop` in release builds). On iOS it forwards to the [Dari Swift package](./ios), which records the messages and serves them to the [desktop app](./desktop).
+
+<Callout>
+The iOS side finds the Swift package at runtime, so `dari-kmp` never links it. Use a Swift package from the same Dari release as `dari-kmp` or newer. When the package is missing or older, `createInterceptor` returns `null` and logs once instead of crashing.
+</Callout>
+
+## Install
+
+In the shared module's `build.gradle.kts`:
+
+```kotlin
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation("io.github.easyhooon:dari-kmp:{{DARI_VERSION}}")
+        }
+    }
+}
+```
+
+In the Android app module, as for any Android app ([Setup](./setup)):
+
+```kotlin
+dependencies {
+    debugImplementation("io.github.easyhooon:dari:{{DARI_VERSION}}")
+    releaseImplementation("io.github.easyhooon:dari-noop:{{DARI_VERSION}}")
+}
+```
+
+`dari-kmp` only compiles against this API, so the app's choice decides what runs. Add both: without them, R8 reports `com.easyhooon.dari.Dari` as missing, and a build without minification returns `null` from `createInterceptor` and logs a warning.
+
+In the iOS app, add the **Dari** Swift package and call `Dari.shared.start()` in debug builds ([iOS getting started](./ios)).
+
+## Connect your bridge
+
+```kotlin
+import com.easyhooon.dari.kmp.DariKmp
+
+class SharedBridge {
+    private val interceptor = DariKmp.createInterceptor(tag = "MyBridge")
+
+    fun onRequest(handlerName: String, requestId: String, data: String?) {
+        interceptor?.onWebToAppRequest(handlerName, requestId, data)
+        // ...
+    }
+
+    fun sendResponse(handlerName: String, requestId: String, isSuccess: Boolean, data: String) {
+        interceptor?.onWebToAppResponse(handlerName, requestId, data, isSuccess)
+        // ...
+    }
+}
+```
+
+The interceptor is the same `DariInterceptor` as on Android ([Interceptor](./interceptor)), including `onPageUrlChanged` and display names. Use one interceptor per WebView.
+
+## Targets
+
+`dari-kmp` supports Android, iOS (`iosArm64`, `iosSimulatorArm64`, `iosX64`) and JVM. On JVM, such as the desktop target of a Compose Multiplatform app, `createInterceptor` returns `null`.
+
+## Release builds
+
+- **Android:** `dari-noop` returns `null`, so the safe calls do nothing.
+- **iOS:** without `Dari.shared.start()`, the Swift package ignores every call. Leave `start()` out of App Store builds.
+
+## Limits
+
+- Protobuf payloads aren't bridged on iOS. `createInterceptor` returns a plain `DariInterceptor`; record protobuf from Swift with the Swift package's interceptor.
+- If a Swift file imports both the Dari package and a Kotlin framework that exports `dari-core`, the name `DariInterceptor` is ambiguous. Write `import class Dari.DariInterceptor` in that file. `Dari.DariInterceptor` doesn't work, because the class `Dari` hides the module name.
+
+## How it works
+
+The Swift package exposes `DariObjC`, a small Objective-C entry point. `dari-kmp` reaches it through a cinterop definition with no linked library: it checks with `NSClassFromString` that the class and every method it calls exist, then sends Objective-C messages to it. The design, the alternatives, and the outlook for Kotlin's Swift export are in [docs/kmp-swift-bridge.md](https://github.com/easyhooon/dari/blob/main/docs/kmp-swift-bridge.md).
+
+## References
+
+- [C, Objective-C, and Swift library import](https://kotlinlang.org/docs/native-lib-import-stability.html): Kotlin/Native can't import pure Swift libraries
+- [Interoperability with Swift/Objective-C](https://kotlinlang.org/docs/native-objc-interop.html)
+- [Definition file](https://kotlinlang.org/docs/native-definition-file.html)
+- [Swift export](https://kotlinlang.org/docs/native-swift-export.html)
+- [SwiftPM import](https://kotlinlang.org/docs/multiplatform/multiplatform-spm-import.html)
