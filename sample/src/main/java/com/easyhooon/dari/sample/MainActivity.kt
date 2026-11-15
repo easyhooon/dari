@@ -24,6 +24,7 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.lifecycleScope
 import com.easyhooon.dari.Dari
 import com.easyhooon.dari.interceptor.protobufDecoder
+import com.easyhooon.dari.sample.kmp.SharedBridge
 import com.google.protobuf.StringValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -72,6 +73,8 @@ class MainActivity : ComponentActivity() {
             },
         )
         enableEdgeToEdge()
+        // dari-kmp sample: Kotlin commonMain code records with tag "kmp" (nothing on dari-noop). See sample-kmp.
+        SharedBridge().simulateTraffic(pageUrl = "https://example.com/kmp?token=1")
 
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
