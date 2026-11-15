@@ -1,5 +1,8 @@
 import DariMacros
 import DariUI
+#if canImport(DariKmpSample)
+import DariKmpSample
+#endif
 import SwiftUI
 
 @main
@@ -24,6 +27,10 @@ struct DariSampleApp: App {
         } catch {
             print("Dari could not start: \(error)")
         }
+        #if canImport(DariKmpSample)
+        // dari-kmp PoC: Kotlin commonMain code records through the Swift SDK. See sample-kmp.
+        SharedBridge().simulateTraffic(pageUrl: "https://example.com/kmp?token=1")
+        #endif
         #endif
     }
 
