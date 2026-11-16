@@ -58,6 +58,7 @@ curl -fsSL https://raw.githubusercontent.com/easyhooon/dari/main/scripts/install
 | Web → App / App → Web 캡처 | ✅ | ✅ |
 | 태그, `displayName`, fire-and-forget, 페이지 URL, 환경 라벨 | ✅ | ✅ |
 | 직접 호출 없이 캡처 | Gradle 플러그인(2.6.0+) | `autoCapture`(3.1.0+) 또는 `@DariBridge` 매크로(3.2.0+) |
+| Kotlin Multiplatform(`commonMain`의 브릿지) | ✅ `dari-kmp`(3.7.0+), `dari`로 동작 | ✅ `dari-kmp`(3.7.0+), Swift 패키지로 동작. Protocol Buffers 미지원 |
 | 앱 내 인스펙터(목록, 상세, 알림, 흔들어 열기, 런처 바로가기) | ✅ | △ 목록, 상세, 검색, 내보내기. 디버그 메뉴에서 열기 |
 | 데스크톱 앱 | ✅ adb로 기기·에뮬레이터 연결, macOS·Windows·Linux | ✅ Simulator·USB 기기, macOS 전용 |
 | 민감 정보 마스킹 | ✅ 앱 내, 데스크톱 | ✅ 앱 내, 데스크톱. 데스크톱용 직접 규칙(`setPayloadRedactor`) 포함 |
@@ -130,6 +131,23 @@ func userContentController(_ controller: WKUserContentController, didReceive mes
 
 Simulator나 USB로 연결한 기기에서 앱을 실행하고, 같은 Mac에서 데스크톱 앱을 여세요. 직접 호출 없이 기록하려면 `start()`에 `autoCapture`(3.1.0+)를 넘기거나, `DariMacros`의 `@DariBridge`(3.2.0+)로 핸들러를 표시하세요. Mac 없이 기기에서 바로 보려면 `DariUI`도 연결하고 `Dari.shared.presentInspector()`를 호출하세요(3.5.0+).
 
+### Kotlin Multiplatform
+
+브릿지가 `commonMain`에 있다면 공유 모듈에 `dari-kmp`(3.7.0+)를 추가하고, Android와 iOS 앱은 위와 같이 설정하세요:
+
+```kotlin
+// shared/build.gradle.kts
+commonMain.dependencies {
+    implementation("io.github.easyhooon:dari-kmp:<latest-version>")
+}
+```
+
+```kotlin
+private val interceptor = DariKmp.createInterceptor(tag = "main")
+```
+
+인터셉터는 Android와 같은 `DariInterceptor`입니다. iOS에서는 런타임에 찾은 Swift 패키지로 호출을 넘기고, 패키지가 없으면 `null`을 반환합니다. 자세한 내용은 [Kotlin Multiplatform 가이드](https://easyhooon.github.io/dari/ko/docs/kmp)를 보세요.
+
 ## 가이드
 
 | | Android | iOS |
@@ -137,6 +155,7 @@ Simulator나 USB로 연결한 기기에서 앱을 실행하고, 같은 Mac에서
 | 설정 | [설정](https://easyhooon.github.io/dari/ko/docs/setup) | [iOS 가이드](https://easyhooon.github.io/dari/ko/docs/ios) |
 | 직접 호출 없이 캡처 | [Gradle 플러그인](https://easyhooon.github.io/dari/ko/docs/gradle-plugin) | [자동 수집](https://easyhooon.github.io/dari/ko/docs/ios/capture#자동-수집), [매크로](https://easyhooon.github.io/dari/ko/docs/ios/capture#매크로로-컴파일-시점-수집) |
 | API | [인터셉터](https://easyhooon.github.io/dari/ko/docs/interceptor), [구성과 런타임 API](https://easyhooon.github.io/dari/ko/docs/configuration) | [iOS 가이드](https://easyhooon.github.io/dari/ko/docs/ios/capture#브릿지-호출-기록) |
+| Kotlin Multiplatform | [Kotlin Multiplatform](https://easyhooon.github.io/dari/ko/docs/kmp) | [Kotlin Multiplatform](https://easyhooon.github.io/dari/ko/docs/kmp) |
 | 더 보기 | [Protocol Buffers](https://easyhooon.github.io/dari/ko/docs/protobuf), [앱 내 인스펙터](https://easyhooon.github.io/dari/ko/docs/inspector), [모듈](https://easyhooon.github.io/dari/ko/docs/modules) | [앱 내 인스펙터](https://easyhooon.github.io/dari/ko/docs/ios#앱-내-인스펙터), [Staging 빌드](https://easyhooon.github.io/dari/ko/docs/ios/connection#staging-빌드), [문제 해결](https://easyhooon.github.io/dari/ko/docs/ios/connection#문제-해결) |
 
 두 플랫폼 공통: [데스크톱 앱](https://easyhooon.github.io/dari/ko/docs/desktop) · [마스킹](https://easyhooon.github.io/dari/ko/docs/masking)
@@ -188,6 +207,7 @@ Android 앱은 [Chucker](https://github.com/ChuckerTeam/chucker)에서 영감을
 
 - `sample/`(Android): 앱/기기 정보, 토스트, 햅틱, 공유 시트, 클립보드, 앱 설정, 카메라 권한 시나리오를 담은 WebView 데모. Gradle 플러그인으로 브릿지를 캡처합니다.
 - `sample-ios/`(iOS): 성공, 에러, 느린 응답, 무응답, fire-and-forget, 마스킹 시나리오를 담은 WKWebView 데모. `@DariBridge`로 브릿지를 캡처합니다. Xcode 16 이상에서 열고 Simulator에서 **DariSample** 스킴을 실행하세요.
+- `sample-kmp/`(Kotlin Multiplatform): `dari-kmp`로 기록하는 `commonMain` 브릿지. Android에서는 `sample`이 실행하고, iOS에서는 `sample-kmp/run-on-simulator.sh`로 실행합니다.
 
 <p align="center">
   <img src="screenshots/ios_sample.jpeg" width="270" alt="Dari iOS 샘플 앱" />
