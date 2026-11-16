@@ -206,6 +206,7 @@ debuggable이 아닌 빌드는 위의 `ALLOW_NON_DEBUGGABLE`도 함께 넣어야
 | Wi-Fi 페어링에서 아무것도 찾지 못함 | 일부 네트워크는 기기 검색(mDNS)을 막습니다. 휴대폰의 페어링 코드 화면에 표시된 주소와 코드를 직접 입력합니다. macOS에서 Android Studio가 adb를 시작했다면 `ADB_MDNS_OPENSCREEN=0`으로 adb를 다시 시작하면 도움이 될 수 있습니다. macOS에서 Dari가 직접 adb를 시작할 때는 이 값을 설정합니다. |
 | "Paired, but the device didn't connect" | 무선 디버깅을 껐다 켜고 몇 초 기다린 뒤 다시 시도합니다. |
 | App is in the background | Android는 백그라운드 앱을 일시 정지합니다. 앱을 화면 맨 앞에 띄우면 Dari가 다시 연결합니다. |
+| 상세가 "Select a message"에서 바뀌지 않음 | 목록은 실시간 스트림으로 채워지지만, 요청·응답 본문은 메시지를 클릭할 때 앱에서 가져옵니다. 백그라운드 앱은 일시 정지돼 응답하지 못할 수 있습니다. 앱을 화면 맨 앞에 띄운 뒤 메시지를 다시 클릭합니다. |
 | Not running Dari | 앱이 `dari` 2.0.0 이상을 쓰는 debuggable 빌드인지 확인합니다. |
 
 문제를 알리려면 **Help → Report an Issue…**를 누릅니다. Dari 버전과 OS가 채워진 버그 양식이 열립니다. 기능 제안은 **Help → Suggest a Feature…**를 누릅니다. **Help → Show Log File**은 `dari.log`가 있는 폴더를 엽니다(macOS `~/Library/Logs/Dari`, Windows `%LOCALAPPDATA%\easyhooon\Dari\logs`, Linux `~/.local/state/dari`). 로그에는 시작 시 버전, 크래시 리포트 설정 변경, 오류만 기록되고 메시지 내용은 남지 않습니다.

@@ -4,6 +4,7 @@
 
 - Do NOT include `Co-Authored-By` lines referencing Claude in commit messages.
 - Do NOT include "Generated with Claude Code" or similar AI attribution in PR descriptions.
+- Do NOT use a `claude/` branch prefix. Name branches `<type>/<short-kebab-description>` with a Conventional Commits type that matches the change: `feat/`, `fix/`, `docs/`, `refactor/`, `perf/`, `test/`, `build/`, `ci/`, or `chore/`. New worktrees start on `feat/` by default; if that isn't the right type (or the branch is `claude/`), rename it before pushing.
 - **Keep commit messages compact.** Subject ≤ 72 chars. Body only when the "why" isn't obvious from the diff — 1–3 short lines, no multi-paragraph essays. Don't restate what the diff already shows.
 
 ## Code Style
