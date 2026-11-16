@@ -58,6 +58,7 @@ See the [Desktop App guide](https://easyhooon.github.io/dari/docs/desktop) for r
 | Web → App / App → Web capture | ✅ | ✅ |
 | Tags, `displayName`, fire-and-forget, page URL, environment labels | ✅ | ✅ |
 | Capture without manual calls | Gradle plugin (2.6.0+) | `autoCapture` (3.1.0+) or `@DariBridge` macro (3.2.0+) |
+| Kotlin Multiplatform (bridge in `commonMain`) | ✅ `dari-kmp` (3.7.0+), runs on `dari` | ✅ `dari-kmp` (3.7.0+), runs on the Swift package. No Protocol Buffers |
 | In-app inspector (list, detail, notification, shake-to-open, launcher shortcut) | ✅ | △ List, detail, search and export, opened from your debug menu |
 | Desktop App | ✅ Device or emulator over adb, on macOS, Windows and Linux | ✅ Simulator or USB device, macOS only |
 | Masking of sensitive values | ✅ In-app and desktop | ✅ In-app and desktop, plus your own rules for the desktop (`setPayloadRedactor`) |
@@ -130,6 +131,23 @@ func userContentController(_ controller: WKUserContentController, didReceive mes
 
 Run the app in a Simulator or on a USB-attached device and open the Desktop App on the same Mac. To skip the manual calls, pass `autoCapture` (3.1.0+) to `start()` or mark the handler with `@DariBridge` from `DariMacros` (3.2.0+). To check messages on the device without a Mac, also link `DariUI` and call `Dari.shared.presentInspector()` (3.5.0+).
 
+### Kotlin Multiplatform
+
+For a bridge in `commonMain`, add `dari-kmp` (3.7.0+) to the shared module, then set up the Android and iOS apps as above:
+
+```kotlin
+// shared/build.gradle.kts
+commonMain.dependencies {
+    implementation("io.github.easyhooon:dari-kmp:<latest-version>")
+}
+```
+
+```kotlin
+private val interceptor = DariKmp.createInterceptor(tag = "main")
+```
+
+The interceptor is the same `DariInterceptor` as on Android. On iOS it forwards to the Swift package found at runtime, and returns `null` when the package is missing. See the [Kotlin Multiplatform guide](https://easyhooon.github.io/dari/docs/kmp).
+
 ## Guides
 
 | | Android | iOS |
@@ -137,6 +155,7 @@ Run the app in a Simulator or on a USB-attached device and open the Desktop App 
 | Setup | [Setup](https://easyhooon.github.io/dari/docs/setup) | [iOS guide](https://easyhooon.github.io/dari/docs/ios) |
 | Capture without manual calls | [Gradle plugin](https://easyhooon.github.io/dari/docs/gradle-plugin) | [Automatic capture](https://easyhooon.github.io/dari/docs/ios/capture#automatic-capture), [Macros](https://easyhooon.github.io/dari/docs/ios/capture#compile-time-capture-with-macros) |
 | API | [Interceptor](https://easyhooon.github.io/dari/docs/interceptor), [Configuration and runtime API](https://easyhooon.github.io/dari/docs/configuration) | [iOS guide](https://easyhooon.github.io/dari/docs/ios/capture#record-bridge-calls) |
+| Kotlin Multiplatform | [Kotlin Multiplatform](https://easyhooon.github.io/dari/docs/kmp) | [Kotlin Multiplatform](https://easyhooon.github.io/dari/docs/kmp) |
 | More | [Protocol Buffers](https://easyhooon.github.io/dari/docs/protobuf), [In-app inspector](https://easyhooon.github.io/dari/docs/inspector), [Modules](https://easyhooon.github.io/dari/docs/modules) | [In-app inspector](https://easyhooon.github.io/dari/docs/ios#in-app-inspector), [Staging builds](https://easyhooon.github.io/dari/docs/ios/connection#staging-builds), [Troubleshooting](https://easyhooon.github.io/dari/docs/ios/connection#troubleshooting) |
 
 Both platforms: [Desktop App](https://easyhooon.github.io/dari/docs/desktop) · [Masking](https://easyhooon.github.io/dari/docs/masking)
@@ -188,6 +207,7 @@ Android apps also get an inspector on the device, inspired by [Chucker](https://
 
 - `sample/` (Android): a WebView demo with app/device info, toast, haptics, share sheet, clipboard, app settings and camera permission scenarios. It captures its bridge with the Gradle plugin.
 - `sample-ios/` (iOS): a WKWebView demo with success, error, slow, no-response, fire-and-forget and masking scenarios. It captures its bridge with `@DariBridge`. Open it in Xcode 16 or later and run the **DariSample** scheme on a Simulator.
+- `sample-kmp/` (Kotlin Multiplatform): a `commonMain` bridge that records through `dari-kmp`. `sample` runs it on Android; on iOS, run `sample-kmp/run-on-simulator.sh`.
 
 <p align="center">
   <img src="screenshots/ios_sample.jpeg" width="270" alt="Dari iOS sample app" />
