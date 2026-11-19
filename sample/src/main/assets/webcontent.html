@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dari WebContent Sample</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, Roboto, sans-serif; padding: 24px 16px; background: #f5f5f5; }
+        h1 { font-size: 20px; margin-bottom: 4px; color: #2D6AB1; }
+        .subtitle { font-size: 13px; color: #888; margin-bottom: 16px; }
+        .state { background: #fff; border-radius: 10px; padding: 12px; font-size: 13px; margin-bottom: 12px; line-height: 1.6; }
+        .btn { display: block; width: 100%; padding: 14px 16px; margin-bottom: 8px; border: none; border-radius: 10px;
+               font-size: 14px; font-weight: 600; color: white; text-align: left; background: #2196F3; }
+        .btn span { display: block; font-size: 11px; font-weight: 400; opacity: 0.8; margin-top: 2px; }
+        .btn-teal { background: #009688; }
+        .btn-orange { background: #FF9800; }
+        #log { margin-top: 12px; padding: 12px; background: #fff; border-radius: 10px; font: 11px/1.6 monospace;
+               max-height: 220px; overflow-y: auto; color: #333; }
+        #log .res { color: #4CAF50; } #log .err { color: #F44336; } #log .req { color: #2196F3; } #log .evt { color: #9C27B0; }
+    </style>
+</head>
+<body>
+    <h1>WebContent Sample</h1>
+    <p class="subtitle">androidx.web engine kept in a ViewModel. Rotate to re-attach the page to a new view.</p>
+
+    <div class="state">
+        JS counter: <b id="counter">0</b> (survives rotation if the engine is kept)<br>
+        Bridge: <b id="bridge">?</b><br>
+        Path: <b id="path"></b>
+    </div>
+
+    <button class="btn" onclick="call('ping')">ping<span>Request → response right away</span></button>
+    <button class="btn btn-orange" onclick="call('delayedPing')">delayedPing<span>Responds after 5s — rotate meanwhile</span></button>
+    <button class="btn btn-teal" onclick="navigate()">pushState<span>Changes the page URL without a reload</span></button>
+
+    <div id="log"></div>
+
+    <script>
+        let counter = 0;
+        let seq = 0;
+        const pending = {};
+
+        function refresh() {
+            document.getElementById('counter').textContent = counter;
+            document.getElementById('bridge').textContent = typeof window.WebContentBridge;
+            document.getElementById('path').textContent = location.pathname.split('/').pop() + location.search;
+        }
+
+        function log(cls, text) {
+            const el = document.getElementById('log');
+            el.insertAdjacentHTML('afterbegin', `<div class="${cls}">${new Date().toLocaleTimeString()} ${text}</div>`);
+        }
+
+        function call(handler) {
+            counter++;
+            const id = `req_${++seq}`;
+            pending[id] = handler;
+            refresh();
+            if (typeof window.WebContentBridge === 'undefined') {
+                log('err', `${handler} ${id}: WebContentBridge is gone`);
+                return;
+            }
+            log('req', `→ ${handler} ${id}`);
+            WebContentBridge.request(handler, id, JSON.stringify({ counter }));
+        }
+
+        function onBridgeResponse(id, success, data) {
+            log(success ? 'res' : 'err', `← ${pending[id] || '?'} ${id} ${data}`);
+            delete pending[id];
+        }
+
+        function onAppEvent(handler, data) {
+            refresh();
+            log('evt', `⇠ ${handler} ${JSON.stringify(data)}`);
+        }
+
+        function navigate() {
+            history.pushState({}, '', `?step=${++counter}`);
+            refresh();
+            log('evt', `pushState ${location.search}`);
+        }
+
+        refresh();
+    </script>
+</body>
+</html>
