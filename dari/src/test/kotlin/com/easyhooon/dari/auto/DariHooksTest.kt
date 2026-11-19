@@ -1,5 +1,6 @@
 package com.easyhooon.dari.auto
 
+import android.app.Activity
 import android.content.Context
 import android.webkit.WebView
 import androidx.test.core.app.ApplicationProvider
@@ -14,6 +15,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -180,6 +182,34 @@ class DariHooksTest {
         assertEquals(2, created.size)
         assertEquals(listOf("Android w2a-req a null 1 null null"), created[0].calls)
         assertEquals(listOf("Android url https://two", "Android w2a-req b null 2 null null"), created[1].calls)
+    }
+
+    @Test
+    fun `a page moved to a new view keeps its bridge and follows the new URL`() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val bridge = Any()
+        val firstView = WebView(activity)
+        activity.setContentView(firstView)
+        DariHooks.addJavascriptInterface(firstView, bridge, "Android")
+        DariHooks.onVisitedHistory(firstView, "https://page")
+        DariHooks.onMappedCall(REQUEST, bridge, arrayOf("a", "1", null))
+
+        // Re-attach as WebContent does: same bridge, new view, no new addJavascriptInterface.
+        val secondView = WebView(activity)
+        activity.setContentView(secondView)
+        DariHooks.onVisitedHistory(secondView, "https://page?step=2")
+        DariHooks.onMappedCall(REQUEST, bridge, arrayOf("b", "2", null))
+
+        assertEquals(1, created.size)
+        assertEquals(
+            listOf(
+                "Android url https://page",
+                "Android w2a-req a null 1 null null",
+                "Android url https://page?step=2",
+                "Android w2a-req b null 2 null null",
+            ),
+            calls,
+        )
     }
 
     @Test

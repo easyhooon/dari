@@ -85,7 +85,7 @@ object DariHooks {
         if (webView == null) return
         try {
             synchronized(lock) {
-                val state = webViews.getOrPut(webView) { WebViewState(null) }
+                val state = webViews[webView] ?: adoptDetachedView(webView) ?: WebViewState(null).also { webViews[webView] = it }
                 state.pageUrl = url
                 state.interceptors.values.forEach { it.onPageUrlChanged(url) }
                 lastWebView = WeakReference(webView)
@@ -93,6 +93,19 @@ object DariHooks {
         } catch (t: Throwable) {
             Log.w(LOG_TAG, "Dari could not record the page URL", t)
         }
+    }
+
+    // Engines like androidx.web's WebContent move one page to a new view, keeping the bridge registered on
+    // the old one. A new attached view takes over the state and bridges of the single detached view.
+    private fun adoptDetachedView(webView: WebView): WebViewState? {
+        if (!webView.isAttachedToWindow) return null
+        val old = bridges.values.mapNotNull { it.webView.get() }.distinct()
+            .singleOrNull { it !== webView && !it.isAttachedToWindow } ?: return null
+        val state = webViews.remove(old) ?: return null
+        webViews[webView] = state
+        bridges.entries.filter { it.value.webView.get() === old }
+            .forEach { it.setValue(Registration(WeakReference(webView), it.value.name)) }
+        return state
     }
 
     private fun dispatch(mapping: BridgeMapping, values: Map<String, Any?>, receiver: Any?, args: Array<Any?>) {
