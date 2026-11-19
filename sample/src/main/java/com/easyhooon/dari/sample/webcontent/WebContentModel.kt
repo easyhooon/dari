@@ -85,6 +85,7 @@ class WebContentModel : ViewModel() {
     }
 
     inner class Bridge {
+        @Suppress("UnusedParameter") // data is read by the dari { } mapping.
         @JavascriptInterface
         fun request(handlerName: String, requestId: String, data: String?) {
             when (handlerName) {

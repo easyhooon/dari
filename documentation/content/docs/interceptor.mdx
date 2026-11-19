@@ -130,6 +130,14 @@ override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boole
 
 Requests captured afterwards store the URL without user info, query or fragment, which can carry credentials or tokens. Both inspectors show it in the detail view, add an origin filter once more than one origin appears, and scope Response Time stats to the picked origin. Exports include it as `page_url`. Use one interceptor per WebView so pages don't overwrite each other.
 
+## androidx.web `WebContent`
+
+With `androidx.web`'s `WebContent`, a page outlives its views: every `attach()` returns a new `WebContentView` for the same engine. Create the interceptor once next to the retained `WebContent` (for example in the same `ViewModel`), not once per view. Report the URL from the engine's `WebViewClient`, which survives re-attach.
+
+The Gradle plugin handles this as is: when a re-attached `WebContentView` reports its first URL, it takes over the previous view's interceptors and page URL.
+
+A response produced while no view is attached is still recorded as `SUCCESS`, even if the app drops it because it has no view to call `evaluateJavascript` on. Dari records the call, not its delivery.
+
 ## Fire-and-Forget
 
 One-way calls that never receive a response can be marked so they immediately resolve to `SUCCESS`:

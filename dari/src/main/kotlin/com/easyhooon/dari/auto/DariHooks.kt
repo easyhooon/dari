@@ -20,6 +20,7 @@ object DariHooks {
 
     private const val LOG_TAG = "Dari"
     private const val UNKNOWN_HANDLER = "unknown"
+    private const val WEB_CONTENT_VIEW = "androidx.web.WebContentView"
 
     // Requests that never get a response (e.g. a page that stops answering) must not pile up.
     private const val MAX_OPEN_REQUESTS = 500
@@ -40,6 +41,12 @@ object DariHooks {
     private val sharedDecoder = ProtobufPayloadDecoder { payload, context -> Dari.protobufDecoder?.decode(payload, context) }
 
     internal var interceptorFactory: (String?) -> DariInterceptor? = { tag -> Dari.createInterceptor(tag, sharedDecoder) }
+
+    // Matched by name so apps without androidx.web pull nothing in.
+    internal var isEngineView: (WebView) -> Boolean = ::isWebContentView
+
+    private fun isWebContentView(view: WebView) =
+        generateSequence<Class<*>>(view.javaClass) { it.superclass }.any { it.name == WEB_CONTENT_VIEW }
 
     private class Registration(val webView: WeakReference<WebView>, val name: String?)
 
@@ -95,12 +102,12 @@ object DariHooks {
         }
     }
 
-    // Engines like androidx.web's WebContent move one page to a new view, keeping the bridge registered on
-    // the old one. A new attached view takes over the state and bridges of the single detached view.
+    // androidx.web's WebContent moves one page to a new view, keeping the bridge registered on the old one.
+    // A new attached engine view takes over the state and bridges of the single detached engine view.
     private fun adoptDetachedView(webView: WebView): WebViewState? {
-        if (!webView.isAttachedToWindow) return null
+        if (!webView.isAttachedToWindow || !isEngineView(webView)) return null
         val old = bridges.values.mapNotNull { it.webView.get() }.distinct()
-            .singleOrNull { it !== webView && !it.isAttachedToWindow } ?: return null
+            .singleOrNull { it !== webView && !it.isAttachedToWindow && isEngineView(it) } ?: return null
         val state = webViews.remove(old) ?: return null
         webViews[webView] = state
         bridges.entries.filter { it.value.webView.get() === old }
@@ -198,6 +205,7 @@ object DariHooks {
         bridges.clear()
         webViews.clear()
         lastWebView = null
+        isEngineView = ::isWebContentView
         detached.clear()
         openRequests.clear()
     }

@@ -186,6 +186,7 @@ class DariHooksTest {
 
     @Test
     fun `a page moved to a new view keeps its bridge and follows the new URL`() {
+        DariHooks.isEngineView = { true }
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val bridge = Any()
         val firstView = WebView(activity)
@@ -210,6 +211,24 @@ class DariHooksTest {
             ),
             calls,
         )
+    }
+
+    @Test
+    fun `a plain view does not take over another detached view's bridge`() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val bridge = Any()
+        val mainView = WebView(activity)
+        activity.setContentView(mainView)
+        DariHooks.addJavascriptInterface(mainView, bridge, "Android")
+        DariHooks.onVisitedHistory(mainView, "https://page")
+
+        // The bridged view stays in memory (e.g. on the back stack) while an unrelated view opens.
+        val termsView = WebView(activity)
+        activity.setContentView(termsView)
+        DariHooks.onVisitedHistory(termsView, "https://terms")
+        DariHooks.onMappedCall(REQUEST, bridge, arrayOf("a", "1", null))
+
+        assertEquals(listOf("Android url https://page", "Android w2a-req a null 1 null null"), calls)
     }
 
     @Test
