@@ -86,6 +86,14 @@ Related: [design](desktop-inspector-design.md), [FAQ](desktop-inspector-faq.md).
 
 ## CI
 
+### Auto-merge from the Claude app failed with a permission error
+
+- **Cause**: the Claude desktop app and plain `gh` used the machine's active GitHub account
+  (a work account). It can open issues but can't label them or enable auto-merge
+  here, and anything it creates shows the wrong author.
+- **Fix**: run `gh` for this repository with `GH_CONFIG_DIR=~/.config/gh-easyhooon`, a config that
+  lists only `easyhooon` and reuses its keyring token. The global active account stays unchanged. (#240)
+
 ### Linux smoke test fails: "Cannot create Linux GL context"
 
 - **Cause**: xvfb has no GPU. Skiko tries OpenGL, logs a `RenderException`, and falls back to
@@ -158,6 +166,14 @@ Related: [design](desktop-inspector-design.md), [FAQ](desktop-inspector-faq.md).
 - **Cause**: Compose's `MenuBar` installs a Swing `JMenuBar`. Without `apple.laf.useScreenMenuBar`, it
   draws inside the window, where the transparent title bar hides it.
 - **Fix**: set `apple.laf.useScreenMenuBar=true` before creating any window. (#100)
+
+### Detail pane stayed on "Select a message" after a click
+
+- **Cause**: the list fills from the live stream, but bodies are fetched on click. The app had gone to
+  the background and Android was about to freeze it (`isPendingFreeze=true`), so `detail()` timed out
+  after 10 s. `loadDetail` swallowed the failure and left `detail` null, which renders the empty state.
+- **Fix**: the pane shows "Loading details…" and, on failure, "Couldn't load details" with Retry. The
+  desktop docs' Troubleshooting table explains bringing the app to the front. (#240)
 
 ### "Read timed out" while the app is open on the phone
 

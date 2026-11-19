@@ -207,6 +207,7 @@ A non-debuggable build needs `ALLOW_NON_DEBUGGABLE` above as well; otherwise not
 | Wi-Fi pairing finds nothing | Some networks block device discovery (mDNS). Type the address and code from the phone's pairing-code screen instead. On macOS, if Android Studio started adb, restarting adb with `ADB_MDNS_OPENSCREEN=0` can help; Dari sets it when it starts adb itself. |
 | "Paired, but the device didn't connect" | Turn Wireless debugging off and on, wait a few seconds, then try again. |
 | App is in the background | Android pauses background apps. Bring the app to the foreground and Dari reconnects. |
+| Details stay on "Select a message" | The list fills from the live stream, but request and response bodies are fetched from the app on click. A backgrounded app may be frozen and not answer. Bring the app to the foreground and click the message again. |
 | Not running Dari | Check that the app is a debuggable build using `dari` 2.0.0 or later. |
 
 To report a problem, use **Help → Report an Issue…**. It opens the bug form with your Dari version and OS filled in; **Help → Suggest a Feature…** opens the feature request form. **Help → Show Log File** opens the folder with `dari.log` (`~/Library/Logs/Dari` on macOS, `%LOCALAPPDATA%\easyhooon\Dari\logs` on Windows, `~/.local/state/dari` on Linux). The log records the version at startup, crash-report setting changes and failures, never message contents.
