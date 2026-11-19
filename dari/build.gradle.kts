@@ -13,6 +13,7 @@ android {
         minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "DARI_VERSION", "\"${libs.versions.dari.get()}\"")
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     compileOptions {

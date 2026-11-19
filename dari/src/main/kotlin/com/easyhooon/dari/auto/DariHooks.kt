@@ -2,6 +2,7 @@ package com.easyhooon.dari.auto
 
 import android.util.Log
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import com.easyhooon.dari.Dari
 import com.easyhooon.dari.auto.BridgeMapping.Kind
 import com.easyhooon.dari.interceptor.DariInterceptor
@@ -31,6 +32,10 @@ object DariHooks {
     private val lock = Any()
     private val bridges = WeakHashMap<Any, Registration>()
     private val webViews = WeakHashMap<WebView, WebViewState>()
+
+    // androidx.web's WebContent moves one page across views but keeps its WebViewClient, so its state is keyed
+    // by that client. The engine holds the client, so the state outlives any one view and goes with close().
+    private val engines = WeakHashMap<WebViewClient, WebViewState>()
     private var lastWebView: WeakReference<WebView>? = null
     private val detached = HashMap<String?, DariInterceptor>()
     private val openRequests = object : LinkedHashMap<String, OpenRequest>() {
@@ -41,12 +46,6 @@ object DariHooks {
     private val sharedDecoder = ProtobufPayloadDecoder { payload, context -> Dari.protobufDecoder?.decode(payload, context) }
 
     internal var interceptorFactory: (String?) -> DariInterceptor? = { tag -> Dari.createInterceptor(tag, sharedDecoder) }
-
-    // Matched by name so apps without androidx.web pull nothing in.
-    internal var isEngineView: (WebView) -> Boolean = ::isWebContentView
-
-    private fun isWebContentView(view: WebView) =
-        generateSequence<Class<*>>(view.javaClass) { it.superclass }.any { it.name == WEB_CONTENT_VIEW }
 
     private class Registration(val webView: WeakReference<WebView>, val name: String?)
 
@@ -75,7 +74,7 @@ object DariHooks {
         try {
             synchronized(lock) {
                 if (bridge != null) bridges[bridge] = Registration(WeakReference(webView), name)
-                val state = webViews.getOrPut(webView) { WebViewState(name) }
+                val state = engineState(webView) ?: webViews.getOrPut(webView) { WebViewState(name) }
                 if (state.jsName == null) state.jsName = name
                 lastWebView = WeakReference(webView)
             }
@@ -92,7 +91,7 @@ object DariHooks {
         if (webView == null) return
         try {
             synchronized(lock) {
-                val state = webViews[webView] ?: adoptDetachedView(webView) ?: WebViewState(null).also { webViews[webView] = it }
+                val state = engineState(webView) ?: webViews.getOrPut(webView) { WebViewState(null) }
                 state.pageUrl = url
                 state.interceptors.values.forEach { it.onPageUrlChanged(url) }
                 lastWebView = WeakReference(webView)
@@ -102,18 +101,21 @@ object DariHooks {
         }
     }
 
-    // androidx.web's WebContent moves one page to a new view, keeping the bridge registered on the old one.
-    // A new attached engine view takes over the state and bridges of the single detached engine view.
-    private fun adoptDetachedView(webView: WebView): WebViewState? {
-        if (!webView.isAttachedToWindow || !isEngineView(webView)) return null
-        val old = bridges.values.mapNotNull { it.webView.get() }.distinct()
-            .singleOrNull { it !== webView && !it.isAttachedToWindow && isEngineView(it) } ?: return null
-        val state = webViews.remove(old) ?: return null
-        webViews[webView] = state
-        bridges.entries.filter { it.value.webView.get() === old }
+    // Main thread only: reads the WebView's client. Bridges registered on earlier views of the engine move here.
+    private fun engineState(webView: WebView): WebViewState? {
+        if (!isWebContentView(webView)) return null
+        val engine = webView.webViewClient?.takeIf { it.javaClass != WebViewClient::class.java } ?: return null
+        val state = engines.getOrPut(engine) { webViews[webView] ?: WebViewState(null) }
+        val previous = webViews.put(webView, state)
+        if (state.jsName == null) state.jsName = previous?.jsName
+        bridges.entries.filter { (_, registration) -> registration.webView.get()?.let { webViews[it] } === state }
             .forEach { it.setValue(Registration(WeakReference(webView), it.value.name)) }
         return state
     }
+
+    // Matched by name so apps without androidx.web pull nothing in.
+    private fun isWebContentView(view: WebView) =
+        generateSequence<Class<*>>(view.javaClass) { it.superclass }.any { it.name == WEB_CONTENT_VIEW }
 
     private fun dispatch(mapping: BridgeMapping, values: Map<String, Any?>, receiver: Any?, args: Array<Any?>) {
         // Before any lookup, so a filtered call neither creates an interceptor nor consumes an open request.
@@ -204,8 +206,8 @@ object DariHooks {
         mappings.clear()
         bridges.clear()
         webViews.clear()
+        engines.clear()
         lastWebView = null
-        isEngineView = ::isWebContentView
         detached.clear()
         openRequests.clear()
     }

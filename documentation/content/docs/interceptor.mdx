@@ -134,7 +134,7 @@ Requests captured afterwards store the URL without user info, query or fragment,
 
 With `androidx.web`'s `WebContent`, a page outlives its views: every `attach()` returns a new `WebContentView` for the same engine. Create the interceptor once next to the retained `WebContent` (for example in the same `ViewModel`), not once per view. Report the URL from the engine's `WebViewClient`, which survives re-attach.
 
-The Gradle plugin handles this as is: when a re-attached `WebContentView` reports its first URL, it takes over the previous view's interceptors and page URL.
+The Gradle plugin keys the page by the engine's `WebViewClient`, which survives re-attach. A new `WebContentView` takes over the page's interceptors and URL when it reports a URL or gets a JavaScript interface, so give each `WebContent` its own `WebViewClient` instance: engines sharing one are recorded as one page. Until then, calls go to the previous view, or are recorded without a page URL if that view was already collected.
 
 A response produced while no view is attached is still recorded as `SUCCESS`, even if the app drops it because it has no view to call `evaluateJavascript` on. Dari records the call, not its delivery.
 

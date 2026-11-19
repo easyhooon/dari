@@ -3,7 +3,10 @@ package com.easyhooon.dari.auto
 import android.app.Activity
 import android.content.Context
 import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import androidx.test.core.app.ApplicationProvider
+import androidx.web.WebContentView
 import com.easyhooon.dari.interceptor.DariInterceptor
 import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
 import kotlinx.serialization.json.buildJsonObject
@@ -186,17 +189,17 @@ class DariHooksTest {
 
     @Test
     fun `a page moved to a new view keeps its bridge and follows the new URL`() {
-        DariHooks.isEngineView = { true }
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val engine = object : WebViewClient() {}
         val bridge = Any()
-        val firstView = WebView(activity)
+        val firstView = engineView(activity, engine)
         activity.setContentView(firstView)
         DariHooks.addJavascriptInterface(firstView, bridge, "Android")
         DariHooks.onVisitedHistory(firstView, "https://page")
         DariHooks.onMappedCall(REQUEST, bridge, arrayOf("a", "1", null))
 
-        // Re-attach as WebContent does: same bridge, new view, no new addJavascriptInterface.
-        val secondView = WebView(activity)
+        // Re-attach as WebContent does: same bridge and client, new view, no new addJavascriptInterface.
+        val secondView = engineView(activity, engine)
         activity.setContentView(secondView)
         DariHooks.onVisitedHistory(secondView, "https://page?step=2")
         DariHooks.onMappedCall(REQUEST, bridge, arrayOf("b", "2", null))
@@ -211,6 +214,75 @@ class DariHooksTest {
             ),
             calls,
         )
+    }
+
+    @Test
+    fun `a view of another engine does not take over a detached engine's bridge`() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val bridge = Any()
+        val pageView = engineView(activity, object : WebViewClient() {})
+        activity.setContentView(pageView)
+        DariHooks.addJavascriptInterface(pageView, bridge, "Android")
+        DariHooks.onVisitedHistory(pageView, "https://page")
+
+        val otherView = engineView(activity, object : WebViewClient() {})
+        activity.setContentView(otherView)
+        DariHooks.onVisitedHistory(otherView, "https://other")
+        DariHooks.onMappedCall(REQUEST, bridge, arrayOf("a", "1", null))
+
+        assertEquals(listOf("Android url https://page", "Android w2a-req a null 1 null null"), calls)
+    }
+
+    @Test
+    fun `two engines re-attached together each keep their own page`() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val engineA = object : WebViewClient() {}
+        val engineB = object : WebViewClient() {}
+        val bridgeA = Any()
+        val bridgeB = Any()
+        val container = FrameLayout(activity)
+        activity.setContentView(container)
+        val a1 = engineView(activity, engineA)
+        val b1 = engineView(activity, engineB)
+        container.addView(a1)
+        container.addView(b1)
+        DariHooks.addJavascriptInterface(a1, bridgeA, "A")
+        DariHooks.addJavascriptInterface(b1, bridgeB, "B")
+        DariHooks.onVisitedHistory(a1, "https://a")
+        DariHooks.onVisitedHistory(b1, "https://b")
+
+        container.removeAllViews()
+        val a2 = engineView(activity, engineA)
+        val b2 = engineView(activity, engineB)
+        container.addView(a2)
+        container.addView(b2)
+        DariHooks.onVisitedHistory(a2, "https://a2")
+        DariHooks.onVisitedHistory(b2, "https://b2")
+        DariHooks.onMappedCall(REQUEST, bridgeA, arrayOf("x", "1", null))
+        DariHooks.onMappedCall(REQUEST, bridgeB, arrayOf("y", "2", null))
+
+        assertEquals(2, created.size)
+        assertEquals(listOf("A url https://a2", "A w2a-req x null 1 null null"), created[0].calls)
+        assertEquals(listOf("B url https://b2", "B w2a-req y null 2 null null"), created[1].calls)
+    }
+
+    @Test
+    fun `a bridge registered again on the new view keeps the page URL before any navigation`() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val engine = object : WebViewClient() {}
+        val bridge = Any()
+        val firstView = engineView(activity, engine)
+        activity.setContentView(firstView)
+        DariHooks.addJavascriptInterface(firstView, bridge, "Android")
+        DariHooks.onVisitedHistory(firstView, "https://page")
+
+        val secondView = engineView(activity, engine)
+        activity.setContentView(secondView)
+        DariHooks.addJavascriptInterface(secondView, bridge, "Android")
+        DariHooks.onMappedCall(REQUEST, bridge, arrayOf("a", "1", null))
+
+        assertEquals(1, created.size)
+        assertEquals(listOf("Android url https://page", "Android w2a-req a null 1 null null"), calls)
     }
 
     @Test
@@ -230,6 +302,9 @@ class DariHooksTest {
 
         assertEquals(listOf("Android url https://page", "Android w2a-req a null 1 null null"), calls)
     }
+
+    private fun engineView(context: Context, client: WebViewClient) =
+        WebContentView(context).apply { webViewClient = client }
 
     @Test
     fun `a broken spec never throws into the bridge`() {
