@@ -7,7 +7,8 @@ plugins {
 android {
     namespace = "com.easyhooon.dari.sample"
     compileSdk {
-        version = release(36)
+        // androidx.web needs compileSdk 37.
+        version = release(37)
     }
 
     defaultConfig {
@@ -95,6 +96,28 @@ dari {
         data = arg("data")
     }
 
+    // androidx.web WebContent screen (issue #311).
+    val webContent = "com.easyhooon.dari.sample.webcontent.WebContentModel"
+    webToAppRequest("$webContent.Bridge", "request") {
+        tag = "WebContent"
+        handlerName = arg("handlerName")
+        requestId = arg("requestId")
+        data = arg("data")
+    }
+    webToAppResponse(webContent, "respond") {
+        tag = "WebContent"
+        handlerName = arg("handlerName")
+        requestId = arg("requestId")
+        success = arg("success")
+        data = arg("data")
+    }
+    appToWebRequest(webContent, "sendToWeb") {
+        tag = "WebContent"
+        handlerName = arg("handlerName")
+        data = arg("data")
+        fireAndForget = constant(true)
+    }
+
     // Debug-only benchmark bridges (src/debug, BridgeOverheadBenchmark).
     val bench = "com.easyhooon.dari.sample.bench"
     webToAppRequest("$bench.MappedPositionalBridge", "onRequest") {
@@ -141,6 +164,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.protobuf.javalite)
+    implementation(libs.androidx.web)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

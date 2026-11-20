@@ -2,7 +2,10 @@
 dari = "3.7.0"
 # Desktop app; matches dari except after a desktop-only release (see /release).
 dariDesktop = "3.7.0"
+# AGP API the Gradle plugin compiles against: its minimum supported AGP.
 agp = "9.0.0"
+# AGP this build runs on; androidx.web (sample) needs 9.1+.
+agpBuild = "9.1.1"
 coreKtx = "1.13.1"
 junit = "4.13.2"
 junitVersion = "1.3.0"
@@ -22,6 +25,7 @@ detekt = "1.23.8"
 ktlintGradle = "11.6.1"
 ktlintSource = "0.50.0"
 protobuf = "4.35.0"
+androidxWeb = "1.0.0-alpha01"
 composeMultiplatform = "1.9.3"
 sentry = "8.58.0"
 jna = "5.17.0"
@@ -68,12 +72,13 @@ robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 android-gradle-api = { group = "com.android.tools.build", name = "gradle-api", version.ref = "agp" }
 android-gradle-plugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
+androidx-web = { group = "androidx.web", name = "web", version.ref = "androidxWeb" }
 asm-commons = { group = "org.ow2.asm", name = "asm-commons", version.ref = "asm" }
 
 [plugins]
-android-application = { id = "com.android.application", version.ref = "agp" }
-android-library = { id = "com.android.library", version.ref = "agp" }
-android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
+android-application = { id = "com.android.application", version.ref = "agpBuild" }
+android-library = { id = "com.android.library", version.ref = "agpBuild" }
+android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agpBuild" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

@@ -130,6 +130,14 @@ override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boole
 
 이후 캡처되는 요청에는 자격 증명이나 토큰이 담길 수 있는 user info, query, fragment를 뺀 URL이 저장됩니다. 두 인스펙터 모두 상세 화면에 표시하고, origin이 둘 이상이면 origin 필터를 보여주며, Response Time 통계도 선택한 origin 기준으로 계산합니다. export에는 `page_url`로 포함됩니다. 페이지끼리 덮어쓰지 않도록 WebView마다 인터셉터를 하나씩 쓰세요.
 
+## androidx.web `WebContent`
+
+`androidx.web`의 `WebContent`를 쓰면 페이지가 뷰보다 오래 남습니다. `attach()`를 호출할 때마다 같은 엔진에 붙은 새 `WebContentView`가 나옵니다. 인터셉터는 뷰마다 만들지 말고, 유지되는 `WebContent` 옆(예: 같은 `ViewModel`)에서 한 번만 만드세요. URL은 re-attach 후에도 유지되는 엔진의 `WebViewClient`에서 전달합니다.
+
+Gradle 플러그인은 re-attach 후에도 유지되는 엔진의 `WebViewClient`를 기준으로 페이지를 구분합니다. 새 `WebContentView`는 URL을 보고하거나 JavaScript 인터페이스가 등록될 때 페이지의 인터셉터와 URL을 이어받습니다. 앱이 attach할 때마다 client를 새로 설정하면 엔진의 history로 페이지를 찾습니다. `WebContent`마다 별도의 `WebViewClient` 인스턴스를 쓰세요. 싱글턴처럼 하나를 공유하는 엔진들은 한 페이지로 기록됩니다. 새 뷰가 보고하기 전까지의 호출은 이전 뷰로 기록됩니다. 이전 뷰가 이미 GC됐다면 마지막으로 본 WebView로 기록되고, 그런 WebView도 없을 때만 페이지 URL 없이 기록됩니다.
+
+붙은 뷰가 없을 때 만든 응답도 `SUCCESS`로 기록됩니다. `evaluateJavascript`를 호출할 뷰가 없어 앱이 응답을 버리더라도 마찬가지입니다. Dari는 전달 여부가 아니라 호출을 기록합니다.
+
 ## Fire-and-Forget (단방향 호출)
 
 응답을 받지 않는 단방향 호출은 즉시 `SUCCESS`로 처리되도록 설정할 수 있습니다:
