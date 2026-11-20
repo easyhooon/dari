@@ -101,6 +101,7 @@ DariAutoCapture(
 - 보고 싶지 않은 트래픽은 `.ignore`를 반환합니다.
 - `start()` 전에 등록한 handler나, 이 WebKit 호출을 거치지 않는 Swift 브릿지 코드는 수집되지 않습니다. 이런 경우는 interceptor를 씁니다.
 - 브릿지에서 이미 interceptor를 호출하고 있다면 `autoCapture`를 켜지 마세요. 메시지가 두 번 기록됩니다.
+- 요청이나 응답을 실어 보내는 스크립트는 전달 상태도 기록합니다. completion에 오류가 없으면 `DELIVERED`, 스크립트가 예외를 던졌으면 `FAILED`입니다.
 
 ## 매크로로 컴파일 시점 수집
 
