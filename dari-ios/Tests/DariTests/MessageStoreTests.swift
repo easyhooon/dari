@@ -18,6 +18,16 @@ final class MessageStoreTests: XCTestCase {
         XCTAssertEqual(store.snapshot().last?.responseTimestamp, 1_250)
     }
 
+    func testDeliveryMarksNewestOfSameDirectionAndNeverGoesBackToPending() {
+        let store = MessageStore(maxEntries: 10)
+        add(store, "1", .webToApp)
+        add(store, "1", .appToWeb)
+        add(store, "1", .webToApp)
+        store.setDelivery(requestId: "1", tag: nil, direction: .webToApp, .delivered)
+        store.setDelivery(requestId: "1", tag: nil, direction: .webToApp, .pending)
+        XCTAssertEqual(store.snapshot().map(\.delivery), [nil, nil, .delivered])
+    }
+
     func testRespondWithIdCompletesThatRecordOnly() {
         let store = MessageStore(maxEntries: 10)
         add(store, "1", .appToWeb)

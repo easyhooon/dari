@@ -94,7 +94,7 @@ JavaScript가 네이티브 앱으로 메시지를 보낼 때 호출합니다. �
 | `responseData` | `String?` | 응답 페이로드 |
 | `isSuccess` | `Boolean` | `true` → `SUCCESS`, `false` → `ERROR` |
 
-Dari는 페이지가 응답을 받은 시점이 아니라 이 메서드가 호출된 시점에 응답을 기록합니다. 그 뒤 WebView가 이미 사라지는 등의 이유로 앱이 응답을 버려도 기록은 남습니다. Gradle 플러그인도 같은 시점, 즉 매핑한 메서드에 진입할 때 기록합니다. [#313](https://github.com/easyhooon/dari/issues/313) 참고.
+Dari는 페이지가 응답을 받은 시점이 아니라 이 메서드가 호출된 시점에 응답을 기록합니다. 페이지가 실제로 받았는지는 전달 상태로 따로 기록합니다. [`onDeliveryChanged`](#ondeliverychanged)를 참고하세요.
 
 ### `onAppToWebRequest`
 
@@ -103,6 +103,21 @@ Dari는 페이지가 응답을 받은 시점이 아니라 이 메서드가 호�
 ### `onAppToWebResponse`
 
 JavaScript가 네이티브 앱의 요청에 응답할 때 호출합니다. 웹의 응답이 도착하는 지점에서 호출합니다.
+
+### `onDeliveryChanged`
+
+Web → App 응답이나 App → Web 요청이 페이지에 도착했는지 알게 되면 `PENDING`, `DELIVERED`, `FAILED` 중 하나로 호출합니다. 어느 쪽인지는 `direction`으로 구분합니다. 상세 화면에는 **Delivery**로 표시되며, 보낸 뒤 5초가 지나도 `PENDING`이면 "확인 안 됨"으로 보입니다. 예를 들어 WebView가 사라져서 앱이 응답을 버린 경우입니다.
+
+Gradle 플러그인과 iOS SDK의 자동 캡처가 대신 호출합니다. 수동 연동이라면 `evaluateJavascript` 콜백에서 호출하세요:
+
+```kotlin
+interceptor?.onDeliveryChanged(requestId, MessageDirection.WEB_TO_APP, DeliveryStatus.PENDING)
+webView.evaluateJavascript(script) {
+    interceptor?.onDeliveryChanged(requestId, MessageDirection.WEB_TO_APP, DeliveryStatus.DELIVERED)
+}
+```
+
+Android의 콜백은 예외를 던진 스크립트와 아무것도 반환하지 않은 스크립트를 구분하지 못하므로, `FAILED`는 iOS에서만 기록됩니다.
 
 ## 선택적 표시 이름
 

@@ -10,4 +10,8 @@ public class Screen {
     public void setupSubclass(MyWebView webView) {
         webView.addJavascriptInterface(this, "Sub");
     }
+
+    public void respond(WebView webView) {
+        webView.evaluateJavascript("onBridgeResponse('1')", null);
+    }
 }

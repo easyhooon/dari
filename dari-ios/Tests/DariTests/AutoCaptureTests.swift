@@ -79,6 +79,15 @@ final class AutoCaptureTests: XCTestCase {
         XCTAssertEqual(records[2].status, .success)
         XCTAssertEqual(records[3].responseData, "2")
         XCTAssertEqual(records[3].status, .success)
+        XCTAssertEqual(records[3].delivery, .delivered)
+        XCTAssertNil(records[2].delivery) // a reply goes back through WebKit, not a script
+
+        let failed = expectation(description: "failing script")
+        webView.evaluateJavaScript("missingFunction()") { _, _ in failed.fulfill() }
+        wait(for: [failed], timeout: 10)
+
+        XCTAssertEqual(Dari.shared.records.last?.status, .error)
+        XCTAssertEqual(Dari.shared.records.last?.delivery, .failed)
     }
 }
 

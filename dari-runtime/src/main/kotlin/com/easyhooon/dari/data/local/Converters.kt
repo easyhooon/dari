@@ -1,6 +1,7 @@
 package com.easyhooon.dari.data.local
 
 import androidx.room.TypeConverter
+import com.easyhooon.dari.DeliveryStatus
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageStatus
 import com.easyhooon.dari.PayloadContentType
@@ -30,4 +31,11 @@ internal class Converters {
 
     @TypeConverter
     fun toPayloadDecodeStatus(value: String): PayloadDecodeStatus = PayloadDecodeStatus.valueOf(value)
+
+    @TypeConverter
+    fun fromDeliveryStatus(delivery: DeliveryStatus): String = delivery.name
+
+    // A value written by a newer version reads as not tracked instead of failing the whole row.
+    @TypeConverter
+    fun toDeliveryStatus(value: String): DeliveryStatus? = DeliveryStatus.entries.firstOrNull { it.name == value }
 }
