@@ -54,6 +54,7 @@ import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
 import com.easyhooon.dari.inspector.protocol.WirePayloadMetadata
+import com.easyhooon.dari.inspector.protocol.deliveryLabel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -257,6 +258,7 @@ private fun summaryLine(detail: WireMessageDetail): String {
         s.handlerName.takeIf { s.displayName != null },
         s.tag,
         s.pageUrl,
+        deliveryLabel(s.delivery, s.responseTimestamp ?: s.requestTimestamp, System.currentTimeMillis()),
         s.requestId,
         formatTime(s.requestTimestamp),
         durationLabel(s),
