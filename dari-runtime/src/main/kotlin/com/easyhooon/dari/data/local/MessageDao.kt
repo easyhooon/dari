@@ -3,9 +3,10 @@ package com.easyhooon.dari.data.local
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import com.easyhooon.dari.DeliveryStatus
+import com.easyhooon.dari.MessageStatus
 import com.easyhooon.dari.PayloadContentType
 import com.easyhooon.dari.PayloadDecodeStatus
-import com.easyhooon.dari.MessageStatus
 
 @Dao
 internal interface MessageDao {
@@ -32,6 +33,9 @@ internal interface MessageDao {
         status: MessageStatus,
         responseTimestamp: Long?,
     )
+
+    @Query("UPDATE messages SET delivery = :delivery WHERE id = :id")
+    suspend fun updateDelivery(id: Long, delivery: DeliveryStatus)
 
     @Query(
         "DELETE FROM messages WHERE id NOT IN (SELECT id FROM messages ORDER BY requestTimestamp DESC, id DESC LIMIT :maxEntries)"

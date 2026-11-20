@@ -20,6 +20,8 @@ data class WireMessageSummary(
     val responseSizeBytes: Int,
     /** Page URL without query or fragment; null from older apps or bridges that don't report it. */
     val pageUrl: String? = null,
+    /** `PENDING`, `DELIVERED` or `FAILED`: whether the message reached the page. Null when not tracked. */
+    val delivery: String? = null,
 ) {
     /** `scheme://host[:port]` of [pageUrl]. Mirrors `MessageEntry.pageOrigin`, which this module can't see. */
     val pageOrigin: String?

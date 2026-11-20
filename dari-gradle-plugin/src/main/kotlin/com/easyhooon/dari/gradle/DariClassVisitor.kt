@@ -20,6 +20,8 @@ internal const val WEB_VIEW = "android/webkit/WebView"
 private const val INTERCEPTOR_PACKAGE = "com/easyhooon/dari/interceptor/"
 private const val ADD_JS_INTERFACE = "addJavascriptInterface"
 private const val ADD_JS_INTERFACE_DESC = "(Ljava/lang/Object;Ljava/lang/String;)V"
+private const val EVALUATE_JS = "evaluateJavascript"
+private const val EVALUATE_JS_DESC = "(Ljava/lang/String;Landroid/webkit/ValueCallback;)V"
 private const val VISITED_HISTORY = "doUpdateVisitedHistory"
 private const val VISITED_HISTORY_DESC = "(Landroid/webkit/WebView;Ljava/lang/String;Z)V"
 private const val CONTINUATION = "kotlin/coroutines/Continuation"
@@ -43,7 +45,8 @@ data class MappingTarget(val className: String, val methodName: String, val spec
  * Rewrites one class:
  * - mapped methods call `DariHooks.onMappedCall(spec, this, args)` on entry;
  * - `WebViewClient.doUpdateVisitedHistory` overrides report the page URL;
- * - `addJavascriptInterface` call sites go through `DariHooks` so bridges know their WebView.
+ * - `addJavascriptInterface` call sites go through `DariHooks` so bridges know their WebView;
+ * - `evaluateJavascript` call sites go through `DariHooks` so it can tell when a message reached the page.
  */
 internal class DariClassVisitor(
     api: Int,
@@ -233,7 +236,7 @@ private class VisitedHistoryAdvice(
     }
 }
 
-/** `webView.addJavascriptInterface(bridge, name)` becomes `DariHooks.addJavascriptInterface(webView, bridge, name)`. */
+/** `webView.addJavascriptInterface(...)` and `webView.evaluateJavascript(...)` become `DariHooks` calls with the WebView first. */
 private class CallSiteRewriter(
     api: Int,
     next: MethodVisitor,
@@ -241,12 +244,15 @@ private class CallSiteRewriter(
 ) : MethodVisitor(api, next) {
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) {
         // INVOKESPECIAL (`super.addJavascriptInterface` in a subclass) stays, or the hook would call back into it.
-        if (opcode == Opcodes.INVOKEVIRTUAL && name == ADD_JS_INTERFACE && descriptor == ADD_JS_INTERFACE_DESC && isWebView(owner)) {
+        if (opcode == Opcodes.INVOKEVIRTUAL && isHooked(name, descriptor) && isWebView(owner)) {
             super.visitMethodInsn(Opcodes.INVOKESTATIC, HOOKS, name, "(L$WEB_VIEW;${descriptor.substring(1)}", false)
         } else {
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
         }
     }
+
+    private fun isHooked(name: String, descriptor: String): Boolean =
+        (name == ADD_JS_INTERFACE && descriptor == ADD_JS_INTERFACE_DESC) || (name == EVALUATE_JS && descriptor == EVALUATE_JS_DESC)
 }
 
 internal interface DariLog {
