@@ -38,9 +38,11 @@ final class MessageFileStoreTests: XCTestCase {
         first.add { id, now in
             MessageRecord(id: id, requestId: nil, handlerName: "log", direction: .webToApp, status: .success, requestTimestamp: now)
         }
+        first.setDelivery(requestId: "r1", tag: "main", direction: .appToWeb, .failed)
         flush()
 
         XCTAssertEqual(loaded().snapshot(), first.snapshot())
+        XCTAssertEqual(loaded().snapshot().first?.delivery, .failed)
     }
 
     func testReloadAppliesRetentionAndMaxEntriesAndContinuesIds() {

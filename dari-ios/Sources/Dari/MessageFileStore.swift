@@ -226,6 +226,7 @@ private struct StoredRecord: Codable {
     let requestTimestamp: Int64
     let responseTimestamp: Int64?
     let pageUrl: String?
+    let delivery: String?
 
     init(_ record: MessageRecord) {
         id = record.id
@@ -244,6 +245,7 @@ private struct StoredRecord: Codable {
         requestTimestamp = record.requestTimestamp
         responseTimestamp = record.responseTimestamp
         pageUrl = record.pageUrl
+        delivery = record.delivery?.rawValue
     }
 
     var record: MessageRecord? {
@@ -264,7 +266,9 @@ private struct StoredRecord: Codable {
             status: status,
             requestTimestamp: requestTimestamp,
             responseTimestamp: responseTimestamp,
-            pageUrl: pageUrl
+            pageUrl: pageUrl,
+            // A value written by a newer version reads as not tracked.
+            delivery: delivery.flatMap(DeliveryStatus.init(rawValue:))
         )
     }
 }

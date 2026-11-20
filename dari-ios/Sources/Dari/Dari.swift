@@ -181,6 +181,11 @@ public final class DariInterceptor {
         lock.withLock { pageUrl = MessageRecord.sanitizePageUrl(url) }
     }
 
+    /// Marks whether a response or App -> Web request reached the page. Auto capture calls it from script completions.
+    func onDeliveryChanged(requestId: String, direction: MessageDirection, _ delivery: DeliveryStatus) {
+        dari?.record { store, _ in store.setDelivery(requestId: requestId, tag: tag, direction: direction, delivery) }
+    }
+
     /// A Web → App request. A nil [requestId] records a standalone message that is never paired.
     public func onWebToAppRequest(
         handlerName: String,

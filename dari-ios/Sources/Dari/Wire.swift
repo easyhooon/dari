@@ -57,6 +57,7 @@ struct WireMessageSummary: Codable, Equatable {
     let requestSizeBytes: Int
     let responseSizeBytes: Int
     var pageUrl: String?
+    var delivery: String?
 }
 
 struct WireMessageDetail: Codable, Equatable {
