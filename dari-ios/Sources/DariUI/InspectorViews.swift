@@ -196,6 +196,7 @@ struct OverviewList: View {
                 LabeledContent("Status") {
                     HStack(spacing: 4) { StatusIcon(status: record.status); Text(record.status.rawValue) }
                 }
+                if let delivery = InspectorFormat.delivery(record) { row("Delivery", delivery) }
                 row("Tag", record.tag ?? "-")
                 if let page = record.pageUrl { row("Page", page) }
                 row("Request ID", record.requestId ?? "-")
