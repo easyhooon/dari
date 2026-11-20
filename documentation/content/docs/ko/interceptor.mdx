@@ -94,6 +94,8 @@ JavaScript가 네이티브 앱으로 메시지를 보낼 때 호출합니다. �
 | `responseData` | `String?` | 응답 페이로드 |
 | `isSuccess` | `Boolean` | `true` → `SUCCESS`, `false` → `ERROR` |
 
+Dari는 페이지가 응답을 받은 시점이 아니라 이 메서드가 호출된 시점에 응답을 기록합니다. 그 뒤 WebView가 이미 사라지는 등의 이유로 앱이 응답을 버려도 기록은 남습니다. Gradle 플러그인도 같은 시점, 즉 매핑한 메서드에 진입할 때 기록합니다. [#313](https://github.com/easyhooon/dari/issues/313) 참고.
+
 ### `onAppToWebRequest`
 
 네이티브 앱이 JavaScript로 메시지를 푸시할 때 호출합니다. 웹으로 메시지를 보내는 함수에서 호출합니다.
