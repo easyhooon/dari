@@ -41,8 +41,11 @@ object DariHooks {
 
     internal var interceptorFactory: (String?) -> DariInterceptor? = { tag -> Dari.createInterceptor(tag, sharedDecoder) }
 
-    // page outlives the WebView, so calls that arrive after it is collected stay on the page that registered them.
-    private class Registration(val webView: WeakReference<WebView>, val name: String?, val page: WebViewState)
+    // webViews: every WebView the bridge was registered on, latest last. page is the latest one's state and outlives
+    // it, so calls that arrive after all of them are collected stay on that page.
+    private class Registration(val webViews: List<WeakReference<WebView>>, val name: String?, val page: WebViewState) {
+        fun liveWebView(): WebView? = webViews.asReversed().firstNotNullOfOrNull { it.get() }
+    }
 
     private class WebViewState(var jsName: String?) {
         val interceptors = HashMap<String?, DariInterceptor>()
@@ -70,7 +73,10 @@ object DariHooks {
             synchronized(lock) {
                 val state = webViews.getOrPut(webView) { WebViewState(name) }
                 if (state.jsName == null) state.jsName = name
-                if (bridge != null) bridges[bridge] = Registration(WeakReference(webView), name, state)
+                if (bridge != null) {
+                    val others = bridges[bridge]?.webViews.orEmpty().filter { it.get().let { view -> view != null && view !== webView } }
+                    bridges[bridge] = Registration(others + WeakReference(webView), name, state)
+                }
                 lastWebView = WeakReference(webView)
             }
         } catch (t: Throwable) {
@@ -156,7 +162,7 @@ object DariHooks {
             val registration = receiver?.let { bridges[it] }
             val webView = args.firstNotNullOfOrNull { it as? WebView }
                 ?: receiver as? WebView
-                ?: registration?.webView?.get()
+                ?: registration?.liveWebView()
             val state = webView?.let(::stateOf)
                 ?: registration?.page
                 ?: lastWebView?.get()?.let(::stateOf)

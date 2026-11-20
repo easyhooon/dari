@@ -214,6 +214,21 @@ class DariHooksTest {
         assumeTrue(view.get() == null)
     }
 
+    @Test
+    fun `a bridge shared by several WebViews follows a live one after the last registered is collected`() {
+        val bridge = Any()
+        val first = WebView(context())
+        DariHooks.addJavascriptInterface(first, bridge, "Android")
+        DariHooks.onVisitedHistory(first, "https://a")
+        collect(registerOnCollectableView(bridge))
+        DariHooks.onVisitedHistory(first, "https://a2")
+
+        DariHooks.onMappedCall(REQUEST, bridge, arrayOf("x", "1", null))
+
+        assertEquals(listOf("Android url https://a2", "Android w2a-req x null 1 null null"), created.last().calls)
+        Reference.reachabilityFence(first)
+    }
+
     private fun registerOnCollectableView(bridge: Any): WeakReference<WebView> {
         val view = WebView(context())
         DariHooks.addJavascriptInterface(view, bridge, "Android")
