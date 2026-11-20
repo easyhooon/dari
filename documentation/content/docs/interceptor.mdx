@@ -94,7 +94,7 @@ Called when the native side sends a response back to JavaScript. Call it in the 
 | `responseData` | `String?` | Response payload |
 | `isSuccess` | `Boolean` | `true` → `SUCCESS`, `false` → `ERROR` |
 
-Dari records the response when this is called, not when the page receives it. A response the app drops afterwards, for example because its WebView is already gone, still shows as recorded. The Gradle plugin records at the same point: when the mapped method is entered. See [#313](https://github.com/easyhooon/dari/issues/313).
+Dari records the response when this is called, not when the page receives it. Whether the page received it is tracked separately as delivery; see [`onDeliveryChanged`](#ondeliverychanged).
 
 ### `onAppToWebRequest`
 
@@ -103,6 +103,21 @@ Called when the native side pushes a message to JavaScript. Call it in the funct
 ### `onAppToWebResponse`
 
 Called when JavaScript responds to a native-initiated message. Call it where the web's reply arrives.
+
+### `onDeliveryChanged`
+
+Called with `PENDING`, `DELIVERED` or `FAILED` once it's known whether a Web → App response or an App → Web request reached the page. `direction` says which. The detail views show it as **Delivery**: a message still pending 5 seconds after it was sent reads as not confirmed, for example a response the app dropped because its WebView was gone.
+
+The Gradle plugin and the iOS SDK's automatic capture call it for you. With a manual integration, call it from your `evaluateJavascript` callback:
+
+```kotlin
+interceptor?.onDeliveryChanged(requestId, MessageDirection.WEB_TO_APP, DeliveryStatus.PENDING)
+webView.evaluateJavascript(script) {
+    interceptor?.onDeliveryChanged(requestId, MessageDirection.WEB_TO_APP, DeliveryStatus.DELIVERED)
+}
+```
+
+On Android, the callback can't tell a script that threw from one that returned nothing, so `FAILED` only comes from iOS.
 
 ## Optional display names
 
