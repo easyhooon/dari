@@ -1,5 +1,6 @@
 package com.easyhooon.dari.auto
 
+import android.webkit.ValueCallback
 import android.webkit.WebView
 
 /**
@@ -21,4 +22,10 @@ object DariHooks {
     @Suppress("UNUSED_PARAMETER")
     @JvmStatic
     fun onVisitedHistory(webView: WebView?, url: String?) = Unit
+
+    @JvmStatic
+    fun evaluateJavascript(webView: WebView, script: String?, callback: ValueCallback<String>?) {
+        // Casts keep the platform's own failure for a null script.
+        webView.evaluateJavascript(script as String, callback)
+    }
 }

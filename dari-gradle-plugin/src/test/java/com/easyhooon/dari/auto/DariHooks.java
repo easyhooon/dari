@@ -1,5 +1,6 @@
 package com.easyhooon.dari.auto;
 
+import android.webkit.ValueCallback;
 import android.webkit.WebView;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,5 +22,10 @@ public final class DariHooks {
 
     public static void onVisitedHistory(WebView webView, String url) {
         calls.add("url " + url);
+    }
+
+    public static void evaluateJavascript(WebView webView, String script, ValueCallback<String> callback) {
+        calls.add("script " + script);
+        webView.evaluateJavascript(script, callback);
     }
 }

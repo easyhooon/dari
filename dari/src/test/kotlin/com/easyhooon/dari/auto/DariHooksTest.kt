@@ -1,8 +1,11 @@
 package com.easyhooon.dari.auto
 
 import android.content.Context
+import android.webkit.ValueCallback
 import android.webkit.WebView
 import androidx.test.core.app.ApplicationProvider
+import com.easyhooon.dari.DeliveryStatus
+import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.interceptor.DariInterceptor
 import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
 import java.lang.ref.Reference
@@ -253,6 +256,82 @@ class DariHooksTest {
     private fun context(): Context = ApplicationProvider.getApplicationContext()
 
     @Test
+    fun `a response is marked delivered once the script naming it runs`() {
+        val view = ScriptRunningWebView(context())
+        DariHooks.addJavascriptInterface(view, Any(), "Android")
+        DariHooks.onMappedCall(RESPONSE, Any(), arrayOf("ping", "req-1", true, "{}"))
+
+        DariHooks.evaluateJavascript(view, "onBridgeResponse('req-1', true, {})", null)
+
+        assertEquals(
+            listOf("Android w2a-res ping req-1 {} true", "Android delivery req-1 WEB_TO_APP DELIVERED"),
+            calls,
+        )
+        assertEquals(listOf("onBridgeResponse('req-1', true, {})"), view.scripts)
+    }
+
+    @Test
+    fun `once delivery is tracked a dropped response stays pending`() {
+        val view = ScriptRunningWebView(context())
+        DariHooks.addJavascriptInterface(view, Any(), "Android")
+        DariHooks.onMappedCall(RESPONSE, Any(), arrayOf("ping", "req-1", true, "{}"))
+        DariHooks.evaluateJavascript(view, "onBridgeResponse(\"req-1\")", null)
+
+        // The app drops this one, e.g. because its WebView is gone.
+        DariHooks.onMappedCall(RESPONSE, Any(), arrayOf("ping", "req-2", true, "{}"))
+
+        assertEquals("Android delivery req-2 WEB_TO_APP PENDING", calls.last())
+    }
+
+    @Test
+    fun `the app's callback still runs after a delivery is recorded`() {
+        val view = ScriptRunningWebView(context())
+        DariHooks.addJavascriptInterface(view, Any(), "Android")
+        DariHooks.onMappedCall(RESPONSE, Any(), arrayOf("ping", "req-1", true, "{}"))
+        var result: String? = null
+
+        DariHooks.evaluateJavascript(view, "f('req-1')") { result = it }
+
+        assertEquals("null", result)
+    }
+
+    @Test
+    fun `an unquoted or ambiguous id leaves delivery untouched`() {
+        val view = ScriptRunningWebView(context())
+        DariHooks.addJavascriptInterface(view, Any(), "Android")
+        DariHooks.onMappedCall(RESPONSE, Any(), arrayOf("ping", "1", true, "{}"))
+        DariHooks.onMappedCall(RESPONSE, Any(), arrayOf("ping", "2", true, "{}"))
+
+        DariHooks.evaluateJavascript(view, "onBridgeResponse(1, true)", null)
+        DariHooks.evaluateJavascript(view, "flush(['1', '2'])", null)
+
+        assertEquals(listOf("Android w2a-res ping 1 {} true", "Android w2a-res ping 2 {} true"), calls)
+        assertEquals(2, view.scripts.size)
+    }
+
+    @Test
+    fun `an app-to-web request is marked delivered too`() {
+        val view = ScriptRunningWebView(context())
+        DariHooks.addJavascriptInterface(view, Any(), "Android")
+        val request = spec("APP_TO_WEB_REQUEST", """"handlerName":{"arg":0},"requestId":{"arg":1},"data":{"arg":2}""")
+        DariHooks.onMappedCall(request, Any(), arrayOf("refresh", "a-1", null))
+
+        DariHooks.evaluateJavascript(view, "onAppEvent('refresh', 'a-1')", null)
+
+        assertEquals("Android delivery a-1 APP_TO_WEB DELIVERED", calls.last())
+    }
+
+    // Robolectric never runs scripts; this one reports every script as run, like a live page.
+    private class ScriptRunningWebView(context: Context) : WebView(context) {
+        val scripts = mutableListOf<String>()
+
+        override fun evaluateJavascript(script: String, resultCallback: ValueCallback<String>?) {
+            scripts += script
+            resultCallback?.onReceiveValue("null")
+        }
+    }
+
+    @Test
     fun `a broken spec never throws into the bridge`() {
         DariHooks.onMappedCall("not json", null, arrayOf("x"))
         assertEquals(emptyList<String>(), calls)
@@ -264,6 +343,10 @@ class DariHooksTest {
 
         override fun onPageUrlChanged(url: String?) {
             calls += "$tag url $url"
+        }
+
+        override fun onDeliveryChanged(requestId: String, direction: MessageDirection, delivery: DeliveryStatus) {
+            calls += "$tag delivery $requestId $direction $delivery"
         }
 
         override fun onWebToAppRequest(handlerName: String, requestId: String?, requestData: String?, fireAndForget: Boolean?) =

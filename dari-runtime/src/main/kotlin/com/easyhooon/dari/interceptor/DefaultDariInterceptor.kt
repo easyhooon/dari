@@ -1,5 +1,6 @@
 package com.easyhooon.dari.interceptor
 
+import com.easyhooon.dari.DeliveryStatus
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessageStatus
@@ -29,6 +30,10 @@ class DefaultDariInterceptor(
 
     override fun onPageUrlChanged(url: String?) {
         pageUrl = MessageEntry.sanitizePageUrl(url)
+    }
+
+    override fun onDeliveryChanged(requestId: String, direction: MessageDirection, delivery: DeliveryStatus) {
+        DariRuntime.repository.updateDelivery(requestId, tag, direction, delivery)
     }
 
     override fun onWebToAppRequest(
