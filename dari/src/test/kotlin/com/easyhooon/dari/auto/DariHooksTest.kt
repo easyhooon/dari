@@ -5,12 +5,15 @@ import android.webkit.WebView
 import androidx.test.core.app.ApplicationProvider
 import com.easyhooon.dari.interceptor.DariInterceptor
 import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
+import java.lang.ref.Reference
+import java.lang.ref.WeakReference
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -181,6 +184,73 @@ class DariHooksTest {
         assertEquals(listOf("Android w2a-req a null 1 null null"), created[0].calls)
         assertEquals(listOf("Android url https://two", "Android w2a-req b null 2 null null"), created[1].calls)
     }
+
+    @Test
+    fun `a bridge whose WebView was collected does not record to another WebView's page`() {
+        val bridge = Any()
+        val view = registerOnCollectableView(bridge)
+        val other = WebView(context())
+        DariHooks.onVisitedHistory(other, "https://other")
+        collect(view)
+
+        DariHooks.onMappedCall(REQUEST, bridge, arrayOf("a", "1", null))
+
+        assertEquals(listOf("Android url https://page", "Android w2a-req a null 1 null null"), calls)
+        Reference.reachabilityFence(other)
+    }
+
+    @Test
+    fun `a bridge whose WebView was collected keeps its JS name and page with no WebView left`() {
+        val bridge = Any()
+        collect(registerOnCollectableView(bridge))
+
+        DariHooks.onMappedCall(REQUEST, bridge, arrayOf("a", "1", null))
+
+        assertEquals(listOf("Android url https://page", "Android w2a-req a null 1 null null"), calls)
+    }
+
+    private fun collect(view: WeakReference<WebView>) {
+        repeat(20) { if (view.get() != null) System.gc() }
+        assumeTrue(view.get() == null)
+    }
+
+    @Test
+    fun `a bridge shared by several WebViews follows a live one after the last registered is collected`() {
+        val bridge = Any()
+        val first = WebView(context())
+        DariHooks.addJavascriptInterface(first, bridge, "Android")
+        DariHooks.onVisitedHistory(first, "https://a")
+        collect(registerOnCollectableView(bridge))
+        DariHooks.onVisitedHistory(first, "https://a2")
+
+        DariHooks.onMappedCall(REQUEST, bridge, arrayOf("x", "1", null))
+
+        assertEquals(listOf("Android url https://a2", "Android w2a-req x null 1 null null"), created.last().calls)
+        Reference.reachabilityFence(first)
+    }
+
+    @Test
+    fun `a shared bridge records under the JS name of the live WebView it was registered on`() {
+        val bridge = Any()
+        val first = WebView(context())
+        DariHooks.addJavascriptInterface(first, bridge, "First")
+        DariHooks.onVisitedHistory(first, "https://a")
+        collect(registerOnCollectableView(bridge, "Second"))
+
+        DariHooks.onMappedCall(REQUEST, bridge, arrayOf("x", "1", null))
+
+        assertEquals(listOf("First url https://a", "First w2a-req x null 1 null null"), created.last().calls)
+        Reference.reachabilityFence(first)
+    }
+
+    private fun registerOnCollectableView(bridge: Any, name: String = "Android"): WeakReference<WebView> {
+        val view = WebView(context())
+        DariHooks.addJavascriptInterface(view, bridge, name)
+        DariHooks.onVisitedHistory(view, "https://page")
+        return WeakReference(view)
+    }
+
+    private fun context(): Context = ApplicationProvider.getApplicationContext()
 
     @Test
     fun `a broken spec never throws into the bridge`() {

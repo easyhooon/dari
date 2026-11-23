@@ -41,7 +41,13 @@ object DariHooks {
 
     internal var interceptorFactory: (String?) -> DariInterceptor? = { tag -> Dari.createInterceptor(tag, sharedDecoder) }
 
-    private class Registration(val webView: WeakReference<WebView>, val name: String?)
+    // webViews: every WebView the bridge was registered on with its JS name, latest last. name and page are the
+    // latest one's, and page outlives it, so calls that arrive after all of them are collected stay on that page.
+    private class Registration(val webViews: List<RegisteredView>, val name: String?, val page: WebViewState) {
+        fun live(): RegisteredView? = webViews.asReversed().firstOrNull { it.webView.get() != null }
+    }
+
+    private class RegisteredView(val webView: WeakReference<WebView>, val name: String?)
 
     private class WebViewState(var jsName: String?) {
         val interceptors = HashMap<String?, DariInterceptor>()
@@ -67,9 +73,13 @@ object DariHooks {
     fun addJavascriptInterface(webView: WebView, bridge: Any?, name: String?) {
         try {
             synchronized(lock) {
-                if (bridge != null) bridges[bridge] = Registration(WeakReference(webView), name)
                 val state = webViews.getOrPut(webView) { WebViewState(name) }
                 if (state.jsName == null) state.jsName = name
+                if (bridge != null) {
+                    val others = bridges[bridge]?.webViews.orEmpty()
+                        .filter { it.webView.get().let { view -> view != null && view !== webView } }
+                    bridges[bridge] = Registration(others + RegisteredView(WeakReference(webView), name), name, state)
+                }
                 lastWebView = WeakReference(webView)
             }
         } catch (t: Throwable) {
@@ -148,25 +158,28 @@ object DariHooks {
         }
     }
 
-    // WebView lookup order: a WebView argument, the receiver itself, the receiver as a registered bridge,
-    // then the WebView seen last (right for single-WebView screens).
+    // Lookup order: a WebView argument, the receiver itself, the receiver as a registered bridge (its WebView, else
+    // the page it was registered on), then the WebView seen last (right for single-WebView screens).
     private fun interceptorFor(mapping: BridgeMapping, receiver: Any?, args: Array<Any?>): DariInterceptor? =
         synchronized(lock) {
             val registration = receiver?.let { bridges[it] }
+            val live = registration?.live()
             val webView = args.firstNotNullOfOrNull { it as? WebView }
                 ?: receiver as? WebView
-                ?: registration?.webView?.get()
-                ?: lastWebView?.get()
-            if (webView == null) {
-                return@synchronized detached[mapping.tag] ?: interceptorFactory(mapping.tag)?.also { detached[mapping.tag] = it }
-            }
-            val state = webViews.getOrPut(webView) { WebViewState(null) }
-            val tag = mapping.tag ?: registration?.name ?: state.jsName
+                ?: live?.webView?.get()
+            val state = webView?.let(::stateOf)
+                ?: registration?.page
+                ?: lastWebView?.get()?.let(::stateOf)
+                ?: return@synchronized detached[mapping.tag] ?: interceptorFactory(mapping.tag)?.also { detached[mapping.tag] = it }
+            // The JS name the bridge has on that WebView; the latest one once all of them are collected.
+            val tag = mapping.tag ?: (if (live != null) live.name else registration?.name) ?: state.jsName
             state.interceptors[tag] ?: interceptorFactory(tag)?.also {
                 state.pageUrl?.let(it::onPageUrlChanged)
                 state.interceptors[tag] = it
             }
         }
+
+    private fun stateOf(webView: WebView): WebViewState = webViews.getOrPut(webView) { WebViewState(null) }
 
     private fun key(kind: Kind, requestId: String): String =
         if (kind == Kind.WEB_TO_APP_REQUEST || kind == Kind.WEB_TO_APP_RESPONSE) "w:$requestId" else "a:$requestId"
