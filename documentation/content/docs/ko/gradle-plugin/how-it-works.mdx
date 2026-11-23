@@ -84,4 +84,4 @@ Kotlin 컴파일러 플러그인을 쓰지 않은 이유: 컴파일러 플러그
   - 응답은 짝이 되는 요청을 기록한 인터셉터를 씁니다.
   - 브릿지 객체가 아닌 곳에 매핑된 메서드는 `WebView` 파라미터가 있으면 그것을 쓰고, 없으면 가장 최근에 본 WebView를 씁니다.
 - **페이지 URL.** `doUpdateVisitedHistory`에서 가져오므로 리다이렉트, 링크 이동, SPA history 변경도 반영됩니다. `doUpdateVisitedHistory`를 override한 `WebViewClient` 서브클래스가 있어야 하며, 빈 override여도 됩니다.
-- **전달 상태.** `evaluateJavascript` 호출도 플러그인을 거칩니다. 스크립트에 기록된 Web → App 응답이나 App → Web 요청 하나의 `requestId`가 따옴표로 감싸져(`'id'`, `"id"`) 들어 있으면, 페이지가 그 스크립트를 실행한 뒤 해당 메시지를 전달됨으로 표시합니다. 처음 한 번 연결된 뒤부터는 새 메시지가 대기 상태로 시작하므로, 앱이 버린 메시지는 5초 뒤 확인 안 됨으로 보입니다. ID를 따옴표 없이 넣는 스크립트, `loadUrl("javascript:...")`, `postWebMessage`, `WebMessagePort`는 추적하지 않으며, 예외를 던진 스크립트도 전달됨으로 기록됩니다.
+- **전달 상태.** `evaluateJavascript` 호출도 플러그인을 거칩니다. 같은 WebView에서 최근 10초 안에 기록된 Web → App 응답이나 App → Web 요청 하나의 `requestId`가 스크립트에 따옴표로 감싸져(`'id'`, `"id"`) 들어 있으면, 페이지가 그 스크립트를 실행한 뒤 해당 메시지를 전달됨으로 표시합니다. 페이지가 응답한 App → Web 요청도 전달됨으로 표시합니다. 한 WebView에서 한 번 연결된 뒤부터는 그 WebView의 같은 방향 새 메시지가 대기 상태로 시작하므로, 앱이 버린 메시지는 5초 뒤 확인 안 됨으로 보입니다. ID를 따옴표 없이 넣는 스크립트, `loadUrl("javascript:...")`, `postWebMessage`, `WebMessagePort`는 추적하지 않으며, 예외를 던진 스크립트도 전달됨으로 기록됩니다.

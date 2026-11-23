@@ -192,7 +192,8 @@ class MessageRepository internal constructor(
     }
 
     /**
-     * Sets [delivery] on the latest entry of [direction] for [requestId]. A settled delivery is never moved back to
+     * Sets [delivery] on the latest entry of [direction] for [requestId]; for Web -> App, the latest one that already
+     * has its response, so a reused id's new request doesn't take it. A settled delivery is never moved back to
      * [DeliveryStatus.PENDING], since the call that marks it pending can arrive after the script already ran.
      */
     fun updateDelivery(requestId: String, tag: String?, direction: MessageDirection, delivery: DeliveryStatus) {
@@ -200,7 +201,9 @@ class MessageRepository internal constructor(
             var updated: MessageEntry? = null
             _entries.update { current ->
                 updated = null
-                val index = current.indexOfLast { it.requestId == requestId && it.tag == tag && it.direction == direction }
+                val index = current.indexOfLast { it.requestId == requestId && it.tag == tag && it.direction == direction &&
+                    (direction == MessageDirection.APP_TO_WEB || it.responseTimestamp != null)
+                }
                 val entry = current.getOrNull(index)
                 if (entry == null || entry.delivery == delivery ||
                     (delivery == DeliveryStatus.PENDING && entry.delivery != null)

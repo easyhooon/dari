@@ -1,5 +1,6 @@
 package com.easyhooon.dari.auto
 
+import android.os.SystemClock
 import android.util.Log
 import android.webkit.ValueCallback
 import android.webkit.WebView
@@ -23,6 +24,8 @@ object DariHooks {
 
     private const val LOG_TAG = "Dari"
     private const val UNKNOWN_HANDLER = "unknown"
+    // How long a message waits for its script; well past the inspectors' 5 s before they call it not confirmed.
+    private const val DELIVERY_WINDOW_MS = 10_000L
     private val QUOTES = listOf("'", "\"", "`")
 
     // Requests that never get a response (e.g. a page that stops answering) must not pile up.
@@ -56,19 +59,29 @@ object DariHooks {
     private class WebViewState(var jsName: String?) {
         val interceptors = HashMap<String?, DariInterceptor>()
         var pageUrl: String? = null
+
+        // Messages this page should receive through a script, waiting for it to run. Only scripts run on this
+        // page's WebView can match them, and they expire, so a dropped message can't match an unrelated script later.
+        val awaiting = ArrayList<AwaitingDelivery>()
+
+        // Directions whose scripts have matched on this page; only those start out pending.
+        val trackedDirections = HashSet<MessageDirection>()
+
+        fun pruneAwaiting(now: Long) {
+            awaiting.removeAll { now - it.since > DELIVERY_WINDOW_MS }
+        }
     }
 
     private class OpenRequest(val interceptor: DariInterceptor, val handlerName: String)
 
-    // Messages that reach the page through a script, waiting for that script to run. Bounded like openRequests.
-    private val awaitingDelivery = object : LinkedHashMap<String, AwaitingDelivery>() {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, AwaitingDelivery>) = size > MAX_OPEN_REQUESTS
-    }
+    private class AwaitingDelivery(
+        val interceptor: DariInterceptor,
+        val requestId: String,
+        val direction: MessageDirection,
+        val since: Long,
+    )
 
-    // Set once a script was matched to a message, so apps whose scripts never match don't show every message pending.
-    private var deliveryTracked = false
-
-    private class AwaitingDelivery(val interceptor: DariInterceptor, val requestId: String, val direction: MessageDirection)
+    internal var clock: () -> Long = SystemClock::uptimeMillis
 
     /** Entry of a method mapped in `dari { }`. [spec] is the mapping the plugin serialized at build time. */
     @JvmStatic
@@ -171,6 +184,13 @@ object DariHooks {
                     } else {
                         interceptor.onAppToWebResponse(requestId, success, data.asPayload())
                     }
+                    // The page answered, so the request reached it whether or not a script was matched.
+                    synchronized(lock) {
+                        pageOf(interceptor)?.awaiting?.removeAll {
+                            it.interceptor === interceptor && it.requestId == requestId && it.direction == MessageDirection.APP_TO_WEB
+                        }
+                    }
+                    interceptor.onDeliveryChanged(requestId, MessageDirection.APP_TO_WEB, DeliveryStatus.DELIVERED)
                 }
             }
         }
@@ -178,29 +198,38 @@ object DariHooks {
 
     private fun awaitDelivery(interceptor: DariInterceptor, requestId: String, direction: MessageDirection) {
         val tracked = synchronized(lock) {
-            awaitingDelivery["${direction.name}:${interceptor.tag}:$requestId"] = AwaitingDelivery(interceptor, requestId, direction)
-            deliveryTracked
+            // An interceptor without a page (no WebView known) has no script to wait for.
+            val page = pageOf(interceptor) ?: return
+            page.pruneAwaiting(clock())
+            page.awaiting.removeAll { it.interceptor === interceptor && it.requestId == requestId && it.direction == direction }
+            page.awaiting += AwaitingDelivery(interceptor, requestId, direction, clock())
+            direction in page.trackedDirections
         }
         if (tracked) interceptor.onDeliveryChanged(requestId, direction, DeliveryStatus.PENDING)
     }
 
+    // Interceptors belong to one page; there are only a few pages, so a scan is enough.
+    private fun pageOf(interceptor: DariInterceptor): WebViewState? =
+        (webViews.values.asSequence() + bridges.values.asSequence().map { it.page })
+            .firstOrNull { page -> page.interceptors.values.any { it === interceptor } }
+
     /**
      * Replaces `webView.evaluateJavascript(script, callback)`. When the script names exactly one message waiting for
-     * delivery, as a quoted literal, that message is marked delivered once the page has run the script.
+     * delivery on this WebView's page, as a quoted literal, that message is marked delivered once the script ran.
      */
     @JvmStatic
     fun evaluateJavascript(webView: WebView, script: String?, callback: ValueCallback<String>?) {
-        val awaiting = try {
-            script?.let(::takeAwaiting)
+        val match = try {
+            script?.let { takeAwaiting(webView, it) }
         } catch (t: Throwable) {
             Log.w(LOG_TAG, "Dari could not match a script to a message", t)
             null
         }
-        val tracked = if (awaiting == null) {
+        val tracked = if (match == null) {
             callback
         } else {
             ValueCallback<String> { result ->
-                markDelivered(awaiting)
+                markDelivered(match.first, match.second)
                 callback?.onReceiveValue(result)
             }
         }
@@ -208,17 +237,17 @@ object DariHooks {
         webView.evaluateJavascript(script as String, tracked)
     }
 
-    private fun takeAwaiting(script: String): AwaitingDelivery? = synchronized(lock) {
-        if (awaitingDelivery.isEmpty()) return null
-        val matches = awaitingDelivery.entries.filter { (_, awaiting) -> script.quotes(awaiting.requestId) }
-        val match = matches.singleOrNull() ?: return null
-        awaitingDelivery.remove(match.key)
-        match.value
+    private fun takeAwaiting(webView: WebView, script: String): Pair<WebViewState, AwaitingDelivery>? = synchronized(lock) {
+        val page = webViews[webView] ?: return null
+        page.pruneAwaiting(clock())
+        val match = page.awaiting.filter { script.quotes(it.requestId) }.singleOrNull() ?: return null
+        page.awaiting.remove(match)
+        page to match
     }
 
-    private fun markDelivered(awaiting: AwaitingDelivery) {
+    private fun markDelivered(page: WebViewState, awaiting: AwaitingDelivery) {
         try {
-            synchronized(lock) { deliveryTracked = true }
+            synchronized(lock) { page.trackedDirections += awaiting.direction }
             awaiting.interceptor.onDeliveryChanged(awaiting.requestId, awaiting.direction, DeliveryStatus.DELIVERED)
         } catch (t: Throwable) {
             Log.w(LOG_TAG, "Dari could not record a delivery", t)
@@ -271,7 +300,6 @@ object DariHooks {
         lastWebView = null
         detached.clear()
         openRequests.clear()
-        awaitingDelivery.clear()
-        deliveryTracked = false
+        clock = SystemClock::uptimeMillis
     }
 }

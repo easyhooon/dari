@@ -20,12 +20,24 @@ final class MessageStoreTests: XCTestCase {
 
     func testDeliveryMarksNewestOfSameDirectionAndNeverGoesBackToPending() {
         let store = MessageStore(maxEntries: 10)
-        add(store, "1", .webToApp)
         add(store, "1", .appToWeb)
         add(store, "1", .webToApp)
-        store.setDelivery(requestId: "1", tag: nil, direction: .webToApp, .delivered)
-        store.setDelivery(requestId: "1", tag: nil, direction: .webToApp, .pending)
+        add(store, "1", .appToWeb)
+        store.setDelivery(requestId: "1", tag: nil, direction: .appToWeb, .delivered)
+        store.setDelivery(requestId: "1", tag: nil, direction: .appToWeb, .pending)
         XCTAssertEqual(store.snapshot().map(\.delivery), [nil, nil, .delivered])
+    }
+
+    func testDeliverySkipsANewerRequestOfAReusedIdThatHasNoResponseYet() {
+        let store = MessageStore(maxEntries: 10)
+        add(store, "1", .webToApp)
+        store.respond(requestId: "1", tag: nil, direction: .webToApp) { record, now in
+            record.status = .success
+            record.responseTimestamp = now
+        }
+        add(store, "1", .webToApp)
+        store.setDelivery(requestId: "1", tag: nil, direction: .webToApp, .delivered)
+        XCTAssertEqual(store.snapshot().map(\.delivery), [.delivered, nil])
     }
 
     func testRespondWithIdCompletesThatRecordOnly() {

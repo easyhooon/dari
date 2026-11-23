@@ -179,8 +179,14 @@ extension Dari {
     ) -> (Any?, Error?) -> Void {
         interceptor.onDeliveryChanged(requestId: requestId, direction: direction, .pending)
         return { _, error in
-            interceptor.onDeliveryChanged(requestId: requestId, direction: direction, error == nil ? .delivered : .failed)
+            interceptor.onDeliveryChanged(requestId: requestId, direction: direction, Self.delivery(after: error))
         }
+    }
+
+    /// A script that ran but ended on a value WebKit can't return (a Promise, a function, a DOM node) still ran.
+    static func delivery(after error: Error?) -> DeliveryStatus {
+        guard let error = error as NSError?, error.domain == WKErrorDomain else { return error == nil ? .delivered : .failed }
+        return error.code == WKError.Code.javaScriptResultTypeIsUnsupported.rawValue ? .delivered : .failed
     }
 }
 

@@ -144,8 +144,10 @@ package final class MessageStore {
     /// Sets [delivery] on the newest matching record. A settled delivery never goes back to pending.
     func setDelivery(requestId: String, tag: String?, direction: MessageDirection, _ delivery: DeliveryStatus) {
         lock.withLock {
+            // For Web -> App, the newest record that already has its response, so a reused id's new request doesn't take it.
             guard let index = records.lastIndex(where: {
-                $0.id >= firstLiveId && $0.requestId == requestId && $0.tag == tag && $0.direction == direction
+                $0.id >= firstLiveId && $0.requestId == requestId && $0.tag == tag && $0.direction == direction &&
+                    (direction == .appToWeb || $0.responseTimestamp != nil)
             }) else { return }
             let current = records[index].delivery
             guard current != delivery, !(delivery == .pending && current != nil) else { return }

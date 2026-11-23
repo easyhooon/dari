@@ -88,6 +88,13 @@ final class AutoCaptureTests: XCTestCase {
 
         XCTAssertEqual(Dari.shared.records.last?.status, .error)
         XCTAssertEqual(Dari.shared.records.last?.delivery, .failed)
+
+        // An async receiver returns a Promise, which WebKit can't hand back, but the script ran.
+        let promise = expectation(description: "promise script")
+        webView.evaluateJavaScript("(async () => 1)()") { _, _ in promise.fulfill() }
+        wait(for: [promise], timeout: 10)
+
+        XCTAssertEqual(Dari.shared.records.last?.delivery, .delivered)
     }
 }
 
