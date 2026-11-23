@@ -23,6 +23,11 @@ enum InspectorFormat {
     /// How long a message may stay pending before it reads as not confirmed. Matches `DELIVERY_GRACE_MS`.
     static let deliveryGraceMillis: Int64 = 5_000
 
+    /// An App → Web request leaves when sent, a Web → App response when answered. Mirrors `deliverySentAt`.
+    static func deliverySentAt(_ record: MessageRecord) -> Int64 {
+        record.direction == .appToWeb ? record.requestTimestamp : record.responseTimestamp ?? record.requestTimestamp
+    }
+
     /// Mirrors `deliveryLabel` in the inspector protocol; nil when delivery isn't tracked.
     static func delivery(_ record: MessageRecord, now: Int64 = Int64(Date().timeIntervalSince1970 * 1000)) -> String? {
         switch record.delivery {
@@ -30,8 +35,7 @@ enum InspectorFormat {
         case .delivered: return "Delivered to the page"
         case .failed: return "Failed in the page"
         case .pending:
-            let sentAt = record.responseTimestamp ?? record.requestTimestamp
-            return now - sentAt >= deliveryGraceMillis ? "Not confirmed: the page never ran it" : "Pending"
+            return now - deliverySentAt(record) >= deliveryGraceMillis ? "Not confirmed: the page never ran it" : "Pending"
         }
     }
 

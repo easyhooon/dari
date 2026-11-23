@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -53,8 +54,11 @@ import com.easyhooon.dari.desktop.app.ui.json.JsonPayload
 import com.easyhooon.dari.desktop.app.ui.theme.Dari
 import com.easyhooon.dari.desktop.app.ui.theme.DariMetrics
 import com.easyhooon.dari.inspector.protocol.WireMessageDetail
+import com.easyhooon.dari.inspector.protocol.WireMessageSummary
 import com.easyhooon.dari.inspector.protocol.WirePayloadMetadata
 import com.easyhooon.dari.inspector.protocol.deliveryLabel
+import com.easyhooon.dari.inspector.protocol.deliveryLabelRefreshIn
+import com.easyhooon.dari.inspector.protocol.deliverySentAt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -122,7 +126,7 @@ fun DetailPane(
                     QuietButton("✕", onClick = onClose, contentDescription = "Close details")
                 }
                 Text(
-                    summaryLine(detail),
+                    summaryLine(detail, rememberDeliveryNow(detail.summary)),
                     style = Dari.type.codeCaption,
                     color = Dari.colors.textTertiary,
                     modifier = Modifier.padding(top = 2.dp),
@@ -252,13 +256,26 @@ private fun ProtobufNotice(status: String, originalSizeBytes: Int) {
 
 private const val DECODED = "DECODED"
 
-private fun summaryLine(detail: WireMessageDetail): String {
+// Recomposes once the grace period ends, so a pending message turns into not confirmed without another update.
+@Composable
+private fun rememberDeliveryNow(summary: WireMessageSummary): Long {
+    val sentAt = deliverySentAt(summary.direction, summary.requestTimestamp, summary.responseTimestamp)
+    val now by produceState(System.currentTimeMillis(), summary.delivery, sentAt) {
+        deliveryLabelRefreshIn(summary.delivery, sentAt, value)?.let { wait ->
+            delay(wait)
+            value = System.currentTimeMillis()
+        }
+    }
+    return now
+}
+
+private fun summaryLine(detail: WireMessageDetail, now: Long): String {
     val s = detail.summary
     return listOfNotNull(
         s.handlerName.takeIf { s.displayName != null },
         s.tag,
         s.pageUrl,
-        deliveryLabel(s.delivery, s.responseTimestamp ?: s.requestTimestamp, System.currentTimeMillis()),
+        deliveryLabel(s.delivery, deliverySentAt(s.direction, s.requestTimestamp, s.responseTimestamp), now),
         s.requestId,
         formatTime(s.requestTimestamp),
         durationLabel(s),

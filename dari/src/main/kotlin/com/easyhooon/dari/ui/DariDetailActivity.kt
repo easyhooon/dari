@@ -41,6 +41,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -58,12 +59,15 @@ import com.easyhooon.dari.export.DariExporter
 import com.easyhooon.dari.export.ExportFormat
 import com.easyhooon.dari.handlerLabel
 import com.easyhooon.dari.inspector.protocol.deliveryLabel
+import com.easyhooon.dari.inspector.protocol.deliveryLabelRefreshIn
+import com.easyhooon.dari.inspector.protocol.deliverySentAt
 import com.easyhooon.dari.masking.maskedIf
 import com.easyhooon.dari.ui.components.CodeViewer
 import com.easyhooon.dari.ui.components.JsonViewer
 import com.easyhooon.dari.ui.theme.ApplyDariSystemBars
 import com.easyhooon.dari.ui.theme.DariTheme
 import com.easyhooon.dari.ui.theme.DariTopBarColors
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
@@ -309,11 +313,9 @@ private fun OverviewTab(entry: MessageEntry) {
         }
         OverviewRow("Direction", direction)
         OverviewRow("Status", entry.status.name)
-        deliveryLabel(
-            entry.delivery?.name,
-            entry.responseTimestamp ?: entry.requestTimestamp,
-            System.currentTimeMillis(),
-        )?.let { OverviewRow("Delivery", it) }
+        val sentAt = deliverySentAt(entry.direction.name, entry.requestTimestamp, entry.responseTimestamp)
+        val now = rememberDeliveryNow(entry.delivery?.name, sentAt)
+        deliveryLabel(entry.delivery?.name, sentAt, now)?.let { OverviewRow("Delivery", it) }
         OverviewRow("Tag", entry.tag ?: "-")
         entry.pageUrl?.let { OverviewRow("Page", it) }
         OverviewRow("Request ID", entry.requestId ?: "-")
@@ -509,3 +511,15 @@ private fun formatRawPreviewSize(previewBytes: Int, originalBytes: Int): String 
     } else {
         formatSize(originalBytes)
     }
+
+// Recomposes once the grace period ends, so a pending row turns into not confirmed without another update.
+@Composable
+private fun rememberDeliveryNow(delivery: String?, sentAt: Long): Long {
+    val now by produceState(System.currentTimeMillis(), delivery, sentAt) {
+        deliveryLabelRefreshIn(delivery, sentAt, value)?.let { wait ->
+            delay(wait)
+            value = System.currentTimeMillis()
+        }
+    }
+    return now
+}

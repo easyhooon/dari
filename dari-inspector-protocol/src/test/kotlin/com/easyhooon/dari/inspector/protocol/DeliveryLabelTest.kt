@@ -28,6 +28,20 @@ class DeliveryLabelTest {
     }
 
     @Test
+    fun `an app-to-web request counts from when it was sent, a response from when it was answered`() {
+        assertEquals(1_000, deliverySentAt("APP_TO_WEB", requestTimestamp = 1_000, responseTimestamp = 9_000))
+        assertEquals(9_000, deliverySentAt("WEB_TO_APP", requestTimestamp = 1_000, responseTimestamp = 9_000))
+        assertEquals(1_000, deliverySentAt("WEB_TO_APP", requestTimestamp = 1_000, responseTimestamp = null))
+    }
+
+    @Test
+    fun `only a pending message inside the grace period needs a refresh`() {
+        assertEquals(DELIVERY_GRACE_MS - 1_000, deliveryLabelRefreshIn("PENDING", sentAt = 0, now = 1_000))
+        assertNull(deliveryLabelRefreshIn("PENDING", sentAt = 0, now = DELIVERY_GRACE_MS))
+        assertNull(deliveryLabelRefreshIn("DELIVERED", sentAt = 0, now = 0))
+    }
+
+    @Test
     fun `a summary from an app without delivery decodes as untracked`() {
         val json = """{"id":1,"handlerName":"h","direction":"WEB_TO_APP","status":"SUCCESS","requestTimestamp":0,""" +
             """"requestSizeBytes":0,"responseSizeBytes":0}"""

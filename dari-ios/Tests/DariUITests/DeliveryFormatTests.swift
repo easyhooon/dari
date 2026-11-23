@@ -17,4 +17,13 @@ final class DeliveryFormatTests: XCTestCase {
         record.delivery = .delivered
         XCTAssertEqual(InspectorFormat.delivery(record, now: 0), "Delivered to the page")
     }
+
+    func testAnAppToWebRequestCountsFromWhenItWasSent() {
+        var record = MessageRecord(
+            id: 1, requestId: "r", handlerName: "h", direction: .appToWeb, status: .success, requestTimestamp: 1_000
+        )
+        record.responseTimestamp = 9_000
+        record.delivery = .pending
+        XCTAssertEqual(InspectorFormat.delivery(record, now: 1_000 + InspectorFormat.deliveryGraceMillis), "Not confirmed: the page never ran it")
+    }
 }
