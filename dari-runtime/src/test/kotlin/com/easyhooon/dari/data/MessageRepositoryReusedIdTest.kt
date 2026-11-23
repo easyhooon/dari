@@ -2,6 +2,7 @@ package com.easyhooon.dari.data
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.easyhooon.dari.DeliveryStatus
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessageStatus
@@ -82,6 +83,22 @@ class MessageRepositoryReusedIdTest {
         val expected = listOf(MessageStatus.IN_PROGRESS to null, MessageStatus.SUCCESS to "second")
         assertEquals(expected, repository.entries.value.responses())
         awaitPersisted(expected)
+    }
+
+    @Test
+    fun `a delivery for the answered call skips a newer request still waiting for its response`() {
+        repository.addEntry(request())
+        respond("first")
+        repository.updateDelivery(REQUEST_ID, TAG, MessageDirection.WEB_TO_APP, DeliveryStatus.PENDING)
+        repository.addEntry(request())
+        repository.updateDelivery(REQUEST_ID, TAG, MessageDirection.WEB_TO_APP, DeliveryStatus.DELIVERED)
+
+        assertEquals(listOf(DeliveryStatus.DELIVERED, null), repository.entries.value.map { it.delivery })
+        runBlocking {
+            withTimeout(5_000) {
+                while (database.messageDao().getAll().map { it.delivery } != listOf(DeliveryStatus.DELIVERED, null)) delay(10)
+            }
+        }
     }
 
     @Test

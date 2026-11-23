@@ -5,11 +5,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,17 +23,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.IosShare
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
@@ -40,29 +41,33 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.easyhooon.dari.Dari
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
-import com.easyhooon.dari.handlerLabel
 import com.easyhooon.dari.MessagePayloadMetadata
 import com.easyhooon.dari.RawPayloadFormatter
 import com.easyhooon.dari.export.DariExporter
 import com.easyhooon.dari.export.ExportFormat
+import com.easyhooon.dari.handlerLabel
+import com.easyhooon.dari.inspector.protocol.deliveryLabel
+import com.easyhooon.dari.inspector.protocol.deliveryLabelRefreshIn
+import com.easyhooon.dari.inspector.protocol.deliverySentAt
 import com.easyhooon.dari.masking.maskedIf
 import com.easyhooon.dari.ui.components.CodeViewer
 import com.easyhooon.dari.ui.components.JsonViewer
-import androidx.compose.foundation.isSystemInDarkTheme
 import com.easyhooon.dari.ui.theme.ApplyDariSystemBars
 import com.easyhooon.dari.ui.theme.DariTheme
 import com.easyhooon.dari.ui.theme.DariTopBarColors
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
@@ -308,6 +313,9 @@ private fun OverviewTab(entry: MessageEntry) {
         }
         OverviewRow("Direction", direction)
         OverviewRow("Status", entry.status.name)
+        val sentAt = deliverySentAt(entry.direction.name, entry.requestTimestamp, entry.responseTimestamp)
+        val now = rememberDeliveryNow(entry.delivery?.name, sentAt)
+        deliveryLabel(entry.delivery?.name, sentAt, now)?.let { OverviewRow("Delivery", it) }
         OverviewRow("Tag", entry.tag ?: "-")
         entry.pageUrl?.let { OverviewRow("Page", it) }
         OverviewRow("Request ID", entry.requestId ?: "-")
@@ -503,3 +511,17 @@ private fun formatRawPreviewSize(previewBytes: Int, originalBytes: Int): String 
     } else {
         formatSize(originalBytes)
     }
+
+// Recomposes once the grace period ends, so a pending row turns into not confirmed without another update.
+@Composable
+private fun rememberDeliveryNow(delivery: String?, sentAt: Long): Long {
+    val now by produceState(System.currentTimeMillis(), delivery, sentAt) {
+        // produceState keeps its value across key changes, so start from a fresh clock.
+        value = System.currentTimeMillis()
+        deliveryLabelRefreshIn(delivery, sentAt, value)?.let { wait ->
+            delay(wait)
+            value = System.currentTimeMillis()
+        }
+    }
+    return now
+}

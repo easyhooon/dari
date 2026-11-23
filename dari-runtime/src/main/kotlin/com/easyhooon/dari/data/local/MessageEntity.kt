@@ -2,6 +2,7 @@ package com.easyhooon.dari.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.easyhooon.dari.DeliveryStatus
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessagePayloadMetadata
@@ -39,6 +40,7 @@ internal data class MessageEntity(
     val status: MessageStatus = MessageStatus.IN_PROGRESS,
     val requestTimestamp: Long = System.currentTimeMillis(),
     val responseTimestamp: Long? = null,
+    val delivery: DeliveryStatus? = null,
 )
 
 internal fun MessageEntry.toEntity(): MessageEntity = MessageEntity(
@@ -67,6 +69,7 @@ internal fun MessageEntry.toEntity(): MessageEntity = MessageEntity(
     status = status,
     requestTimestamp = requestTimestamp,
     responseTimestamp = responseTimestamp,
+    delivery = delivery,
 )
 
 internal fun MessageEntity.toMessageEntry(): MessageEntry = MessageEntry(
@@ -100,6 +103,7 @@ internal fun MessageEntity.toMessageEntry(): MessageEntry = MessageEntry(
     status = status,
     requestTimestamp = requestTimestamp,
     responseTimestamp = responseTimestamp,
+    delivery = delivery,
 )
 
 private fun payloadMetadata(

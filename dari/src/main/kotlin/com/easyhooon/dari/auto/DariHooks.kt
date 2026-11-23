@@ -1,8 +1,12 @@
 package com.easyhooon.dari.auto
 
+import android.os.SystemClock
 import android.util.Log
+import android.webkit.ValueCallback
 import android.webkit.WebView
 import com.easyhooon.dari.Dari
+import com.easyhooon.dari.DeliveryStatus
+import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.auto.BridgeMapping.Kind
 import com.easyhooon.dari.interceptor.DariInterceptor
 import com.easyhooon.dari.interceptor.ProtobufDariInterceptor
@@ -20,6 +24,9 @@ object DariHooks {
 
     private const val LOG_TAG = "Dari"
     private const val UNKNOWN_HANDLER = "unknown"
+    // How long a message waits for its script; well past the inspectors' 5 s before they call it not confirmed.
+    private const val DELIVERY_WINDOW_MS = 10_000L
+    private val QUOTES = listOf("'", "\"", "`")
 
     // Requests that never get a response (e.g. a page that stops answering) must not pile up.
     private const val MAX_OPEN_REQUESTS = 500
@@ -52,9 +59,29 @@ object DariHooks {
     private class WebViewState(var jsName: String?) {
         val interceptors = HashMap<String?, DariInterceptor>()
         var pageUrl: String? = null
+
+        // Messages this page should receive through a script, waiting for it to run. Only scripts run on this
+        // page's WebView can match them, and they expire, so a dropped message can't match an unrelated script later.
+        val awaiting = ArrayList<AwaitingDelivery>()
+
+        // Directions whose scripts have matched on this page; only those start out pending.
+        val trackedDirections = HashSet<MessageDirection>()
+
+        fun pruneAwaiting(now: Long) {
+            awaiting.removeAll { now - it.since > DELIVERY_WINDOW_MS }
+        }
     }
 
     private class OpenRequest(val interceptor: DariInterceptor, val handlerName: String)
+
+    private class AwaitingDelivery(
+        val interceptor: DariInterceptor,
+        val requestId: String,
+        val direction: MessageDirection,
+        val since: Long,
+    )
+
+    internal var clock: () -> Long = SystemClock::uptimeMillis
 
     /** Entry of a method mapped in `dari { }`. [spec] is the mapping the plugin serialized at build time. */
     @JvmStatic
@@ -134,6 +161,9 @@ object DariHooks {
                 if (requestId != null && fireAndForget != true) {
                     synchronized(lock) { openRequests[key(mapping.kind, requestId)] = OpenRequest(interceptor, handlerName) }
                 }
+                if (mapping.kind == Kind.APP_TO_WEB_REQUEST && requestId != null) {
+                    awaitDelivery(interceptor, requestId, MessageDirection.APP_TO_WEB)
+                }
             }
             Kind.WEB_TO_APP_RESPONSE, Kind.APP_TO_WEB_RESPONSE -> {
                 // Like the manual API, a response without a requestId has nothing to pair with.
@@ -147,16 +177,88 @@ object DariHooks {
                     } else {
                         interceptor.onWebToAppResponse(handlerName, requestId, data.asPayload(), success)
                     }
+                    awaitDelivery(interceptor, requestId, MessageDirection.WEB_TO_APP)
                 } else {
                     if (data is ByteArray && interceptor is ProtobufDariInterceptor) {
                         interceptor.onAppToWebProtobufResponse(requestId, success, data)
                     } else {
                         interceptor.onAppToWebResponse(requestId, success, data.asPayload())
                     }
+                    // The page answered, so the request reached it whether or not a script was matched.
+                    synchronized(lock) {
+                        pageOf(interceptor)?.awaiting?.removeAll {
+                            it.interceptor === interceptor && it.requestId == requestId && it.direction == MessageDirection.APP_TO_WEB
+                        }
+                    }
+                    interceptor.onDeliveryChanged(requestId, MessageDirection.APP_TO_WEB, DeliveryStatus.DELIVERED)
                 }
             }
         }
     }
+
+    private fun awaitDelivery(interceptor: DariInterceptor, requestId: String, direction: MessageDirection) {
+        // An interceptor without a page (no WebView known) has no script to wait for.
+        val page = synchronized(lock) { pageOf(interceptor) } ?: return
+        // Reported before the wait can match, so a script run on another thread can't follow DELIVERED with PENDING.
+        if (synchronized(lock) { direction in page.trackedDirections }) {
+            interceptor.onDeliveryChanged(requestId, direction, DeliveryStatus.PENDING)
+        }
+        synchronized(lock) {
+            page.pruneAwaiting(clock())
+            page.awaiting.removeAll { it.interceptor === interceptor && it.requestId == requestId && it.direction == direction }
+            page.awaiting += AwaitingDelivery(interceptor, requestId, direction, clock())
+        }
+    }
+
+    // Interceptors belong to one page; there are only a few pages, so a scan is enough.
+    private fun pageOf(interceptor: DariInterceptor): WebViewState? =
+        (webViews.values.asSequence() + bridges.values.asSequence().map { it.page })
+            .firstOrNull { page -> page.interceptors.values.any { it === interceptor } }
+
+    /**
+     * Replaces `webView.evaluateJavascript(script, callback)`. When the script names exactly one message waiting for
+     * delivery on this WebView's page, as a quoted literal, that message is marked delivered once the script ran.
+     */
+    @JvmStatic
+    fun evaluateJavascript(webView: WebView, script: String?, callback: ValueCallback<String>?) {
+        val match = try {
+            script?.let { takeAwaiting(webView, it) }
+        } catch (t: Throwable) {
+            Log.w(LOG_TAG, "Dari could not match a script to a message", t)
+            null
+        }
+        val tracked = if (match == null) {
+            callback
+        } else {
+            ValueCallback<String> { result ->
+                markDelivered(match.first, match.second)
+                callback?.onReceiveValue(result)
+            }
+        }
+        // Casts keep the platform's own failure for a null script.
+        webView.evaluateJavascript(script as String, tracked)
+    }
+
+    private fun takeAwaiting(webView: WebView, script: String): Pair<WebViewState, AwaitingDelivery>? = synchronized(lock) {
+        val page = webViews[webView] ?: return null
+        page.pruneAwaiting(clock())
+        val match = page.awaiting.filter { script.quotes(it.requestId) }.singleOrNull() ?: return null
+        page.awaiting.remove(match)
+        page to match
+    }
+
+    private fun markDelivered(page: WebViewState, awaiting: AwaitingDelivery) {
+        try {
+            synchronized(lock) { page.trackedDirections += awaiting.direction }
+            awaiting.interceptor.onDeliveryChanged(awaiting.requestId, awaiting.direction, DeliveryStatus.DELIVERED)
+        } catch (t: Throwable) {
+            Log.w(LOG_TAG, "Dari could not record a delivery", t)
+        }
+    }
+
+    // Only a quoted literal counts, so an id like "1" doesn't match every script that happens to contain the digit.
+    private fun String.quotes(id: String): Boolean =
+        QUOTES.any { quote -> contains(quote + id + quote) } || contains("\\\"$id\\\"")
 
     // Lookup order: a WebView argument, the receiver itself, the receiver as a registered bridge (its WebView, else
     // the page it was registered on), then the WebView seen last (right for single-WebView screens).
@@ -172,7 +274,8 @@ object DariHooks {
                 ?: lastWebView?.get()?.let(::stateOf)
                 ?: return@synchronized detached[mapping.tag] ?: interceptorFactory(mapping.tag)?.also { detached[mapping.tag] = it }
             // The JS name the bridge has on that WebView; the latest one once all of them are collected.
-            val tag = mapping.tag ?: (if (live != null) live.name else registration?.name) ?: state.jsName
+            val selected = registration?.webViews?.lastOrNull { webView != null && it.webView.get() === webView }
+            val tag = mapping.tag ?: (selected ?: live)?.name ?: (if (live == null) registration?.name else null) ?: state.jsName
             state.interceptors[tag] ?: interceptorFactory(tag)?.also {
                 state.pageUrl?.let(it::onPageUrlChanged)
                 state.interceptors[tag] = it
@@ -200,5 +303,6 @@ object DariHooks {
         lastWebView = null
         detached.clear()
         openRequests.clear()
+        clock = SystemClock::uptimeMillis
     }
 }

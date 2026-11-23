@@ -101,6 +101,7 @@ DariAutoCapture(
 - Return `.ignore` for traffic you don't want to see.
 - Handlers added before `start()`, and Swift bridge code outside these WebKit calls, aren't captured. Use the interceptor for those.
 - Leave `autoCapture` off if your bridge already calls the interceptor, or messages are recorded twice.
+- Scripts that carry a request or a response also record delivery: `FAILED` when the script threw or WebKit couldn't run it, otherwise `DELIVERED`. A script that ends on a value WebKit can't return, such as an async function's Promise, still counts as delivered.
 
 ## Compile-time capture with macros
 

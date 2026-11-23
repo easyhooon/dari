@@ -196,6 +196,14 @@ struct OverviewList: View {
                 LabeledContent("Status") {
                     HStack(spacing: 4) { StatusIcon(status: record.status); Text(record.status.rawValue) }
                 }
+                if record.delivery != nil {
+                    // Redraws each second, so a pending row turns into not confirmed while it's open.
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        if let delivery = InspectorFormat.delivery(record, now: Int64(context.date.timeIntervalSince1970 * 1000)) {
+                            row("Delivery", delivery)
+                        }
+                    }
+                }
                 row("Tag", record.tag ?? "-")
                 if let page = record.pageUrl { row("Page", page) }
                 row("Request ID", record.requestId ?? "-")

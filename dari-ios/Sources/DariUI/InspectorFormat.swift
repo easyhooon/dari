@@ -20,6 +20,25 @@ enum InspectorFormat {
         direction == .webToApp ? "Web → App" : "App → Web"
     }
 
+    /// How long a message may stay pending before it reads as not confirmed. Matches `DELIVERY_GRACE_MS`.
+    static let deliveryGraceMillis: Int64 = 5_000
+
+    /// An App → Web request leaves when sent, a Web → App response when answered. Mirrors `deliverySentAt`.
+    static func deliverySentAt(_ record: MessageRecord) -> Int64 {
+        record.direction == .appToWeb ? record.requestTimestamp : record.responseTimestamp ?? record.requestTimestamp
+    }
+
+    /// Mirrors `deliveryLabel` in the inspector protocol; nil when delivery isn't tracked.
+    static func delivery(_ record: MessageRecord, now: Int64 = Int64(Date().timeIntervalSince1970 * 1000)) -> String? {
+        switch record.delivery {
+        case nil: return nil
+        case .delivered: return "Delivered to the page"
+        case .failed: return "Failed in the page"
+        case .pending:
+            return now - deliverySentAt(record) >= deliveryGraceMillis ? "Not confirmed: the page never ran it" : "Pending"
+        }
+    }
+
     static func duration(_ record: MessageRecord) -> Int64? {
         record.responseTimestamp.map { $0 - record.requestTimestamp }
     }
@@ -115,8 +134,9 @@ enum InspectorFormat {
         lines += [
             "Direction: \(direction(record.direction))",
             "Status: \(record.status.rawValue)",
-            "Tag: \(record.tag ?? "-")",
         ]
+        if let delivery = record.delivery { lines.append("Delivery: \(delivery.rawValue)") }
+        lines += ["Tag: \(record.tag ?? "-")"]
         if let page = record.pageUrl { lines.append("Page: \(page)") }
         lines += ["Request ID: \(record.requestId ?? "-")", "", "Request time: \(date(record.requestTimestamp))"]
         if let response = record.responseTimestamp { lines.append("Response time: \(date(response))") }
@@ -231,6 +251,7 @@ extension InspectorFormat {
             ("direction", record.direction.rawValue),
             ("tag", record.tag),
             ("page_url", record.pageUrl),
+            ("delivery", record.delivery?.rawValue),
             ("request_data", record.requestData),
             ("response_data", record.responseData),
             ("request_data_truncated", record.requestDataTruncated),

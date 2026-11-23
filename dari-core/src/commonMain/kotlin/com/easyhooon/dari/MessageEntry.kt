@@ -10,6 +10,8 @@ package com.easyhooon.dari
  * @property handlerName Stable bridge handler identifier.
  * @property displayName Optional human-readable handler description.
  * @property pageUrl Page the WebView showed when the request was captured, without query or fragment.
+ * @property delivery Whether the message reached the page: a Web -> App response or an App -> Web request.
+ *                    Null when it isn't tracked.
  */
 data class MessageEntry(
     val id: Long = 0L,
@@ -28,7 +30,50 @@ data class MessageEntry(
     val responsePayloadMetadata: MessagePayloadMetadata? = null,
     val displayName: String? = null,
     val pageUrl: String? = null,
+    val delivery: DeliveryStatus? = null,
 ) {
+
+    /**
+     * Preserves the pre-delivery constructor for binary callers, including its default-argument variant that Kotlin
+     * callers compiled against 3.7 link to. Hidden so source calls resolve to the primary constructor.
+     */
+    @Deprecated("Kept for binary compatibility.", level = DeprecationLevel.HIDDEN)
+    constructor(
+        id: Long = 0L,
+        requestId: String? = null,
+        handlerName: String,
+        direction: MessageDirection,
+        tag: String? = null,
+        requestData: String? = null,
+        responseData: String? = null,
+        requestDataTruncated: Boolean = false,
+        responseDataTruncated: Boolean = false,
+        status: MessageStatus = MessageStatus.IN_PROGRESS,
+        requestTimestamp: Long = currentTimeMillis(),
+        responseTimestamp: Long? = null,
+        requestPayloadMetadata: MessagePayloadMetadata? = null,
+        responsePayloadMetadata: MessagePayloadMetadata? = null,
+        displayName: String? = null,
+        pageUrl: String? = null,
+    ) : this(
+        id = id,
+        requestId = requestId,
+        handlerName = handlerName,
+        direction = direction,
+        tag = tag,
+        requestData = requestData,
+        responseData = responseData,
+        requestDataTruncated = requestDataTruncated,
+        responseDataTruncated = responseDataTruncated,
+        status = status,
+        requestTimestamp = requestTimestamp,
+        responseTimestamp = responseTimestamp,
+        requestPayloadMetadata = requestPayloadMetadata,
+        responsePayloadMetadata = responsePayloadMetadata,
+        displayName = displayName,
+        pageUrl = pageUrl,
+        delivery = null,
+    )
 
     /** Preserves the pre-page-URL constructor signature for binary callers. */
     constructor(

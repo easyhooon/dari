@@ -149,22 +149,44 @@ extension Dari {
         case let .request(handlerName, requestId?, data, fireAndForget):
             // The page answers this one through a message.
             interceptor.onAppToWebRequest(handlerName: handlerName, requestId: requestId, data: data, fireAndForget: fireAndForget)
+            return delivery(interceptor, requestId, .appToWeb)
         case let .request(handlerName, nil, data, fireAndForget):
             let requestId = AutoCaptureIds.next()
             interceptor.onAppToWebRequest(handlerName: handlerName, requestId: requestId, data: data, fireAndForget: fireAndForget)
+            let delivered = delivery(interceptor, requestId, .appToWeb)
             return { result, error in
                 interceptor.onAppToWebResponse(
                     requestId: requestId,
                     isSuccess: error == nil,
                     responseData: error.map { $0.localizedDescription } ?? DariAutoCapture.stringify(result)
                 )
+                delivered(result, error)
             }
         case let .response(requestId, data, isSuccess):
             interceptor.onWebToAppResponse(handlerName: "", requestId: requestId, responseData: data, isSuccess: isSuccess)
+            return delivery(interceptor, requestId, .webToApp)
         case .ignore:
             break
         }
         return nil
+    }
+
+    /// Marks the message pending now, then delivered or failed once WebKit reports how the script ran.
+    private func delivery(
+        _ interceptor: DariInterceptor,
+        _ requestId: String,
+        _ direction: MessageDirection
+    ) -> (Any?, Error?) -> Void {
+        interceptor.onDeliveryChanged(requestId: requestId, direction: direction, .pending)
+        return { _, error in
+            interceptor.onDeliveryChanged(requestId: requestId, direction: direction, Self.delivery(after: error))
+        }
+    }
+
+    /// A script that ran but ended on a value WebKit can't return (a Promise, a function, a DOM node) still ran.
+    static func delivery(after error: Error?) -> DeliveryStatus {
+        guard let error = error as NSError?, error.domain == WKErrorDomain else { return error == nil ? .delivered : .failed }
+        return error.code == WKError.Code.javaScriptResultTypeIsUnsupported.rawValue ? .delivered : .failed
     }
 }
 

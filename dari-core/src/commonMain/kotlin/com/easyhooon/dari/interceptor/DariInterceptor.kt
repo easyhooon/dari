@@ -1,5 +1,8 @@
 package com.easyhooon.dari.interceptor
 
+import com.easyhooon.dari.DeliveryStatus
+import com.easyhooon.dari.MessageDirection
+
 /**
  * Interface for intercepting WebView bridge communication.
  * Injected into WebViewBridge to capture all bridge messages.
@@ -52,4 +55,10 @@ interface DariInterceptor {
      * Requests captured afterwards record this URL, so use one interceptor per WebView.
      */
     fun onPageUrlChanged(url: String?) = Unit
+
+    /**
+     * Called when it becomes known whether a message reached the page: the response to a Web -> App request, or an
+     * App -> Web request. [direction] says which. The Gradle plugin and the iOS SDK call this for you.
+     */
+    fun onDeliveryChanged(requestId: String, direction: MessageDirection, delivery: DeliveryStatus) = Unit
 }

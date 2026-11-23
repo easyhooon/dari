@@ -33,6 +33,7 @@ internal data class ExportableMessage(
     @SerialName("response_raw_preview_size_bytes") val responseRawPreviewSizeBytes: Int? = null,
     @SerialName("response_raw_preview_truncated") val responseRawPreviewTruncated: Boolean? = null,
     val status: String,
+    val delivery: String? = null,
     @SerialName("request_timestamp") val requestTimestamp: Long,
     @SerialName("response_timestamp") val responseTimestamp: Long? = null,
     @SerialName("duration_ms") val durationMs: Long? = null,
@@ -70,6 +71,7 @@ internal fun MessageEntry.toExportable(): ExportableMessage = ExportableMessage(
         MessageStatus.SUCCESS -> "SUCCESS"
         MessageStatus.ERROR -> "ERROR"
     },
+    delivery = delivery?.name,
     requestTimestamp = requestTimestamp,
     responseTimestamp = responseTimestamp,
     durationMs = durationMs,

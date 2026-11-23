@@ -184,9 +184,21 @@ class DariClassVisitorTest {
     fun `super calls inside a WebView subclass stay direct`() {
         val subclass = loader.loadClass("fixtures.MyWebView").getConstructor().newInstance() as WebView
         subclass.javaClass.getMethod("addSelf").invoke(subclass)
+        subclass.javaClass.getMethod("runSelf").invoke(subclass)
 
         assertEquals(emptyList<String>(), DariHooks.calls)
         assertEquals(listOf("Self"), subclass.added)
+        assertEquals(listOf("self()"), subclass.scripts)
+    }
+
+    @Test
+    fun `evaluateJavascript goes through the hook`() {
+        val webView = WebView()
+        val screen = loader.new("fixtures.Screen")
+        screen.javaClass.getMethod("respond", WebView::class.java).invoke(screen, webView)
+
+        assertEquals(listOf("script onBridgeResponse('1')"), DariHooks.calls)
+        assertEquals(listOf("onBridgeResponse('1')"), webView.scripts)
     }
 
     @Test

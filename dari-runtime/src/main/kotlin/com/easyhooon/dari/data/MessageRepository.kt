@@ -1,5 +1,7 @@
 package com.easyhooon.dari.data
 
+import androidx.annotation.VisibleForTesting
+import com.easyhooon.dari.DeliveryStatus
 import com.easyhooon.dari.MessageDirection
 import com.easyhooon.dari.MessageEntry
 import com.easyhooon.dari.MessageStatus
@@ -8,8 +10,6 @@ import com.easyhooon.dari.data.local.MessageDao
 import com.easyhooon.dari.data.local.toEntity
 import com.easyhooon.dari.data.local.toMessageEntry
 import com.easyhooon.dari.runtime.InternalDariApi
-import androidx.annotation.VisibleForTesting
-import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Message store backed by Room for persistence across sessions.
@@ -186,6 +187,37 @@ class MessageRepository internal constructor(
                         responseTimestamp = entry.responseTimestamp,
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Sets [delivery] on the latest entry of [direction] for [requestId]; for Web -> App, the latest one that already
+     * has its response, so a reused id's new request doesn't take it. A settled delivery is never moved back to
+     * [DeliveryStatus.PENDING], since the call that marks it pending can arrive after the script already ran.
+     */
+    fun updateDelivery(requestId: String, tag: String?, direction: MessageDirection, delivery: DeliveryStatus) {
+        synchronized(lock) {
+            var updated: MessageEntry? = null
+            _entries.update { current ->
+                updated = null
+                val index = current.indexOfLast { it.requestId == requestId && it.tag == tag && it.direction == direction &&
+                    (direction == MessageDirection.APP_TO_WEB || it.responseTimestamp != null)
+                }
+                val entry = current.getOrNull(index)
+                if (entry == null || entry.delivery == delivery ||
+                    (delivery == DeliveryStatus.PENDING && entry.delivery != null)
+                ) {
+                    current
+                } else {
+                    current.toMutableList().also { it[index] = entry.copy(delivery = delivery).also { e -> updated = e } }
+                }
+            }
+            val entry = updated ?: return
+            _events.tryEmit(RepositoryEvent.Updated(InspectorEntry(wireIdOf(entry.id), entry)))
+            launchWrite {
+                val id = persistedIdOf(entry.id) ?: return@launchWrite
+                dao.updateDelivery(id, delivery)
             }
         }
     }

@@ -18,6 +18,8 @@ package struct MessageRecord: Equatable {
     package var requestTimestamp: Int64
     package var responseTimestamp: Int64?
     package var pageUrl: String?
+    /// Whether the message reached the page; nil when not tracked. Mirrors `MessageEntry.delivery`.
+    package var delivery: DeliveryStatus? = nil
 }
 
 /// Raw values match `MessageDirection` in dari-core; the desktop filters on them.
@@ -31,6 +33,13 @@ package enum MessageStatus: String {
     case inProgress = "IN_PROGRESS"
     case success = "SUCCESS"
     case error = "ERROR"
+}
+
+/// Raw values match `DeliveryStatus` in dari-core.
+package enum DeliveryStatus: String {
+    case pending = "PENDING"
+    case delivered = "DELIVERED"
+    case failed = "FAILED"
 }
 
 package enum StoreEvent: Equatable {
@@ -127,6 +136,22 @@ package final class MessageStore {
             let index = id.map { id in records.firstIndex { $0.id == id } } ?? targetIndex(requestId, tag, direction)
             guard let index else { return }
             transform(&records[index], now())
+            persist(records[index])
+            notify(.updated(records[index]))
+        }
+    }
+
+    /// Sets [delivery] on the newest matching record. A settled delivery never goes back to pending.
+    func setDelivery(requestId: String, tag: String?, direction: MessageDirection, _ delivery: DeliveryStatus) {
+        lock.withLock {
+            // For Web -> App, the newest record that already has its response, so a reused id's new request doesn't take it.
+            guard let index = records.lastIndex(where: {
+                $0.id >= firstLiveId && $0.requestId == requestId && $0.tag == tag && $0.direction == direction &&
+                    (direction == .appToWeb || $0.responseTimestamp != nil)
+            }) else { return }
+            let current = records[index].delivery
+            guard current != delivery, !(delivery == .pending && current != nil) else { return }
+            records[index].delivery = delivery
             persist(records[index])
             notify(.updated(records[index]))
         }
@@ -248,7 +273,8 @@ extension MessageRecord {
             // The payload's own size for protobuf, like `MessageEntry.requestSizeBytes`.
             requestSizeBytes: requestPayloadMetadata?.originalSizeBytes ?? requestData?.utf8.count ?? 0,
             responseSizeBytes: responsePayloadMetadata?.originalSizeBytes ?? responseData?.utf8.count ?? 0,
-            pageUrl: pageUrl
+            pageUrl: pageUrl,
+            delivery: delivery?.rawValue
         )
     }
 

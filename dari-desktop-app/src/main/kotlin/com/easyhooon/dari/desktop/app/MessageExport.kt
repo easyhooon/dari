@@ -97,6 +97,7 @@ object MessageExport {
             s.displayName?.takeIf { it.isNotBlank() }?.let { appendLine("Display name: $it") }
             appendLine("Direction: $direction")
             appendLine("Status: ${s.status}")
+            s.delivery?.let { appendLine("Delivery: $it") }
             appendLine("Tag: ${s.tag ?: "-"}")
             s.pageUrl?.let { appendLine("Page: $it") }
             appendLine("Request ID: ${s.requestId ?: "-"}")
@@ -153,6 +154,7 @@ object MessageExport {
                 "direction" to JsonPrimitive(s.direction),
                 "tag" to JsonPrimitive(s.tag),
                 "page_url" to JsonPrimitive(s.pageUrl),
+                "delivery" to JsonPrimitive(s.delivery),
                 "request_data" to JsonPrimitive(detail.requestData),
                 "response_data" to JsonPrimitive(detail.responseData),
                 "request_data_truncated" to JsonPrimitive(detail.requestDataTruncated),
