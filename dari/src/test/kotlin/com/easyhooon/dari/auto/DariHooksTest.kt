@@ -257,6 +257,18 @@ class DariHooksTest {
         Reference.reachabilityFence(first)
     }
 
+    @Test
+    fun `a shared bridge called with a WebView records under the JS name it has on that WebView`() {
+        val bridge = Any()
+        val first = WebView(context())
+        DariHooks.addJavascriptInterface(first, bridge, "First")
+        DariHooks.addJavascriptInterface(WebView(context()), bridge, "Second")
+
+        DariHooks.onMappedCall(REQUEST, bridge, arrayOf("x", "1", null, first))
+
+        assertEquals(listOf("First w2a-req x null 1 null null"), created.last().calls)
+    }
+
     private fun registerOnCollectableView(bridge: Any, name: String = "Android"): WeakReference<WebView> {
         val view = WebView(context())
         DariHooks.addJavascriptInterface(view, bridge, name)

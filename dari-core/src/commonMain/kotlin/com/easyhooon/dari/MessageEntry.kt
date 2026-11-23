@@ -33,24 +33,28 @@ data class MessageEntry(
     val delivery: DeliveryStatus? = null,
 ) {
 
-    /** Preserves the pre-delivery constructor signature for binary callers. */
+    /**
+     * Preserves the pre-delivery constructor for binary callers, including its default-argument variant that Kotlin
+     * callers compiled against 3.7 link to. Hidden so source calls resolve to the primary constructor.
+     */
+    @Deprecated("Kept for binary compatibility.", level = DeprecationLevel.HIDDEN)
     constructor(
-        id: Long,
-        requestId: String?,
+        id: Long = 0L,
+        requestId: String? = null,
         handlerName: String,
         direction: MessageDirection,
-        tag: String?,
-        requestData: String?,
-        responseData: String?,
-        requestDataTruncated: Boolean,
-        responseDataTruncated: Boolean,
-        status: MessageStatus,
-        requestTimestamp: Long,
-        responseTimestamp: Long?,
-        requestPayloadMetadata: MessagePayloadMetadata?,
-        responsePayloadMetadata: MessagePayloadMetadata?,
-        displayName: String?,
-        pageUrl: String?,
+        tag: String? = null,
+        requestData: String? = null,
+        responseData: String? = null,
+        requestDataTruncated: Boolean = false,
+        responseDataTruncated: Boolean = false,
+        status: MessageStatus = MessageStatus.IN_PROGRESS,
+        requestTimestamp: Long = currentTimeMillis(),
+        responseTimestamp: Long? = null,
+        requestPayloadMetadata: MessagePayloadMetadata? = null,
+        responsePayloadMetadata: MessagePayloadMetadata? = null,
+        displayName: String? = null,
+        pageUrl: String? = null,
     ) : this(
         id = id,
         requestId = requestId,

@@ -197,15 +197,17 @@ object DariHooks {
     }
 
     private fun awaitDelivery(interceptor: DariInterceptor, requestId: String, direction: MessageDirection) {
-        val tracked = synchronized(lock) {
-            // An interceptor without a page (no WebView known) has no script to wait for.
-            val page = pageOf(interceptor) ?: return
+        // An interceptor without a page (no WebView known) has no script to wait for.
+        val page = synchronized(lock) { pageOf(interceptor) } ?: return
+        // Reported before the wait can match, so a script run on another thread can't follow DELIVERED with PENDING.
+        if (synchronized(lock) { direction in page.trackedDirections }) {
+            interceptor.onDeliveryChanged(requestId, direction, DeliveryStatus.PENDING)
+        }
+        synchronized(lock) {
             page.pruneAwaiting(clock())
             page.awaiting.removeAll { it.interceptor === interceptor && it.requestId == requestId && it.direction == direction }
             page.awaiting += AwaitingDelivery(interceptor, requestId, direction, clock())
-            direction in page.trackedDirections
         }
-        if (tracked) interceptor.onDeliveryChanged(requestId, direction, DeliveryStatus.PENDING)
     }
 
     // Interceptors belong to one page; there are only a few pages, so a scan is enough.
@@ -272,7 +274,8 @@ object DariHooks {
                 ?: lastWebView?.get()?.let(::stateOf)
                 ?: return@synchronized detached[mapping.tag] ?: interceptorFactory(mapping.tag)?.also { detached[mapping.tag] = it }
             // The JS name the bridge has on that WebView; the latest one once all of them are collected.
-            val tag = mapping.tag ?: (if (live != null) live.name else registration?.name) ?: state.jsName
+            val selected = registration?.webViews?.lastOrNull { webView != null && it.webView.get() === webView }
+            val tag = mapping.tag ?: (selected ?: live)?.name ?: (if (live == null) registration?.name else null) ?: state.jsName
             state.interceptors[tag] ?: interceptorFactory(tag)?.also {
                 state.pageUrl?.let(it::onPageUrlChanged)
                 state.interceptors[tag] = it

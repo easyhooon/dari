@@ -261,6 +261,8 @@ private const val DECODED = "DECODED"
 private fun rememberDeliveryNow(summary: WireMessageSummary): Long {
     val sentAt = deliverySentAt(summary.direction, summary.requestTimestamp, summary.responseTimestamp)
     val now by produceState(System.currentTimeMillis(), summary.delivery, sentAt) {
+        // produceState keeps its value across key changes, so start from a fresh clock.
+        value = System.currentTimeMillis()
         deliveryLabelRefreshIn(summary.delivery, sentAt, value)?.let { wait ->
             delay(wait)
             value = System.currentTimeMillis()

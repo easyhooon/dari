@@ -516,6 +516,8 @@ private fun formatRawPreviewSize(previewBytes: Int, originalBytes: Int): String 
 @Composable
 private fun rememberDeliveryNow(delivery: String?, sentAt: Long): Long {
     val now by produceState(System.currentTimeMillis(), delivery, sentAt) {
+        // produceState keeps its value across key changes, so start from a fresh clock.
+        value = System.currentTimeMillis()
         deliveryLabelRefreshIn(delivery, sentAt, value)?.let { wait ->
             delay(wait)
             value = System.currentTimeMillis()
