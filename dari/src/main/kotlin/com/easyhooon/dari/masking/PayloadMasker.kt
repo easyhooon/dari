@@ -21,6 +21,8 @@ internal object PayloadMasker {
         "token", "password", "passwd", "secret", "authorization", "cookie", "apikey", "sessionid", "cardnumber",
     )
     private val SENSITIVE_KEYS = setOf("cvv", "cvc", "ssn", "otp", "pin")
+    private val PAIR_NAME_FIELDS = setOf("name", "key")
+    private const val PAIR_VALUE_FIELD = "value"
 
     // `key: value` / `key=value` in decoded protobuf text, query strings and other non-JSON text.
     private val KEY_VALUE = Regex(
@@ -68,14 +70,23 @@ internal object PayloadMasker {
     }
 
     private fun maskElement(element: JsonElement): JsonElement = when (element) {
-        is JsonObject -> JsonObject(
-            element.mapValues { (key, value) ->
-                if (isSensitiveKey(key)) JsonPrimitive(MASK) else maskElement(value)
-            },
-        )
+        is JsonObject -> {
+            val sensitivePair = isSensitivePair(element)
+            JsonObject(
+                element.mapValues { (key, value) ->
+                    val masked = isSensitiveKey(key) || (sensitivePair && key.lowercase() == PAIR_VALUE_FIELD)
+                    if (masked) JsonPrimitive(MASK) else maskElement(value)
+                },
+            )
+        }
         is JsonArray -> JsonArray(element.map(::maskElement))
         // Bridges often nest stringified JSON; mask inside it too.
         is JsonPrimitive -> if (element.isString) JsonPrimitive(maskText(element.content)) else element
+    }
+
+    // Header lists such as [{"name":"Authorization","value":"..."}] carry the key as data.
+    private fun isSensitivePair(obj: JsonObject): Boolean = obj.any { (key, value) ->
+        key.lowercase() in PAIR_NAME_FIELDS && value is JsonPrimitive && value.isString && isSensitiveKey(value.content)
     }
 
     private fun maskKeyValues(text: String): String = KEY_VALUE.replace(text) { match ->

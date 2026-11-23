@@ -11,6 +11,8 @@ package enum PayloadMasker {
         "token", "password", "passwd", "secret", "authorization", "cookie", "apikey", "sessionid", "cardnumber",
     ]
     private static let sensitiveKeys: Set<String> = ["cvv", "cvc", "ssn", "otp", "pin"]
+    private static let pairNameFields: Set<String> = ["name", "key"]
+    private static let pairValueField = "value"
 
     private static let keyValue = try! NSRegularExpression(
         pattern: #"(?i)\b([\w.\-]*(?:token|password|passwd|secret|authorization|cookie|api[_\-]?key|session[_\-]?id|card[_\-]?number)[\w.\-]*)(["']?\s*[:=]\s*)("(?:[^"\\]|\\.)*"|'[^']*'|[^\s,;&}\]]+)"#
@@ -53,8 +55,10 @@ package enum PayloadMasker {
     private static func maskValue(_ value: Any) -> Any {
         switch value {
         case let object as [String: Any]:
+            let sensitivePair = isSensitivePair(object)
             return Dictionary(uniqueKeysWithValues: object.map { key, value in
-                (key, isSensitiveKey(key) ? mask as Any : maskValue(value))
+                let masked = isSensitiveKey(key) || (sensitivePair && key.lowercased() == pairValueField)
+                return (key, masked ? mask as Any : maskValue(value))
             })
         case let array as [Any]:
             return array.map(maskValue)
@@ -63,6 +67,13 @@ package enum PayloadMasker {
             return maskText(string) ?? redactionFailed
         default:
             return value
+        }
+    }
+
+    // Header lists such as [{"name":"Authorization","value":"..."}] carry the key as data.
+    private static func isSensitivePair(_ object: [String: Any]) -> Bool {
+        object.contains { key, value in
+            pairNameFields.contains(key.lowercased()) && (value as? String).map(isSensitiveKey) == true
         }
     }
 
