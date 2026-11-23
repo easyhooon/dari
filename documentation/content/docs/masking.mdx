@@ -14,7 +14,7 @@ Both switches use the same rules. Apps on dari older than 2.2.0 always mask what
 
 ## What gets masked
 
-The rules look at **key names**, not at values. The one exception is `Bearer` and `Basic` credentials. Request and response bodies are checked; handler names, tags and other summary fields are not.
+The rules look at **key names**, not at values. The exceptions are `Bearer` and `Basic` credentials, and the `name`/`key` field of name-value pairs described below. Request and response bodies are checked; handler names, tags and other summary fields are not.
 
 ### 1. JSON bodies
 
@@ -24,6 +24,8 @@ A body that starts with `{` or `[` and parses as JSON is walked at every depth. 
 - The normalized key **equals** one of `cvv`, `cvc`, `ssn`, `otp`, `pin`.
 
 The value of a sensitive key is replaced with `"***"`, even if that value is an object or an array. String values under other keys are checked again as text, so stringified JSON inside JSON is masked too.
+
+An object whose `name` or `key` field (any case) holds a string that would be a sensitive key, by the same rules, also has its `value` field masked. This covers header lists like `[{"name":"Authorization","value":"..."}]`, and also hides pairs such as `{"key":"login.password.hint","value":"..."}`.
 
 | Key | Normalized | Masked |
 | --- | --- | --- |

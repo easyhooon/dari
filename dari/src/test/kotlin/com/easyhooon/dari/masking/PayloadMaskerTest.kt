@@ -131,6 +131,28 @@ class PayloadMaskerTest {
     }
 
     @Test
+    fun `masks the value of a name-value pair whose name is sensitive`() {
+        assertEquals(
+            """[{"name":"Authorization","value":"***"},{"name":"Accept","value":"json"}]""",
+            PayloadMasker.maskText("""[{"name":"Authorization","value":"xyz"},{"name":"Accept","value":"json"}]"""),
+        )
+        assertEquals(
+            """{"headers":[{"Key":"X-Api-Key","Value":"***"}]}""",
+            PayloadMasker.maskText("""{"headers":[{"Key":"X-Api-Key","Value":{"v":"k"}}]}"""),
+        )
+        assertEquals(
+            """{"NAME":"id","key":"Cookie","VALUE":"***"}""",
+            PayloadMasker.maskText("""{"NAME":"id","key":"Cookie","VALUE":null}"""),
+        )
+    }
+
+    @Test
+    fun `keeps name-value pairs whose name is not a string`() {
+        val pair = """{"name":7,"value":"keep"}"""
+        assertEquals(pair, PayloadMasker.maskText(pair))
+    }
+
+    @Test
     fun `drops raw previews and keeps entries without payloads intact`() {
         val metadata = MessagePayloadMetadata(
             contentType = PayloadContentType.PROTOBUF,
