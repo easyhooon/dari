@@ -41,11 +41,13 @@ object DariHooks {
 
     internal var interceptorFactory: (String?) -> DariInterceptor? = { tag -> Dari.createInterceptor(tag, sharedDecoder) }
 
-    // webViews: every WebView the bridge was registered on, latest last. page is the latest one's state and outlives
-    // it, so calls that arrive after all of them are collected stay on that page.
-    private class Registration(val webViews: List<WeakReference<WebView>>, val name: String?, val page: WebViewState) {
-        fun liveWebView(): WebView? = webViews.asReversed().firstNotNullOfOrNull { it.get() }
+    // webViews: every WebView the bridge was registered on with its JS name, latest last. name and page are the
+    // latest one's, and page outlives it, so calls that arrive after all of them are collected stay on that page.
+    private class Registration(val webViews: List<RegisteredView>, val name: String?, val page: WebViewState) {
+        fun live(): RegisteredView? = webViews.asReversed().firstOrNull { it.webView.get() != null }
     }
+
+    private class RegisteredView(val webView: WeakReference<WebView>, val name: String?)
 
     private class WebViewState(var jsName: String?) {
         val interceptors = HashMap<String?, DariInterceptor>()
@@ -74,8 +76,9 @@ object DariHooks {
                 val state = webViews.getOrPut(webView) { WebViewState(name) }
                 if (state.jsName == null) state.jsName = name
                 if (bridge != null) {
-                    val others = bridges[bridge]?.webViews.orEmpty().filter { it.get().let { view -> view != null && view !== webView } }
-                    bridges[bridge] = Registration(others + WeakReference(webView), name, state)
+                    val others = bridges[bridge]?.webViews.orEmpty()
+                        .filter { it.webView.get().let { view -> view != null && view !== webView } }
+                    bridges[bridge] = Registration(others + RegisteredView(WeakReference(webView), name), name, state)
                 }
                 lastWebView = WeakReference(webView)
             }
@@ -160,14 +163,16 @@ object DariHooks {
     private fun interceptorFor(mapping: BridgeMapping, receiver: Any?, args: Array<Any?>): DariInterceptor? =
         synchronized(lock) {
             val registration = receiver?.let { bridges[it] }
+            val live = registration?.live()
             val webView = args.firstNotNullOfOrNull { it as? WebView }
                 ?: receiver as? WebView
-                ?: registration?.liveWebView()
+                ?: live?.webView?.get()
             val state = webView?.let(::stateOf)
                 ?: registration?.page
                 ?: lastWebView?.get()?.let(::stateOf)
                 ?: return@synchronized detached[mapping.tag] ?: interceptorFactory(mapping.tag)?.also { detached[mapping.tag] = it }
-            val tag = mapping.tag ?: registration?.name ?: state.jsName
+            // The JS name the bridge has on that WebView; the latest one once all of them are collected.
+            val tag = mapping.tag ?: (if (live != null) live.name else registration?.name) ?: state.jsName
             state.interceptors[tag] ?: interceptorFactory(tag)?.also {
                 state.pageUrl?.let(it::onPageUrlChanged)
                 state.interceptors[tag] = it
