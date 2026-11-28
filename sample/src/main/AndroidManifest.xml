@@ -28,6 +28,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- androidx.web WebContent sample (issue #311); its own launcher entry. -->
+        <activity
+            android:name=".webcontent.WebContentActivity"
+            android:exported="true"
+            android:label="Dari WebContent"
+            android:theme="@style/Theme.Dari">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>
