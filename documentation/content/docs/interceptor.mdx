@@ -94,6 +94,8 @@ Called when the native side sends a response back to JavaScript. Call it in the 
 | `responseData` | `String?` | Response payload |
 | `isSuccess` | `Boolean` | `true` → `SUCCESS`, `false` → `ERROR` |
 
+Dari records the response when this is called, not when the page receives it. A response the app drops afterwards, for example because its WebView is already gone, still shows as recorded. The Gradle plugin records at the same point: when the mapped method is entered. See [#313](https://github.com/easyhooon/dari/issues/313).
+
 ### `onAppToWebRequest`
 
 Called when the native side pushes a message to JavaScript. Call it in the function that sends messages to the web.
@@ -134,7 +136,7 @@ Requests captured afterwards store the URL without user info, query or fragment,
 
 With `androidx.web`'s `WebContent`, a page outlives its views: every `attach()` returns a new `WebContentView` for the same engine. Create the interceptor once next to the retained `WebContent` (for example in the same `ViewModel`), not once per view. Report the URL from the engine's `WebViewClient`, which survives re-attach.
 
-The Gradle plugin keys the page by the engine's `WebViewClient`, which survives re-attach. A new `WebContentView` takes over the page's interceptors and URL when it reports a URL or gets a JavaScript interface. If the app sets a new client on every attach, the page is matched through the engine's history instead. Give each `WebContent` its own `WebViewClient` instance: engines sharing one, such as a singleton, are recorded as one page. Until the new view reports, calls go to the previous view; if that view was already collected, they go to the WebView seen last, and are recorded without a page URL only when there is none.
+The Gradle plugin keys the page by the engine's `WebViewClient`, which survives re-attach. A new `WebContentView` takes over the page's interceptors and URL when it reports a URL or gets a JavaScript interface. If the app sets a new client on every attach, the page goes to the new view only when no attached view shows it and the view's history continues the page's history. Give each `WebContent` its own `WebViewClient` instance: engines sharing one, such as a singleton, are recorded as one page. Until the new view reports, calls go to the previous view; if that view was already collected, they stay on the page the bridge was registered on. The WebView seen last is used only when neither is known, and calls are recorded without a page URL only when there is none.
 
 A response produced while no view is attached is still recorded as `SUCCESS`, even if the app drops it because it has no view to call `evaluateJavascript` on. Dari records the call, not its delivery.
 

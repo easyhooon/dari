@@ -94,6 +94,8 @@ JavaScript가 네이티브 앱으로 메시지를 보낼 때 호출합니다. �
 | `responseData` | `String?` | 응답 페이로드 |
 | `isSuccess` | `Boolean` | `true` → `SUCCESS`, `false` → `ERROR` |
 
+Dari는 페이지가 응답을 받은 시점이 아니라 이 메서드가 호출된 시점에 응답을 기록합니다. 그 뒤 WebView가 이미 사라지는 등의 이유로 앱이 응답을 버려도 기록은 남습니다. Gradle 플러그인도 같은 시점, 즉 매핑한 메서드에 진입할 때 기록합니다. [#313](https://github.com/easyhooon/dari/issues/313) 참고.
+
 ### `onAppToWebRequest`
 
 네이티브 앱이 JavaScript로 메시지를 푸시할 때 호출합니다. 웹으로 메시지를 보내는 함수에서 호출합니다.
@@ -134,7 +136,7 @@ override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boole
 
 `androidx.web`의 `WebContent`를 쓰면 페이지가 뷰보다 오래 남습니다. `attach()`를 호출할 때마다 같은 엔진에 붙은 새 `WebContentView`가 나옵니다. 인터셉터는 뷰마다 만들지 말고, 유지되는 `WebContent` 옆(예: 같은 `ViewModel`)에서 한 번만 만드세요. URL은 re-attach 후에도 유지되는 엔진의 `WebViewClient`에서 전달합니다.
 
-Gradle 플러그인은 re-attach 후에도 유지되는 엔진의 `WebViewClient`를 기준으로 페이지를 구분합니다. 새 `WebContentView`는 URL을 보고하거나 JavaScript 인터페이스가 등록될 때 페이지의 인터셉터와 URL을 이어받습니다. 앱이 attach할 때마다 client를 새로 설정하면 엔진의 history로 페이지를 찾습니다. `WebContent`마다 별도의 `WebViewClient` 인스턴스를 쓰세요. 싱글턴처럼 하나를 공유하는 엔진들은 한 페이지로 기록됩니다. 새 뷰가 보고하기 전까지의 호출은 이전 뷰로 기록됩니다. 이전 뷰가 이미 GC됐다면 마지막으로 본 WebView로 기록되고, 그런 WebView도 없을 때만 페이지 URL 없이 기록됩니다.
+Gradle 플러그인은 re-attach 후에도 유지되는 엔진의 `WebViewClient`를 기준으로 페이지를 구분합니다. 새 `WebContentView`는 URL을 보고하거나 JavaScript 인터페이스가 등록될 때 페이지의 인터셉터와 URL을 이어받습니다. 앱이 attach할 때마다 client를 새로 설정하면, 붙은 뷰 중 그 페이지를 보여주는 뷰가 없고 새 뷰의 history가 페이지의 history를 이어갈 때만 새 뷰가 페이지를 이어받습니다. `WebContent`마다 별도의 `WebViewClient` 인스턴스를 쓰세요. 싱글턴처럼 하나를 공유하는 엔진들은 한 페이지로 기록됩니다. 새 뷰가 보고하기 전까지의 호출은 이전 뷰로 기록됩니다. 이전 뷰가 이미 GC됐다면 bridge가 등록된 페이지로 기록됩니다. 둘 다 알 수 없을 때만 마지막으로 본 WebView를 쓰고, 그런 WebView도 없을 때만 페이지 URL 없이 기록됩니다.
 
 붙은 뷰가 없을 때 만든 응답도 `SUCCESS`로 기록됩니다. `evaluateJavascript`를 호출할 뷰가 없어 앱이 응답을 버리더라도 마찬가지입니다. Dari는 전달 여부가 아니라 호출을 기록합니다.
 

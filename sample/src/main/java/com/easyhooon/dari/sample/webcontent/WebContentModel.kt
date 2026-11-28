@@ -70,7 +70,7 @@ class WebContentModel : ViewModel() {
     // App-to-Web notification; dropped while no view is attached.
     private fun sendToWeb(handlerName: String, data: String) {
         val target = view ?: return
-        target.post { target.evaluateJavascript("onAppEvent('$handlerName', $data)", null) }
+        target.post { view?.evaluateJavascript("onAppEvent('$handlerName', $data)", null) }
     }
 
     @Suppress("UnusedParameter") // handlerName is read by the dari { } mapping.
@@ -81,7 +81,7 @@ class WebContentModel : ViewModel() {
             return
         }
         val escaped = JSONObject.quote(data)
-        target.post { target.evaluateJavascript("onBridgeResponse('$requestId', $success, $escaped)", null) }
+        target.post { view?.evaluateJavascript("onBridgeResponse('$requestId', $success, $escaped)", null) }
     }
 
     inner class Bridge {
