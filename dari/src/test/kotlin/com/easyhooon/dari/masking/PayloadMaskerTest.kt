@@ -62,6 +62,75 @@ class PayloadMaskerTest {
     }
 
     @Test
+    fun `passes empty and payload-free inputs through unchanged`() {
+        listOf("", "   ", "null", "[]", "{}").forEach { assertEquals(it, PayloadMasker.maskText(it)) }
+    }
+
+    @Test
+    fun `keeps non-ASCII and emoji values while masking sensitive ones`() {
+        assertEquals(
+            """{"name":"김철수","token":"***","emoji":"😀"}""",
+            PayloadMasker.maskText("""{"name":"김철수","token":"비밀값","emoji":"😀"}"""),
+        )
+    }
+
+    @Test
+    fun `keeps number literals as written and masks non-string sensitive values`() {
+        assertEquals(
+            """{"pin":"***","otp":"***","cvv":"***","amount":12345678901234567890,"z":-0.0,"e":1.0E10}""",
+            PayloadMasker.maskText(
+                """{"pin":1234,"otp":null,"cvv":true,"amount":12345678901234567890,"z":-0.0,"e":1.0E10}""",
+            ),
+        )
+    }
+
+    @Test
+    fun `duplicate sensitive keys leak neither value`() {
+        assertEquals("""{"token":"***"}""", PayloadMasker.maskText("""{"token":"first","token":"second"}"""))
+    }
+
+    @Test
+    fun `masks triple-nested stringified JSON`() {
+        assertEquals(
+            """{"data":"{\"inner\":\"{\\\"password\\\":\\\"***\\\"}\"}"}""",
+            PayloadMasker.maskText("""{"data":"{\"inner\":\"{\\\"password\\\":\\\"deep\\\"}\"}"}"""),
+        )
+    }
+
+    @Test
+    fun `parses JSON after leading whitespace`() {
+        assertEquals("""{"token":"***"}""", PayloadMasker.maskText("""  {"token":"a"}"""))
+    }
+
+    @Test
+    fun `single-quoted pseudo-JSON falls back to key-value masking`() {
+        assertEquals("{'token':'***'}", PayloadMasker.maskText("{'token':'abc'}"))
+    }
+
+    @Test
+    fun `masks hyphenated and underscored keys in query strings`() {
+        assertEquals(
+            "access_token=***&refresh-token=***",
+            PayloadMasker.maskText("access_token=abc&refresh-token=def"),
+        )
+    }
+
+    @Test
+    fun `deeply nested input leaks no sensitive value`() {
+        // Either fully masked or REDACTION_FAILED, depending on the thread's stack size.
+        val deep = "[".repeat(20_000) + """{"token":"leak"}""" + "]".repeat(20_000)
+        assertFalse(PayloadMasker.maskText(deep)!!.contains("leak"))
+    }
+
+    @Test
+    fun `large payload keeps no sensitive value`() {
+        val items = (1..20_000).joinToString(",") { """{"id":$it,"token":"t$it"}""" }
+        val masked = PayloadMasker.maskText("""{"items":[$items]}""")!!
+        assertFalse(Regex(""""t\d+"""").containsMatchIn(masked))
+        assertTrue(masked.contains(""""id":20000"""))
+    }
+
+    @Test
     fun `drops raw previews and keeps entries without payloads intact`() {
         val metadata = MessagePayloadMetadata(
             contentType = PayloadContentType.PROTOBUF,
